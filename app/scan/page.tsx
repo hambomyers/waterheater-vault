@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { brainRouter, OnDevicePreview } from '../../brain/router'
-import { getCategoryInfo, DEFAULT_GUIDANCE, CategoryInfo } from '../../lib/categoryMap'
 
 /**
  * Scan flow phases:
@@ -38,7 +37,6 @@ export default function ScanPage() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [shot1Url, setShot1Url] = useState<string | null>(null)
   const [onDevicePreview, setOnDevicePreview] = useState<OnDevicePreview | null>(null)
-  const [categoryInfo, setCategoryInfo] = useState<CategoryInfo>(DEFAULT_GUIDANCE)
   const [error, setError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [isDragging, setIsDragging] = useState(false)
@@ -195,47 +193,8 @@ export default function ScanPage() {
     try {
       const preview = await brainRouter.extractOnDevicePreview(blob)
       setOnDevicePreview(preview)
-
-      let info: ReturnType<typeof getCategoryInfo> = null
-
-      // When online: use Grok to identify by SHAPE only (ignores text on screens/labels).
-      // Tesseract reads text and can misclassify (e.g. "Warranty File" on screen → warranty card).
-      if (isOnline) {
-        try {
-          const fd = new FormData()
-          const base64 = await new Promise<string>((res, rej) => {
-            const r = new FileReader()
-            r.onloadend = () => res((r.result as string).split(',')[1])
-            r.onerror = rej
-            r.readAsDataURL(blob)
-          })
-          fd.append('image', base64)
-          fd.append('mode', 'identify')
-          const resp = await fetch('/api/grok-scan', {
-            method: 'POST', body: fd,
-            signal: AbortSignal.timeout(5000),
-          })
-          if (resp.ok) {
-            const d = await resp.json()
-            if (d.category) {
-              const grokHint = [d.brand, d.product, d.category].filter(Boolean).join(' ')
-              info = getCategoryInfo(grokHint) ?? getCategoryInfo(d.category) ?? null
-            }
-          }
-        } catch {
-          // Grok failed — fall back to Tesseract
-        }
-      }
-
-      // Offline or Grok failed: use Tesseract category (text-based, less reliable for object type)
-      if (!info) {
-        info = getCategoryInfo(preview.categoryHint) ?? null
-      }
-
-      setCategoryInfo(info ?? DEFAULT_GUIDANCE)
       setPhase('guide')
     } catch {
-      setCategoryInfo(DEFAULT_GUIDANCE)
       setPhase('guide')
     }
   }
@@ -266,7 +225,7 @@ export default function ScanPage() {
     }
 
     try {
-      const result = await brainRouter.processTwoShots(s1, s2, categoryInfo.label)
+      const result = await brainRouter.processTwoShots(s1, s2, 'water heater')
       sessionStorage.setItem('scan-result', JSON.stringify(result))
       window.location.href = '/results'
     } catch (err) {
@@ -292,7 +251,6 @@ export default function ScanPage() {
     setPhase('idle')
     setShot1Url(null)
     setOnDevicePreview(null)
-    setCategoryInfo(DEFAULT_GUIDANCE)
     setError(null)
     shot1BlobRef.current = null
     shot2BlobRef.current = null
@@ -338,7 +296,7 @@ export default function ScanPage() {
           {phase === 'camera-2' && (
             <div className="absolute left-4 right-4 bottom-36 bg-black bg-opacity-75 rounded-2xl p-4 text-center">
               <p className="text-white text-sm font-light">
-                📍 <span className="font-medium">{categoryInfo.locationHint}</span>
+                📍 <span className="font-medium">Find the silver data plate on the side or front of the tank.</span>
               </p>
             </div>
           )}
@@ -433,11 +391,11 @@ export default function ScanPage() {
                   <span className="text-2xl">✅</span>
                   <div>
                     <p className="text-white font-medium text-base">
-                      Got it! Looks like a{' '}
-                      <span className="text-blue-accent">{categoryInfo.label}</span>.
+                      Got it! Now snap the{' '}
+                      <span className="text-blue-accent">data plate label</span>.
                     </p>
                     <p className="text-white text-opacity-60 font-light text-sm mt-1 leading-relaxed">
-                      {categoryInfo.instruction}
+                      It's the silver sticker on the side or front of the tank — has brand, model, serial number, and manufacture date.
                     </p>
                   </div>
                 </div>
@@ -449,14 +407,12 @@ export default function ScanPage() {
                       </span>
                     </div>
                   )}
-                {categoryInfo.secondaryHint && (
-                  <div className="pt-1 border-t border-white border-opacity-8">
-                    <p className="text-white text-opacity-35 text-xs font-light leading-relaxed">
-                      <span className="text-white text-opacity-50">Can't find it?</span>{' '}
-                      {categoryInfo.secondaryHint}
-                    </p>
-                  </div>
-                )}
+                <div className="pt-1 border-t border-white border-opacity-8">
+                  <p className="text-white text-opacity-35 text-xs font-light leading-relaxed">
+                    <span className="text-white text-opacity-50">Can't find it?</span>{' '}
+                    Try the top of the unit or look for a cardboard tag near the base.
+                  </p>
+                </div>
               </div>
 
               <div className="text-white text-opacity-40 text-xs text-center font-light">
@@ -594,7 +550,7 @@ export default function ScanPage() {
                 ) : phase === 'guide' ? (
                   <div className="text-center p-8">
                     <div className="text-4xl mb-4">📍</div>
-                    <div className="text-white text-lg font-light mb-2">{categoryInfo.instruction}</div>
+                    <div className="text-white text-lg font-light mb-2">Now drop the data plate photo (Shot 2)</div>
                     <div className="text-white text-opacity-40 text-sm">Drop Shot 2 here or click to browse</div>
                   </div>
                 ) : (
@@ -617,9 +573,9 @@ export default function ScanPage() {
                 </div>
                 <div>
                   <p className="text-white font-medium">
-                    ✅ Looks like a <span className="text-blue-accent">{categoryInfo.label}</span>
+                    ✅ Got overview. Now snap the <span className="text-blue-accent">data plate</span>
                   </p>
-                  <p className="text-white text-opacity-60 text-sm font-light mt-1">{categoryInfo.instruction}</p>
+                  <p className="text-white text-opacity-60 text-sm font-light mt-1">Silver sticker on the side or front of the tank — brand, model, serial, manufacture date.</p>
                 </div>
               </div>
             )}
@@ -628,7 +584,7 @@ export default function ScanPage() {
               <div className="aspect-video rounded-3xl border border-white border-opacity-10 flex items-center justify-center animate-pulse">
                 <div className="text-center">
                   <div className="text-4xl mb-4">🔍</div>
-                  <div className="text-white text-opacity-60 font-light">Sending both photos to Grok…</div>
+                  <div className="text-white text-opacity-60 font-light">Analysing water heater data…</div>
                   <div className="text-white text-opacity-30 text-sm mt-1">3–5 seconds</div>
                 </div>
               </div>
@@ -678,11 +634,11 @@ export default function ScanPage() {
         <div className="flex-1 flex flex-col justify-center px-20 py-16">
           <div className="max-w-md space-y-6">
             <h2 className="text-white text-4xl font-light">
-              Two-shot<br />
+              Water heater<br />
               <span className="text-blue-accent">precision scan</span>
             </h2>
             <p className="text-white text-opacity-40 font-light">
-              Shot 1 identifies the product. Shot 2 captures the serial/model label. Grok sees both at once for maximum accuracy.
+              Shot 1 — overview of the unit. Shot 2 — the silver data plate with serial number. Grok sees both for maximum accuracy.
             </p>
             <div className="space-y-4">
               <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5">

@@ -30,17 +30,17 @@ export interface OnDevicePreview {
 
 function onDeviceToExtractedData(r: OnDeviceExtractionResult): ExtractedData {
   return {
-    product: r.product,
-    brand: r.brand,
-    model: r.model,
-    serialNumber: r.serialNumber,
-    manufactureDate: r.manufactureDate,
-    purchaseDate: r.purchaseDate,
-    warranty: r.warranty,
-    price: r.price,
-    condition: r.condition,
-    category: r.category,
-    customFields: r.customFields,
+    product: r.product || 'Water Heater',
+    brand: r.brand || 'Unknown',
+    model: r.model || 'Unknown',
+    serialNumber: r.serialNumber || '',
+    manufactureDate: r.manufactureDate || '',
+    tankSizeGallons: undefined,
+    fuelType: 'unknown',
+    ageYears: 0,
+    remainingLifeYears: 0,
+    estimatedReplacementCost: 0,
+    currentWarranty: r.warranty || '',
   }
 }
 

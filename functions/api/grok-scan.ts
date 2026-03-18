@@ -10,125 +10,91 @@ function userFriendlyError(status: number): string {
   }
 }
 
-// ── System prompts ────────────────────────────────────────────────────────────
+// ── Water Heater System Prompts ───────────────────────────────────────────────
 
-const DOCS_PROMPT = `
-After extracting product details, determine what official documentation realistically exists for this specific product.
-Return a "docs" array. Each entry must have:
-  - "type": one of "ownerManual" | "warrantyTerms" | "supportPage" | "installationManual" | "quickStart" | "serviceManual" | "serialDecoder"
-  - "label": human-readable name (e.g. "Owner Manual", "Serial Date Decoder")
-  - "searchQuery": a precise web search query to find the official document or page
-
-Only include types that genuinely apply. Examples:
-  Laptop: ownerManual, warrantyTerms, supportPage
-  Dishwasher: ownerManual, installationManual, warrantyTerms, supportPage
-  Water heater / furnace / HVAC / boiler: ownerManual, installationManual, warrantyTerms, serialDecoder
-  USB cable: omit docs entirely or return empty array
-
-For "serialDecoder": use searchQuery "[Brand] serial number manufacture date decoder"
-  Water heaters, HVAC, furnaces, and boilers almost always need this — their manufacture dates
-  are encoded in the serial number using brand-specific letter/number tables.
-
-Good searchQuery examples:
-  "Apple MacBook Pro 14-inch M3 user guide PDF site:support.apple.com"
-  "Bradford White water heater serial number manufacture date decoder"
-  "Carrier HVAC serial number year decoder"
-  "LG LRFXS2503S refrigerator installation guide site:lg.com"
+const WH_SERIAL_DECODERS = `
+BRAND SERIAL NUMBER DECODE RULES (use to determine manufactureDate from serialNumber):
+- Rheem / Ruud: positions 1-4 = week+year e.g. "0115" = Jan 2015. Or "F15" = June 2015 (A=Jan…L=Dec).
+- AO Smith / American / State / Reliance / Whirlpool WH: 2-digit year + 2-digit week in positions 1-4, e.g. "1506" = 2015 week 6.
+- Bradford White: position 1 = decade code (A=00s,B=10s,C=20s), position 2 = year within decade (A=0,B=1…J=9), position 3 = month (A=Jan…L=Dec). e.g. "BEF..." = 2014 June.
+- Navien: "YY" + "WW" encoded in first 4 chars. e.g. "2312" = 2023 week 12.
+- Rinnai: 4-digit year+month in first 4 chars e.g. "2308" = Aug 2023.
+- GE / GE Appliances: letter-number-letter format, year = position 2 (A=2001, B=2002…).
+- Kenmore (Sears): first 3 digits are factory code; date encoded varies — use brand-specific decoder.
+- Lochinvar / Weil-McLain: first 2 digits = year, next 2 = week.
+- If serial is ambiguous: return your best YYYY-MM estimate with note "(from serial — verify)".
 `
 
-const VALUATION_RULES = `
-VALUATION RULES (currentValue is REQUIRED — never return null or 0):
-- Use current used-market prices as your reference (eBay sold listings, Amazon used, Back Market).
-- If you know the brand and rough category but not exact model: estimate by category and age.
-- If you cannot identify the product at all: return 1 as a placeholder, not null.
-- Laptop examples: budget $80-200, mid-range $200-600, premium $600-1800
-- Smartphone examples: budget $50-150, mid $150-400, flagship $400-900
-- TV examples: 43" budget $80-200, 55" mid $200-500, 65" OLED $600-1400
-- Appliance examples: small $20-80, medium $100-300, large $300-800
-- Always provide a specific integer or decimal, never null, never 0 unless the item is genuinely worthless.`
+const WH_LIFESPAN_RULES = `
+LIFESPAN + REPLACEMENT COST RULES:
+- Gas tank water heater: typical lifespan 8–12 years. Use 10 as midpoint.
+- Electric tank water heater: typical lifespan 10–15 years. Use 12 as midpoint.
+- Tankless (gas or electric): typical lifespan 15–20 years. Use 18 as midpoint.
+- Heat pump water heater: typical lifespan 10–15 years. Use 13 as midpoint.
+- remainingLifeYears = max(0, expectedLifespan - ageYears). Adjust down if unit shows signs of age/corrosion.
+- estimatedReplacementCost:
+    Gas tank 30-50 gal: $900–$1,400 installed
+    Gas tank 50-75 gal: $1,100–$1,800 installed
+    Electric tank: $700–$1,200 installed
+    Tankless gas: $1,500–$2,500 installed
+    Tankless electric: $800–$1,500 installed
+    Heat pump: $1,200–$2,000 installed
+  Use the midpoint of the applicable range.
+`
 
-const SINGLE_SHOT_SYSTEM = `You are a precise warranty and product data extraction assistant.
-Analyze this product, receipt, or warranty image carefully.
+const WH_WARRANTY_GUIDE = `
+COMMON WATER HEATER WARRANTY PERIODS (use if label is unclear):
+- Rheem Professional / Marathon: 6-year or 10-year tank warranty
+- Bradford White: 6-year residential tank, 1-year parts
+- AO Smith Signature: 6-year or 12-year depending on model
+- Navien / Rinnai tankless: 12–15 year heat exchanger, 5-year parts
+- State Select: 6-year tank, 1-year parts
+- Kenmore: 6-year tank
+Return the warranty string exactly as printed on the label if visible. Otherwise use the above guide.
+`
 
-Return ONLY a single valid JSON object. No markdown, no text before or after. Use null for unknown string fields:
+const WH_DOCS_INSTRUCTIONS = `
+Always return a "docs" array. For water heaters, ALWAYS include ALL of:
+1. { "type": "serialDecoder", "label": "Serial Date Decoder", "searchQuery": "[Brand] water heater serial number manufacture date decoder" }
+2. { "type": "ownerManual", "label": "Owner Manual", "searchQuery": "[Brand] [Model] water heater owner manual PDF" }
+3. { "type": "warrantyTerms", "label": "Warranty Terms", "searchQuery": "[Brand] water heater warranty terms [Model]" }
+4. { "type": "recallCheck", "label": "CPSC Recall Check", "searchQuery": "[Brand] [Model] water heater CPSC recall site:cpsc.gov" }
+Replace [Brand] and [Model] with the actual detected values.
+`
+
+const WH_SYSTEM = `You are WaterHeaterVault's expert AI — the world's best water heater identification and analysis engine.
+You ONLY analyze water heaters. You know every major brand's serial number encoding system by heart.
+
+${WH_SERIAL_DECODERS}
+
+${WH_LIFESPAN_RULES}
+
+${WH_WARRANTY_GUIDE}
+
+Return ONLY a single valid JSON object. No markdown, no text before or after:
 {
-  "product": "full product name",
-  "brand": "manufacturer or brand",
-  "model": "model number or null",
-  "serialNumber": "serial number if visible, or null",
-  "manufactureDate": "manufacture date as YYYY-MM or YYYY-MM-DD if visible on label, or null",
-  "purchaseDate": "YYYY-MM-DD or null",
-  "warranty": "warranty period e.g. '2 years', or null",
-  "price": "$XX.XX or null",
-  "condition": "new|like-new|good|fair|poor",
-  "category": "one of: appliance|vehicle|watch|whisky|wine|collectible|instrument|electronics|tool|other",
-  "customFields": {
-    // Include ONLY fields meaningful for this category. Omit or return {} for generic electronics/appliances.
-    // watch:       { "reference": "...", "movement": "...", "complication": "..." }
-    // whisky/wine: { "distillery": "...", "ageStatement": "...", "caskType": "...", "vintage": "..." }
-    // collectible: { "grade": "...", "gradingCompany": "PSA|BGS|CGC", "population": "...", "year": "..." }
-    // vehicle:     { "vin": "...", "trim": "...", "mileage": "..." }
-    // instrument:  { "year": "...", "finish": "...", "country": "..." }
-  },
-  "currentValue": current used-market value in USD as a number (REQUIRED — see rules below),
-  "originalPrice": original retail price as number or null,
-  "depreciationRate": depreciation as decimal 0.0-1.0 or null,
-  "marketTrend": "up|down|stable",
+  "product": "Water Heater (e.g. 'Rheem 40-Gal Gas Water Heater')",
+  "brand": "exact brand name (Rheem|AO Smith|Bradford White|GE|Navien|Rinnai|State|Reliance|American|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
+  "model": "model number from label or null",
+  "serialNumber": "full serial number exactly as printed",
+  "manufactureDate": "YYYY-MM decoded from serial or label — REQUIRED, use decoder rules above",
+  "tankSizeGallons": tank capacity as integer (e.g. 40, 50, 75) or null if tankless,
+  "fuelType": "gas|electric|tankless|unknown",
+  "ageYears": calculated as (current year - manufacture year) as number,
+  "remainingLifeYears": calculated remaining life as number (see lifespan rules),
+  "estimatedReplacementCost": estimated installed replacement cost in USD as integer (see cost rules),
+  "currentWarranty": "warranty as printed on label or inferred from brand guide",
   "confidence": overall extraction confidence 0.0-1.0,
-  "docs": [
-    { "type": "ownerManual", "label": "Owner Manual", "searchQuery": "Brand Model owner manual PDF site:brand.com" }
-  ]
+  "docs": [ ... always 4 entries per docs instructions above ... ]
 }
-MANUFACTURE DATE RULES:
-1. First look for explicit label text: "MFG DATE", "DATE MFG", "DOM", "MFD", "MFG.", "FABR", "PROD DATE", "DATE CODE", "MANUF", "DATE OF MFG", "MANUFACTURED".
-2. If not found as label text, examine the serialNumber you extracted. Many manufacturers encode the manufacture date in their serial format — use your training knowledge of brand-specific serial encodings to decode it (e.g. Samsung appliances encode year in position 5 as a letter, LG in position 2, Whirlpool in positions 3-4, etc.).
-3. If you decode a date from the serial, return it as "YYYY-MM (from serial)" so the user knows it was inferred.
-4. If genuinely not determinable: return null. Do not guess.
-${VALUATION_RULES}
-${DOCS_PROMPT}
-If not a product/warranty/receipt image: { "error": "not_a_product", "message": "brief description" }`
 
-const TWO_SHOT_SYSTEM = `You are a precise warranty data extraction assistant.
-Two images with DIFFERENT roles:
-- Shot 1 = wide overview. Look ONLY at the physical shape, form, and object type. IGNORE all text, screens, labels, papers. Use it for category and brand context from the object's appearance.
-- Shot 2 = close-up of serial/model label. Authoritative for ALL text: serial, model, warranty, purchase date. Focus ONLY on reading the characters and numbers on the label.
+CRITICAL RULES:
+1. manufactureDate is REQUIRED — always decode from serial using brand rules above. Never return null if you have a serial number.
+2. ageYears and remainingLifeYears are REQUIRED — always calculate them.
+3. estimatedReplacementCost is REQUIRED — always return a realistic integer.
+4. If image shows something other than a water heater: { "error": "not_a_water_heater", "message": "This appears to be a [X], not a water heater." }
 
-Return ONLY a single valid JSON object. No markdown, no text before or after. Use null for unknown string fields:
-{
-  "product": "full product name",
-  "brand": "manufacturer or brand",
-  "model": "model number or null",
-  "serialNumber": "serial number",
-  "manufactureDate": "manufacture date as YYYY-MM or YYYY-MM-DD if visible on label, or null",
-  "purchaseDate": "YYYY-MM-DD or null",
-  "warranty": "warranty period e.g. '2 years', or null",
-  "price": "$XX.XX or null",
-  "condition": "new|like-new|good|fair|poor",
-  "category": "one of: appliance|vehicle|watch|whisky|wine|collectible|instrument|electronics|tool|other",
-  "customFields": {
-    // Include ONLY fields meaningful for this category. Omit or return {} for generic electronics/appliances.
-    // watch:       { "reference": "...", "movement": "...", "complication": "..." }
-    // whisky/wine: { "distillery": "...", "ageStatement": "...", "caskType": "...", "vintage": "..." }
-    // collectible: { "grade": "...", "gradingCompany": "PSA|BGS|CGC", "population": "...", "year": "..." }
-    // vehicle:     { "vin": "...", "trim": "...", "mileage": "..." }
-    // instrument:  { "year": "...", "finish": "...", "country": "..." }
-  },
-  "currentValue": current used-market value in USD as a number (REQUIRED — see rules below),
-  "originalPrice": original retail price as number or null,
-  "depreciationRate": depreciation as decimal 0.0-1.0 or null,
-  "marketTrend": "up|down|stable",
-  "confidence": overall extraction confidence 0.0-1.0,
-  "docs": [
-    { "type": "ownerManual", "label": "Owner Manual", "searchQuery": "Brand Model owner manual PDF site:brand.com" }
-  ]
-}
-MANUFACTURE DATE RULES:
-1. First look for explicit label text: "MFG DATE", "DATE MFG", "DOM", "MFD", "MFG.", "FABR", "PROD DATE", "DATE CODE", "MANUF", "DATE OF MFG", "MANUFACTURED".
-2. If not found as label text, examine the serialNumber you extracted. Many manufacturers encode the manufacture date in their serial format — use your training knowledge of brand-specific serial encodings to decode it (e.g. Samsung appliances encode year in position 5 as a letter, LG in position 2, Whirlpool in positions 3-4, etc.).
-3. If you decode a date from the serial, return it as "YYYY-MM (from serial)" so the user knows it was inferred.
-4. If genuinely not determinable: return null. Do not guess.
-${VALUATION_RULES}
-${DOCS_PROMPT}`
+${WH_DOCS_INSTRUCTIONS}`
 
 // ── JSON extraction ───────────────────────────────────────────────────────────
 // Finds the outermost {...} block by counting brackets — handles nested objects.
@@ -181,17 +147,16 @@ async function callGrok(
   categoryHint: string | null,
 ): Promise<Response> {
   const isTwoShot = Boolean(shot2Base64)
-  const systemPrompt = isTwoShot ? TWO_SHOT_SYSTEM : SINGLE_SHOT_SYSTEM
 
   const userContent: any[] = isTwoShot
     ? [
-        { type: 'text', text: `Shot 1 — overview. Look at SHAPE and FORM only, ignore text. Category hint: ${categoryHint || 'unknown'}. What object is this?` },
+        { type: 'text', text: 'Shot 1 — wide overview of the water heater unit. Use to identify brand, tank size, and fuel type from the unit appearance.' },
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot1Base64}`, detail: 'high' } },
-        { type: 'text', text: 'Shot 2 — close-up of serial/model label. Read ONLY the characters and numbers. Extract serial, model, warranty, purchase date from this label.' },
+        { type: 'text', text: 'Shot 2 — close-up of the data plate / serial label. Read every character precisely: serial number, model number, manufacture date, warranty info, BTU/wattage, tank capacity.' },
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot2Base64}`, detail: 'high' } },
       ]
     : [
-        { type: 'text', text: 'Extract all warranty and product data from this image.' },
+        { type: 'text', text: 'Analyze this water heater image. Extract all data from the data plate label — serial number, model, brand, manufacture date, warranty, tank size.' },
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot1Base64}`, detail: 'high' } },
       ]
 
@@ -201,7 +166,7 @@ async function callGrok(
     body: JSON.stringify({
       model: 'grok-4.20-beta',
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: WH_SYSTEM },
         { role: 'user', content: userContent },
       ],
       max_tokens: 2000,
@@ -239,36 +204,6 @@ export const onRequest = async (context: any) => {
         JSON.stringify({ error: 'API key not configured', message: 'GROK_API_KEY is not set in Cloudflare Pages environment variables.' }),
         { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
-    }
-
-    // ── Identify mode — lightweight category detection for Shot 1 guide screen ──
-    // Cheap: 100 tokens max. SHAPE ONLY — ignore all text (screens, labels, papers).
-    if (mode === 'identify') {
-      const identifySystem = `Look ONLY at the physical shape, form, and silhouette of the object. IGNORE all text, labels, screens, papers, documents, and on-screen content. Identify what TYPE of product this is by its physical appearance.
-Return ONLY valid JSON with exactly these fields:
-{"category":"appliance|vehicle|watch|electronics|instrument|whisky|wine|collectible|tool|other","brand":"brand name or null","product":"2-3 word description"}
-No markdown. No other fields.`
-      const res = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'grok-4.20-beta',
-          messages: [
-            { role: 'system', content: identifySystem },
-            { role: 'user', content: [
-              { type: 'text', text: 'Identify by shape and form only — ignore any text. What physical object is this?' },
-              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot1}`, detail: 'low' } },
-            ]},
-          ],
-          max_tokens: 100,
-          temperature: 0.1,
-        }),
-      })
-      if (!res.ok) return new Response('{}', { headers: { 'Content-Type': 'application/json', ...corsHeaders } })
-      const d = await res.json()
-      const content = d.choices?.[0]?.message?.content || '{}'
-      const raw = extractOutermostJson(content)
-      return new Response(raw || '{}', { headers: { 'Content-Type': 'application/json', ...corsHeaders } })
     }
 
     // ── Step 1: Call Grok ──
@@ -319,7 +254,7 @@ No markdown. No other fields.`
       )
     }
 
-    if (parsed.error) {
+    if (parsed.error === 'not_a_water_heater' || parsed.error) {
       return new Response(JSON.stringify(parsed), { headers: { 'Content-Type': 'application/json', ...corsHeaders } })
     }
 

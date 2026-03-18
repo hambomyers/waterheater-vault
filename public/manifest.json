@@ -1,7 +1,7 @@
 {
-  "name": "WarrantyFile",
-  "short_name": "WF",
-  "description": "Premium minimalist digital warranty & product file vault",
+  "name": "WaterHeaterVault",
+  "short_name": "WaterHeaterVault",
+  "description": "Scan your water heater. Know its exact age, warranty, recall status, and replacement cost — before it fails.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

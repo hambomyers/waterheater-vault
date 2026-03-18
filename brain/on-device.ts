@@ -9,25 +9,17 @@ function toNum(val: unknown): number {
 }
 
 export interface ExtractedData {
-  // ── Core fields (universal — apply to every category) ──────────────────────
   product: string
   brand: string
   model: string
-  serialNumber?: string
-  manufactureDate?: string
-  purchaseDate?: string
-  warranty?: string
-  price?: string
-  condition?: string
-  // ── Category intelligence ───────────────────────────────────────────────────
-  // e.g. "appliance" | "watch" | "whisky" | "vehicle" | "collectible" | "instrument"
-  category?: string
-  // Category-specific fields Grok populates dynamically.
-  // Examples: watch → { reference, movement, complication }
-  //           whisky → { distillery, ageStatement, caskType, batchNumber }
-  //           collectible → { grade, population, year, publisher }
-  //           vehicle → { vin, mileage, trim }
-  customFields?: Record<string, string | number | null>
+  serialNumber: string
+  manufactureDate: string
+  tankSizeGallons?: number
+  fuelType: 'gas' | 'electric' | 'tankless' | 'unknown'
+  ageYears: number
+  remainingLifeYears: number
+  estimatedReplacementCost: number
+  currentWarranty: string
 }
 
 interface GrokDocItem {
@@ -99,25 +91,24 @@ export async function extractFromImage(imageData: Blob): Promise<GrokScanResult>
 
   return {
     extractedData: {
-      product: data.product || 'Unknown Product',
+      product: data.product || 'Water Heater',
       brand: data.brand || 'Unknown',
       model: data.model || 'Unknown',
-      serialNumber: data.serialNumber || undefined,
-      manufactureDate: data.manufactureDate || undefined,
-      purchaseDate: data.purchaseDate || undefined,
-      warranty: data.warranty || undefined,
-      price: data.price || undefined,
-      condition: data.condition || undefined,
-      category: data.category || undefined,
-      customFields: (data.customFields && typeof data.customFields === 'object')
-        ? data.customFields : undefined,
+      serialNumber: data.serialNumber || '',
+      manufactureDate: data.manufactureDate || '',
+      tankSizeGallons: data.tankSizeGallons ? toNum(data.tankSizeGallons) : undefined,
+      fuelType: data.fuelType || 'unknown',
+      ageYears: toNum(data.ageYears),
+      remainingLifeYears: toNum(data.remainingLifeYears),
+      estimatedReplacementCost: toNum(data.estimatedReplacementCost),
+      currentWarranty: data.currentWarranty || data.warranty || '',
     },
     valuation: {
-      currentValue: toNum(data.currentValue),
-      originalPrice: toNum(data.originalPrice),
+      currentValue: toNum(data.estimatedReplacementCost),
+      originalPrice: toNum(data.estimatedReplacementCost),
       depreciationRate: toNum(data.depreciationRate),
-      marketTrend: data.marketTrend || 'stable',
-      confidence: toNum(data.confidence) || 0.5,
+      marketTrend: 'stable' as const,
+      confidence: toNum(data.confidence) || 0.7,
     },
     docs: Array.isArray(data.docs) ? data.docs : [],
   }
@@ -165,25 +156,24 @@ export async function extractFromTwoShots(
 
   return {
     extractedData: {
-      product: data.product || 'Unknown Product',
+      product: data.product || 'Water Heater',
       brand: data.brand || 'Unknown',
       model: data.model || 'Unknown',
-      serialNumber: data.serialNumber || undefined,
-      manufactureDate: data.manufactureDate || undefined,
-      purchaseDate: data.purchaseDate || undefined,
-      warranty: data.warranty || undefined,
-      price: data.price || undefined,
-      condition: data.condition || undefined,
-      category: data.category || undefined,
-      customFields: (data.customFields && typeof data.customFields === 'object')
-        ? data.customFields : undefined,
+      serialNumber: data.serialNumber || '',
+      manufactureDate: data.manufactureDate || '',
+      tankSizeGallons: data.tankSizeGallons ? toNum(data.tankSizeGallons) : undefined,
+      fuelType: data.fuelType || 'unknown',
+      ageYears: toNum(data.ageYears),
+      remainingLifeYears: toNum(data.remainingLifeYears),
+      estimatedReplacementCost: toNum(data.estimatedReplacementCost),
+      currentWarranty: data.currentWarranty || data.warranty || '',
     },
     valuation: {
-      currentValue: toNum(data.currentValue),
-      originalPrice: toNum(data.originalPrice),
+      currentValue: toNum(data.estimatedReplacementCost),
+      originalPrice: toNum(data.estimatedReplacementCost),
       depreciationRate: toNum(data.depreciationRate),
-      marketTrend: data.marketTrend || 'stable',
-      confidence: toNum(data.confidence) || 0.5,
+      marketTrend: 'stable' as const,
+      confidence: toNum(data.confidence) || 0.7,
     },
     docs: Array.isArray(data.docs) ? data.docs : [],
   }

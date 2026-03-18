@@ -21,7 +21,7 @@ export default function Logo({ size = 48, className = '' }: LogoProps) {
       viewBox="0 0 100 100"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      aria-label="WarrantyFile"
+      aria-label="WaterHeaterVault"
       role="img"
     >
       <text
@@ -35,7 +35,7 @@ export default function Logo({ size = 48, className = '' }: LogoProps) {
         fill="#ffffff"
         letterSpacing="-0.02em"
       >
-        WF
+        WH
       </text>
       <line
         x1="12"

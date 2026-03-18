@@ -16,7 +16,7 @@ export default function TopNav() {
       <Link href="/" className="flex items-center gap-3 group">
         <Logo size={28} />
         <span className="text-white text-sm font-medium tracking-[0.18em] group-hover:text-white group-hover:text-opacity-70 transition-colors duration-200">
-          WarrantyFile
+          WaterHeaterVault
         </span>
       </Link>
 

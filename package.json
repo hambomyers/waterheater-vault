@@ -1,7 +1,8 @@
 {
-  "name": "warrantyfile",
+  "name": "waterheater-vault",
   "version": "1.0.0",
   "private": true,
+  "description": "Scan your water heater. Know its exact age, warranty, recall status, and replacement cost — before it fails.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

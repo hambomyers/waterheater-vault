@@ -1,4 +1,4 @@
-# WarrantyFile — Dev Notes
+# WaterHeaterVault — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 
 ---
@@ -461,3 +461,53 @@ Insurance B2B strategy. Guardian tier. CPSC recall hook. Acquisition path. Prior
 - `serialDecoder` doc type: Grok adds this for water heaters/HVAC/furnaces so Brave finds the right decoder page
 - Manufacture date prompt: 2-step logic (explicit label first → serial decode fallback → null if uncertain)
 - DEV-NOTES: full rewrite — core architectural pattern documented ("AI understands → Brave verifies"), serial decoder pattern, near-term pipeline merge opportunity, file tree updated
+
+### 2026-03-18 — WaterHeaterVault Fork (Sessions 5–6)
+**PROJECT RENAMED: WarrantyFile → WaterHeaterVault**
+
+#### Branding
+- `package.json`: name → `waterheater-vault`, description updated
+- `app/layout.tsx`: metadata title/description → WaterHeaterVault + new tagline
+- `app/components/Logo.tsx`: SVG text "WF" → "WH", aria-label updated
+- `app/page.tsx`: all homepage text rewritten for WaterHeaterVault, new tagline, new scan button text
+- `app/components/TopNav.tsx`: brand name → WaterHeaterVault
+- `public/manifest.json`: name/short_name/description → WaterHeaterVault
+- `vault/private.ts`: IndexedDB name `warrantyfile-vault` → `waterheater-vault`
+- `DEV-NOTES.md`: title updated
+
+#### Hard-Lock to Water Heaters
+- `lib/categoryMap.ts`: **deleted** — no multi-category logic exists anymore
+- `app/scan/page.tsx`: removed `categoryInfo` state + `getCategoryInfo` call + Grok identify mode; hard-coded water heater data plate guidance throughout; `processTwoShots` hint hardcoded to `'water heater'`
+
+#### ExtractedData Interface (water-heater-only)
+Old generic interface replaced in `brain/on-device.ts`:
+```ts
+interface ExtractedData {
+  product, brand, model, serialNumber, manufactureDate,
+  tankSizeGallons?, fuelType, ageYears, remainingLifeYears,
+  estimatedReplacementCost, currentWarranty
+}
+```
+- `brain/router.ts`: `onDeviceToExtractedData()` updated to map to new fields
+- `app/vault/item/page.tsx`: FIELDS array replaced with water-heater fields
+
+#### Grok Prompt — Water Heater Expert
+`functions/api/grok-scan.ts` — all generic prompts replaced with:
+- `WH_SERIAL_DECODERS`: brand-specific serial → manufacture date decode rules (Rheem, Bradford White, AO Smith, Navien, Rinnai, GE, etc.)
+- `WH_LIFESPAN_RULES`: gas/electric/tankless/heat pump expected lifespans + installed replacement cost ranges
+- `WH_WARRANTY_GUIDE`: common warranty periods by brand
+- `WH_DOCS_INSTRUCTIONS`: always returns 4 docs — serialDecoder, ownerManual, warrantyTerms, recallCheck
+- Identify mode removed (no longer needed — always water heater)
+
+#### New UI Components
+- `RemainingLifeGauge`: color-coded progress bar (green/amber/red), age + remaining years display — added to `results/page.tsx` and `vault/item/page.tsx`
+- `PriceSurpriseCalculator`: replacement cost + emergency premium (+30%) + monthly savings suggestion — added to `vault/item/page.tsx`
+
+#### Lead-Gen CTAs (waterheaterplan.com)
+Added to both `results/page.tsx` and `vault/item/page.tsx` (mobile + desktop):
+- "Book Professional Service Now →" → `https://waterheaterplan.com/book`
+- "Get Protection Plan →" → `https://waterheaterplan.com/protection`
+
+#### Recall Logic
+- `lib/recallChecker.ts`: already CPSC-only — no changes needed
+- `functions/api/recall-check.ts`: already CPSC-only — no changes needed

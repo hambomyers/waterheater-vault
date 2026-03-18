@@ -7,8 +7,8 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: 'WarrantyFile',
-  description: 'Warranties, manuals, pics.',
+  title: 'WaterHeaterVault',
+  description: 'Scan your water heater. Know its exact age, warranty, recall status, and replacement cost — before it fails.',
   manifest: '/manifest.json',
   icons: {
     icon: [

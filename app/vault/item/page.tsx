@@ -12,34 +12,84 @@ interface FieldDef {
   label: string
   type: 'text' | 'date' | 'textarea'
   editable: boolean
-  path: 'extractedData' | 'valuation' | 'root'
+  path: 'extractedData' | 'root'
   alwaysShow?: boolean  // show even when empty — signals "app looked, didn't find"
 }
 
 const FIELDS: FieldDef[] = [
-  { key: 'product',         label: 'Product',          type: 'text',     editable: true,  path: 'extractedData' },
-  { key: 'brand',           label: 'Brand',            type: 'text',     editable: true,  path: 'extractedData' },
-  { key: 'model',           label: 'Model',            type: 'text',     editable: true,  path: 'extractedData' },
-  { key: 'serialNumber',    label: 'Serial Number',    type: 'text',     editable: true,  path: 'extractedData' },
-  { key: 'manufactureDate', label: 'Manufacture Date', type: 'text',     editable: true,  path: 'extractedData', alwaysShow: true },
-  { key: 'purchaseDate',    label: 'Purchase Date',    type: 'date',     editable: true,  path: 'extractedData' },
-  { key: 'warranty',        label: 'Warranty',         type: 'text',     editable: true,  path: 'extractedData' },
-  { key: 'price',           label: 'Price Paid',       type: 'text',     editable: true,  path: 'extractedData' },
-  { key: 'condition',       label: 'Condition',        type: 'text',     editable: true,  path: 'extractedData' },
-  { key: 'currentValue',    label: 'Est. Value',       type: 'text',     editable: false, path: 'valuation' },
-  { key: 'notes',           label: 'Notes',            type: 'textarea', editable: true,  path: 'root' },
+  { key: 'brand',                    label: 'Brand',               type: 'text',     editable: true,  path: 'extractedData' },
+  { key: 'model',                    label: 'Model',               type: 'text',     editable: true,  path: 'extractedData' },
+  { key: 'serialNumber',             label: 'Serial Number',       type: 'text',     editable: true,  path: 'extractedData', alwaysShow: true },
+  { key: 'manufactureDate',          label: 'Manufacture Date',    type: 'text',     editable: true,  path: 'extractedData', alwaysShow: true },
+  { key: 'fuelType',                 label: 'Fuel Type',           type: 'text',     editable: true,  path: 'extractedData' },
+  { key: 'tankSizeGallons',          label: 'Tank Size (gal)',     type: 'text',     editable: true,  path: 'extractedData' },
+  { key: 'currentWarranty',          label: 'Warranty',            type: 'text',     editable: true,  path: 'extractedData', alwaysShow: true },
+  { key: 'estimatedReplacementCost', label: 'Replacement Cost',    type: 'text',     editable: false, path: 'extractedData' },
+  { key: 'notes',                    label: 'Notes',               type: 'textarea', editable: true,  path: 'root' },
 ]
 
 function getValue(item: VaultItem, field: FieldDef): string {
   if (field.path === 'extractedData') {
-    return (item.extractedData as any)[field.key] ?? ''
-  }
-  if (field.path === 'valuation') {
-    const v = (item.valuation as any)?.[field.key]
-    if (field.key === 'currentValue' && v != null) return `$${Number(v).toFixed(2)}`
+    const v = (item.extractedData as any)[field.key]
+    if (field.key === 'estimatedReplacementCost' && v != null) return `$${Number(v).toLocaleString()} installed`
     return v ?? ''
   }
   return (item as any)[field.key] ?? ''
+}
+
+// ── Remaining Life Gauge ─────────────────────────────────────────────────────
+
+function RemainingLifeGauge({ remainingLifeYears, ageYears }: { remainingLifeYears: number; ageYears: number }) {
+  const totalLife = ageYears + remainingLifeYears
+  const pct = totalLife > 0 ? Math.max(0, Math.min(100, (remainingLifeYears / totalLife) * 100)) : 0
+  const color = remainingLifeYears < 2 ? '#ef4444' : remainingLifeYears < 5 ? '#f59e0b' : '#22c55e'
+  const label = remainingLifeYears < 2 ? 'Critical — plan replacement now' : remainingLifeYears < 5 ? 'Aging — schedule inspection' : 'Healthy'
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-white text-opacity-60 text-sm font-light">Estimated remaining life</span>
+        <span className="font-medium text-sm" style={{ color }}>{remainingLifeYears} yr · {label}</span>
+      </div>
+      <div className="h-2 rounded-full bg-white bg-opacity-10 overflow-hidden">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: color }} />
+      </div>
+      <div className="flex justify-between text-white text-opacity-25 text-xs font-light">
+        <span>Age: {ageYears} yr</span>
+        <span>Remaining: ~{remainingLifeYears} yr</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Price Surprise Calculator ─────────────────────────────────────────────────
+
+function PriceSurpriseCalculator({ replacementCost, remainingYears }: { replacementCost: number; remainingYears: number }) {
+  const emergencyPremium = Math.round(replacementCost * 0.3)
+  const monthlySavings = replacementCost > 0 ? Math.round(replacementCost / Math.max(remainingYears * 12, 1)) : 0
+  const urgency = remainingYears < 2 ? 'high' : remainingYears < 5 ? 'medium' : 'low'
+  return (
+    <div className="space-y-3">
+      <div className="text-white text-opacity-40 text-xs font-light uppercase tracking-widest mb-1">Price Surprise Calculator</div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white bg-opacity-5 rounded-xl p-4">
+          <div className="text-white text-opacity-40 text-xs font-light mb-1">Estimated replacement</div>
+          <div className="text-blue-accent font-semibold text-xl">${replacementCost.toLocaleString()}</div>
+          <div className="text-white text-opacity-30 text-xs font-light">installed cost</div>
+        </div>
+        <div className="bg-white bg-opacity-5 rounded-xl p-4">
+          <div className="text-white text-opacity-40 text-xs font-light mb-1">Emergency premium</div>
+          <div className="text-amber-400 font-semibold text-xl">+${emergencyPremium.toLocaleString()}</div>
+          <div className="text-white text-opacity-30 text-xs font-light">if it fails overnight</div>
+        </div>
+      </div>
+      {urgency !== 'low' && monthlySavings > 0 && (
+        <div className="bg-white bg-opacity-5 rounded-xl p-4 flex items-center justify-between">
+          <span className="text-white text-opacity-60 text-sm font-light">Start saving now</span>
+          <span className="text-white font-medium">${monthlySavings}/mo</span>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ── Main component (needs Suspense for useSearchParams) ────────────────────
@@ -293,27 +343,35 @@ function VaultItemContent() {
             })}
           </div>
 
-          {/* Category-specific custom fields — rendered dynamically */}
-          {(() => {
-            const cf = item.extractedData.customFields
-            const entries = cf ? Object.entries(cf).filter(([, v]) => v != null && v !== '') : []
-            if (entries.length === 0 && !editMode) return null
-            return (
-              <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 overflow-hidden divide-y divide-white divide-opacity-5">
-                <div className="px-5 py-3 text-white text-opacity-30 text-xs font-light uppercase tracking-widest">
-                  {item.extractedData.category ? `${item.extractedData.category} details` : 'Details'}
-                </div>
-                {entries.map(([key, value]) => (
-                  <div key={key} className="px-5 py-4">
-                    <div className="text-white text-opacity-40 text-xs font-light uppercase tracking-wider mb-1">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </div>
-                    <div className="text-white text-sm font-light">{String(value)}</div>
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
+          {/* Remaining Life Gauge */}
+          <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5">
+            <RemainingLifeGauge
+              remainingLifeYears={item.extractedData.remainingLifeYears}
+              ageYears={item.extractedData.ageYears}
+            />
+          </div>
+
+          {/* Price Surprise Calculator */}
+          {item.extractedData.estimatedReplacementCost > 0 && (
+            <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5">
+              <PriceSurpriseCalculator
+                replacementCost={item.extractedData.estimatedReplacementCost}
+                remainingYears={item.extractedData.remainingLifeYears}
+              />
+            </div>
+          )}
+
+          {/* Lead-Gen CTAs */}
+          <div className="space-y-3">
+            <a href="https://waterheaterplan.com/book" target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center w-full py-4 px-8 bg-blue-accent text-white rounded-full font-medium text-base active:scale-[0.97] transition-all">
+              Book Professional Service Now →
+            </a>
+            <a href="https://waterheaterplan.com/protection" target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center w-full py-4 px-8 bg-transparent border-2 border-blue-accent text-white rounded-full font-medium text-base active:scale-[0.97] transition-all">
+              Get Protection Plan →
+            </a>
+          </div>
 
           {/* Docs & Links */}
           <MobileDocsSection
@@ -515,27 +573,35 @@ function VaultItemContent() {
             </div>
           </div>
 
-          {/* Category-specific custom fields — desktop */}
-          {(() => {
-            const cf = item.extractedData.customFields
-            const entries = cf ? Object.entries(cf).filter(([, v]) => v != null && v !== '') : []
-            if (entries.length === 0) return null
-            return (
-              <div className="rounded-2xl border border-white border-opacity-8 overflow-hidden divide-y divide-white divide-opacity-5 mb-6">
-                <div className="px-6 py-3 text-white text-opacity-30 text-xs font-light uppercase tracking-widest">
-                  {item.extractedData.category ? `${item.extractedData.category} details` : 'Details'}
-                </div>
-                {entries.map(([key, value]) => (
-                  <div key={key} className="grid grid-cols-3 gap-4 px-6 py-4 items-center">
-                    <div className="text-white text-opacity-35 text-sm font-light">
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </div>
-                    <div className="col-span-2 text-white text-sm font-light">{String(value)}</div>
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
+          {/* Remaining Life Gauge — desktop */}
+          <div className="rounded-2xl border border-white border-opacity-8 p-6 mb-5">
+            <RemainingLifeGauge
+              remainingLifeYears={item.extractedData.remainingLifeYears}
+              ageYears={item.extractedData.ageYears}
+            />
+          </div>
+
+          {/* Price Surprise Calculator — desktop */}
+          {item.extractedData.estimatedReplacementCost > 0 && (
+            <div className="rounded-2xl border border-white border-opacity-8 p-6 mb-5">
+              <PriceSurpriseCalculator
+                replacementCost={item.extractedData.estimatedReplacementCost}
+                remainingYears={item.extractedData.remainingLifeYears}
+              />
+            </div>
+          )}
+
+          {/* Lead-Gen CTAs — desktop */}
+          <div className="flex gap-4 mb-6">
+            <a href="https://waterheaterplan.com/book" target="_blank" rel="noopener noreferrer"
+              className="flex-1 py-3.5 rounded-full bg-blue-accent text-white text-sm font-medium text-center hover:bg-opacity-90 transition-colors duration-200">
+              Book Professional Service Now →
+            </a>
+            <a href="https://waterheaterplan.com/protection" target="_blank" rel="noopener noreferrer"
+              className="flex-1 py-3.5 rounded-full border border-blue-accent text-white text-sm font-medium text-center hover:bg-blue-accent hover:bg-opacity-10 transition-all duration-200">
+              Get Protection Plan →
+            </a>
+          </div>
 
           {/* Docs — full width below */}
           <DesktopDocsSection

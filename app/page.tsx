@@ -42,10 +42,10 @@ export default function HomePage() {
           <div className="flex flex-col items-center space-y-3">
             <Logo size={64} />
             <span className="text-white text-base font-medium tracking-[0.18em] select-none">
-              WarrantyFile
+              WaterHeaterVault
             </span>
             <span className="text-white text-opacity-35 text-sm font-light">
-              Warranties, manuals, pics.
+              Know your water heater's age, warranty & recall status.
             </span>
           </div>
 
@@ -54,7 +54,7 @@ export default function HomePage() {
             href="/scan"
             className="w-full max-w-xs py-5 px-10 bg-transparent border-2 border-blue-accent text-white rounded-full text-center font-medium text-lg transition-all duration-500 hover:bg-blue-accent hover:bg-opacity-8 hover:border-opacity-80 active:scale-95 focus:outline-none"
           >
-            Snap a photo
+            Scan Water Heater
           </Link>
 
           {/* Vault */}
@@ -72,14 +72,14 @@ export default function HomePage() {
         <div className="flex flex-col items-center text-center gap-9">
           <Logo size={72} />
           <div className="space-y-2">
-            <div className="text-white text-2xl font-light tracking-[0.1em]">WarrantyFile</div>
-            <div className="text-white text-opacity-35 text-base font-light">Warranties, manuals, pics.</div>
+            <div className="text-white text-2xl font-light tracking-[0.1em]">WaterHeaterVault</div>
+            <div className="text-white text-opacity-35 text-base font-light">Know your water heater's age, warranty &amp; recall status.</div>
           </div>
           <Link
             href="/scan"
             className="px-10 py-3 rounded-full border border-blue-accent text-white text-sm font-medium hover:bg-blue-accent hover:bg-opacity-10 transition-all duration-200 focus:outline-none"
           >
-            Start scanning
+            Scan Water Heater
           </Link>
           <Link
             href="/vault"

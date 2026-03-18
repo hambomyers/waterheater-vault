@@ -88,7 +88,7 @@ interface SyncOperation {
 }
 
 class PrivateVault {
-  private dbName = 'warrantyfile-vault'
+  private dbName = 'waterheater-vault'
   private dbVersion = 2
   private db?: IDBDatabase
   private syncListenerBound = false
