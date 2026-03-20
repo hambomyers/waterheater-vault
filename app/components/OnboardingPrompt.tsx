@@ -42,11 +42,11 @@ export default function OnboardingPrompt({ onDone }: OnboardingPromptProps) {
       <div className="w-full max-w-md rounded-3xl border border-white border-opacity-10 bg-white bg-opacity-[0.03] p-6 md:p-8">
         <div className="flex flex-col items-center text-center gap-4">
           <Logo size={64} />
-          <h1 className="text-white text-2xl font-light tracking-wide">WarrantyFile</h1>
+          <h1 className="text-white text-2xl font-light tracking-wide">WaterHeaterVault</h1>
           <p className="text-white text-opacity-70 font-light leading-relaxed">
-            Keep warranties, manuals, and receipts in one private vault.
+            Know your water heater's age, warranty &amp; recall status.
             <br />
-            Sign in once to sync across all your devices.
+            Keep your records private and on-device.
           </p>
         </div>
 

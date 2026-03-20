@@ -1,36 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Logo from './components/Logo'
-import OnboardingPrompt from './components/OnboardingPrompt'
-import { bootstrapAuthAndSync, hasSeenOnboarding, isLocalOnlyMode, setCloudSyncMode } from '../lib/auth'
 
 export default function HomePage() {
-  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    const url = new URL(window.location.href)
-    if (url.searchParams.get('auth') === 'success') {
-      if (!isLocalOnlyMode()) {
-        setCloudSyncMode()
-      }
-      url.searchParams.delete('auth')
-      window.history.replaceState({}, '', url.toString())
-    }
-
-    setShowOnboarding(!hasSeenOnboarding())
-    bootstrapAuthAndSync()
-  }, [])
-
-  if (showOnboarding) {
-    return <OnboardingPrompt onDone={() => setShowOnboarding(false)} />
-  }
-
-  if (showOnboarding === null) {
-    return <div className="min-h-screen bg-black" />
-  }
-
   return (
     <div className="min-h-screen bg-black">
 
