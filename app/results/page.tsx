@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ProcessingResult } from '../../brain/router'
 import { privateVault, normalizeDocs } from '../../vault/private'
+import { ExtractedData } from '../../brain/on-device'
 
 function RemainingLifeGauge({ remainingLifeYears, ageYears }: { remainingLifeYears: number; ageYears: number }) {
   const totalLife = ageYears + remainingLifeYears
@@ -23,6 +24,74 @@ function RemainingLifeGauge({ remainingLifeYears, ageYears }: { remainingLifeYea
         <span>Age: {ageYears} yr</span>
         <span>Remaining: {remainingLifeYears} yr</span>
       </div>
+    </div>
+  )
+}
+
+function EmailCapture({ extractedData }: { extractedData: ExtractedData }) {
+  const [email, setEmail] = useState('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!email.trim()) return
+    setStatus('loading')
+    try {
+      const res = await fetch('/api/capture-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          brand: extractedData.brand,
+          model: extractedData.model,
+          serialNumber: extractedData.serialNumber,
+          manufactureDate: extractedData.manufactureDate,
+          ageYears: extractedData.ageYears,
+          fuelType: extractedData.fuelType,
+          estimatedReplacementCost: extractedData.estimatedReplacementCost,
+          remainingLifeYears: extractedData.remainingLifeYears,
+        }),
+      })
+      if (!res.ok) throw new Error('Failed')
+      setStatus('done')
+    } catch {
+      setStatus('error')
+      setErrorMsg('Could not send — please try again.')
+    }
+  }
+
+  if (status === 'done') {
+    return (
+      <div className="rounded-2xl border border-green-500 border-opacity-30 bg-green-500 bg-opacity-10 p-5 text-center">
+        <div className="text-green-400 font-medium mb-1">✓ Report sent to your inbox</div>
+        <div className="text-white text-opacity-50 text-sm font-light">We'll remind you before your heater fails.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 p-5">
+      <div className="text-white font-medium mb-1">📧 Email me this report</div>
+      <div className="text-white text-opacity-50 text-sm font-light mb-4">Free copy + a reminder before your heater fails.</div>
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="you@email.com"
+          required
+          className="flex-1 rounded-full border border-white border-opacity-20 bg-transparent px-4 py-2.5 text-white text-sm placeholder:text-white placeholder:text-opacity-30 focus:outline-none focus:border-blue-accent"
+        />
+        <button
+          type="submit"
+          disabled={status === 'loading'}
+          className="rounded-full bg-blue-accent px-5 py-2.5 text-white text-sm font-medium disabled:opacity-60 whitespace-nowrap"
+        >
+          {status === 'loading' ? '…' : 'Send →'}
+        </button>
+      </form>
+      {status === 'error' && <p className="mt-2 text-red-300 text-sm font-light">{errorMsg}</p>}
     </div>
   )
 }
@@ -174,6 +243,9 @@ export default function ResultsPage() {
             </a>
           </div>
 
+          {/* Email Capture */}
+          <EmailCapture extractedData={extractedData} />
+
           {/* Docs */}
           {docs.length > 0 && (
             <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 overflow-hidden divide-y divide-white divide-opacity-5">
@@ -276,6 +348,11 @@ export default function ResultsPage() {
               className="flex-1 py-3.5 rounded-full border border-blue-accent text-white text-sm font-medium text-center hover:bg-blue-accent hover:bg-opacity-10 transition-all duration-200">
               Get Protection Plan →
             </a>
+          </div>
+
+          {/* Email Capture */}
+          <div className="mb-6">
+            <EmailCapture extractedData={extractedData} />
           </div>
 
           {/* Docs */}
