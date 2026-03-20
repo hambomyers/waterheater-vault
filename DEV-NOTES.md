@@ -1,5 +1,7 @@
 # WaterHeaterVault — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
+*Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*
+*Last updated: 2026-03-20*
 
 ---
 
@@ -10,52 +12,67 @@
 
 ## What This Is
 
-WarrantyFile is a **premium minimalist product lifecycle vault**. Snap a photo of anything you own — it becomes a verified, editable record with AI-extracted specs, current market value, official documentation links, and active warranty/recall tracking.
+**WaterHeaterVault** is a free AI scanner that tells homeowners the exact age, warranty status, replacement cost, and recall status of their standard residential storage-tank water heater — in 60 seconds, from a photo.
 
-**Tagline:** *Warranties, manuals, pics.*
+**waterheaterplan.com** is the service business that converts those scans into $159–$319/year maintenance plan customers.
 
-**One-sentence pitch (consumer):** *"It's like a CarFax for everything you own — it tells you when your warranty expires, when your stuff needs service, and if anything gets recalled."*
+Together they form a **two-sided demand machine** that no local service competitor can replicate.
 
-**One-sentence pitch (insurer):** *"Your policyholders get a 5% discount for documenting their belongings — you get verified pre-loss inventory that deters fraud and cuts claim settlement from 90 days to 5."*
+**Tagline:** *Know your water heater's age, warranty & recall status.*
+
+**One-sentence pitch (consumer):** *"Point your phone at your water heater's data plate — we'll tell you how old it is, how much life it has left, what it'll cost to replace, and whether it's been recalled."*
+
+**One-sentence pitch (service business):** *"We are the Jiffy Lube for the one appliance that fails silently, costs $1,500 overnight, and that 90% of homeowners have never thought about — until water is on the floor."*
+
+**One-sentence pitch (franchise):** *"A turnkey AI-powered customer acquisition machine for water heater service companies. You do the service work. We supply the customers."*
 
 ---
 
-## Business Model
+## Business Model — Three Phases
 
-### Layer 1 — Consumer (current)
-| Tier | Price | What you get |
-|------|-------|-------------|
-| Free | $0 | Scan + file, up to 10 items |
-| Guardian | $4.99/mo or $39/yr | Unlimited items · warranty expiry alerts · CPSC recall matching · service reminders · claim export PDF |
+### Phase 1 — Local Service (NOW)
+The scanner generates high-intent leads. waterheaterplan.com converts them.
 
-**Why people pay:** Not for storage. For the notification they didn't know they needed — a warranty expiring, a recall on their kid's stroller, a service interval overdue.
+| Plan | Price | Notes |
+|------|-------|-------|
+| Basic | $159/yr | Annual inspection + flush. Valley discount. |
+| Advanced | $249/yr | Bi-annual + water quality test. Most popular. |
+| Elite | $319/yr | Advanced + Wi-Fi sensor + real-time alerts. |
 
-### Layer 2 — B2B Insurance (next phase)
-Insurers offer a 5% contents-coverage discount to policyholders who use WarrantyFile. The insurer's math:
+**Unit economics:**
+- CAC via app scan: ~$0 (organic intent)
+- Average plan: ~$220/yr
+- Gross margin: ~60%
+- 3-yr LTV: ~$660
+- LTV:CAC: 11:1
 
-```
-They give up:  $60/yr (5% of $1,200 avg premium)
-They save:     ~$1,400 in deterred fraud per claim
-               ~$320 in adjuster settlement costs
-Net benefit:   ~$700/policy/year
-```
+**Service area:** Waynesboro · Staunton · Harrisonburg · Charlottesville (expanding)
+**Partner:** Hamilton Plumbing handles service delivery
 
-Revenue structures:
-- **White-label:** Insurer brands app as theirs. We charge $2-4/policyholder/month.
-- **API verification:** Per-claim check — "was this item in the policyholder's vault pre-loss?" $5-15/call.
-- **Data licensing:** Aggregate anonymized replacement cost database sold to Verisk/CoreLogic. Worth $1-5M/yr at scale.
+### Phase 2 — B2B Vertical (MONTH 2–6)
+| Customer | Product | Price |
+|----------|---------|-------|
+| Home inspectors | Certified AI scan + branded PDF report | $49/mo unlimited |
+| Real estate agents | "Water Heater Report Card" per listing | $25/scan |
+| Property managers | Fleet scan + annual service contracts | Custom |
 
-### Layer 3 — Acquisition Exit
-Target: **$2-10M acquisition** by an InsurTech within 12-18 months.
+### Phase 3 — Franchise Kit (MONTH 6–12)
+License the entire system to water heater service companies in other markets.
+- White-labeled scanner app (their brand, their phone number, their booking URL)
+- Pre-built booking flow + email urgency sequences
+- Operational playbook ("here's exactly how we get a customer from scan to signed")
+- **Price: $299/mo per territory**
+- **50 licensees = $15K MRR without touching a single water heater**
 
-| Milestone | Price range unlocked |
-|-----------|---------------------|
-| 10k active users + recall alerts live | $1-3M |
-| 25k users + Guardian MRR + press story | $3-5M |
-| B2B pilot or MOU with one insurer | $5-10M |
-| 50k users + signed B2B contract | $10-20M |
+### The Data Moat (LONG TERM)
+Every scan creates: `{brand, model, serial, age, fuelType, zip, manufactureDate}`.
+This database does not exist anywhere — not at manufacturers, not at utilities, not at insurers.
 
-**Most likely acquirers:** Lemonade, Hippo, Encircle, Verisk, Branch.
+**Strategic value:**
+- Dominion Energy: age map of every water heater in their service area → rebate targeting
+- Home warranty cos (AHS, etc.): pre-policy risk assessment
+- Real estate platforms: listing disclosure tool
+- Manufacturers (Rheem, Bradford White): warranty planning + replacement timing
 
 ---
 
@@ -79,16 +96,160 @@ Target: **$2-10M acquisition** by an InsurTech within 12-18 months.
 
 ---
 
-## Core Architectural Pattern
+## Core Principle
 
 **"AI understands → Brave verifies."**
+Grok never hallucinates a URL. It generates search queries. Brave finds the live page.
+This extends to every reference: serial decoders, warranty terms, manuals, recall pages.
 
-This is the fundamental design principle of the enrichment pipeline:
-- **Grok** understands what the product is, what the label says, what it's worth, and what documentation exists
-- **Brave Search** finds live, verified URLs for everything Grok identifies — docs, serial decoders, support pages
+---
 
-Grok never hallucinates a URL. It only generates search queries. Brave finds the actual current page.
-This pattern extends to every type of reference data: manuals, warranty terms, serial date decoders, support pages.
+## Full System Architecture
+
+```
+╔══════════════════════════════════════════════════════════════════════╗
+║                    THE WATERHEATERPLAN ECOSYSTEM                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────┐
+│  LAYER 1 — DEMAND CAPTURE                                            │
+│  scan.waterheaterplan.com  (WaterHeaterVault PWA)                   │
+│                                                                      │
+│  [Camera] ──▶ [Two-Shot Scan] ──▶ [Grok Vision AI]                 │
+│                                         │                            │
+│                    ┌────────────────────┤                            │
+│                    ▼                    ▼                            │
+│             [Serial Decoder]    [Brave Search]                       │
+│             (brand-specific     (live docs, recall                   │
+│              mfg date rules)     pages, manuals)                     │
+│                    │                    │                            │
+│                    └────────┬───────────┘                            │
+│                             ▼                                        │
+│              ┌──────────────────────────────┐                       │
+│              │  /results                    │                       │
+│              │  Brand · Model · Age         │                       │
+│              │  Remaining Life Gauge        │                       │
+│              │  Price Surprise Calculator   │                       │
+│              │  CPSC Recall Status          │                       │
+│              │  📧 Email capture → CRM      │  ← THE MISSING PIECE  │
+│              └──────────┬───────────────────┘                       │
+│                         │                                            │
+│              ┌──────────▼───────────────────┐                       │
+│              │  "Book Now" CTA              │                       │
+│              │  waterheaterplan.com/book    │                       │
+│              │  ?brand=Rheem&age=9          │                       │
+│              │  &fuel=gas&cost=1800         │                       │
+│              │  &remaining=2               │                       │
+│              └──────────────────────────────┘                       │
+└──────────────────────────────┬───────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  LAYER 2 — SERVICE CONVERSION                                        │
+│  waterheaterplan.com                                                 │
+│                                                                      │
+│  /book ──▶ personalized quote (scan data pre-filled)                │
+│  /protection ──▶ plan comparison with scan context                  │
+│  /pricing ──▶ Basic $159 · Advanced $249 · Elite $319               │
+│  /blog ──▶ SEO content engine (AI-generated, human-reviewed)        │
+│                                                                      │
+│  Lead captured: {email, brand, age, fuel, cost, remaining, zip}     │
+│  Stored: Cloudflare D1                                               │
+│  Triggered: Resend email drip sequence                               │
+└──────────────────────────────┬───────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  LAYER 3 — AI OPERATIONS TEAM  (The Unfair Advantage)               │
+│  Powered by: Claude API + n8n + Cloudflare Workers + Resend         │
+│                                                                      │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  AGENT 1: INTAKE                                            │    │
+│  │  Trigger: new lead form submission                          │    │
+│  │  Action: Claude reads lead data → scores urgency (1-10)    │    │
+│  │          → drafts personalized reply email                  │    │
+│  │          → flags Critical leads (remaining < 2 yrs)        │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  AGENT 2: SCHEDULER                                         │    │
+│  │  Trigger: lead replies "yes" or clicks confirm              │    │
+│  │  Action: reads available slots from Cal.com API             │    │
+│  │          → proposes 3 times → books on confirmation         │    │
+│  │          → sends reminder 24h before + day-of               │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  AGENT 3: NURTURE                                           │    │
+│  │  Trigger: lead scanned but did not book                     │    │
+│  │  Sequence:                                                  │    │
+│  │    Day 0:  "Here's your water heater report" (PDF)          │    │
+│  │    Day 3:  Urgency email (age-specific copy)                │    │
+│  │    Day 14: Social proof + seasonal angle                    │    │
+│  │    Year N: "Your heater just turned [age+1]" (anniversary)  │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  AGENT 4: CONTENT                                           │    │
+│  │  Trigger: weekly cron                                       │    │
+│  │  Action: Claude writes 1 SEO blog post                     │    │
+│  │          Topics: "how old is my [brand] water heater"       │    │
+│  │                  "water heater age [city VA]"               │    │
+│  │          → staged for human review → published on approval  │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  AGENT 5: BOOKKEEPER                                        │    │
+│  │  Trigger: daily                                             │    │
+│  │  Action: reads Stripe/payment events                        │    │
+│  │          → categorizes revenue by plan tier                 │    │
+│  │          → flags overdue renewals                           │    │
+│  │          → generates weekly P&L summary → emails owner      │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────────────────────┐    │
+│  │  AGENT 6: ANALYST                                           │    │
+│  │  Trigger: weekly Sunday                                     │    │
+│  │  Action: scans + leads + bookings + revenue data            │    │
+│  │          → Claude writes plain-English business report      │    │
+│  │          → highlights top opportunity for the week          │    │
+│  │          → emails owner: "Here's what happened + what next" │    │
+│  └─────────────────────────────────────────────────────────────┘    │
+└──────────────────────────────┬───────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  LAYER 4 — DATA MOAT  (The Long-Term Asset)                         │
+│  Cloudflare D1 (SQLite at the edge)                                 │
+│                                                                      │
+│  ┌──────────────┐  ┌───────────────┐  ┌──────────────────────────┐  │
+│  │    leads     │  │   customers   │  │    heater_registry       │  │
+│  │ ──────────── │  │ ──────────── │  │ ────────────────────── │  │
+│  │ email        │  │ plan_tier     │  │ brand · model · serial   │  │
+│  │ brand        │  │ amount        │  │ age · fuel · zip_code    │  │
+│  │ model        │  │ started_at    │  │ remaining_life           │  │
+│  │ age          │  │ renewed_at    │  │ scanned_at               │  │
+│  │ fuel         │  │ next_service  │  │ (anonymized — the asset) │  │
+│  │ cost         │  │ hamilton_tech │  │                          │  │
+│  │ remaining    │  │               │  │ Strategic buyers:        │  │
+│  │ zip          │  │               │  │ Dominion Energy          │  │
+│  │ scanned_at   │  │               │  │ AHS / Cinch warranty cos │  │
+│  └──────────────┘  └───────────────┘  │ Rheem / Bradford White   │  │
+│                                        │ Zillow / Redfin          │  │
+│                                        └──────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## AI Agent Tech Stack
+
+| Agent | Trigger | Brain | Delivery |
+|-------|---------|-------|----------|
+| Intake | Webhook (CF Worker) | Claude API | Resend email |
+| Scheduler | Reply webhook | Claude + Cal.com API | Resend + Cal invite |
+| Nurture | Resend sequence | Claude (template vars) | Resend drip |
+| Content | Weekly cron (CF Cron) | Claude API | Staged HTML → git PR |
+| Bookkeeper | Daily cron | Claude + Stripe events | Email digest |
+| Analyst | Sunday cron | Claude | Email report |
+
+**Orchestration:** n8n (self-hosted on a $6/mo VPS) or Make.com (hosted)
+**Cost:** ~$20–50/mo total to run all 6 agents at current scale
 
 ---
 
@@ -364,103 +525,85 @@ WARRANTYFILE/
 
 ## Build Queue
 
-### Sprint 1 — Acquisition-ready features
+### Sprint 1 — Close the Loop (DONE ✅)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 1 | **CPSC recall alerts** | ✅ Done | CF proxy + recallChecker + vault badges + item banner |
-| 2 | **Manufacture date + serial decoder** | ✅ Done | Grok prompts, on-device parse (MFG label), results + vault UI, serialDecoder doc type |
-| 3 | **Warranty expiry engine** | 🔲 Next | Parse warranty string → expiry date. Active/Expiring Soon/Expired badge. |
-| 4 | **Vault total value display** | 🔲 | Sum valuations. "Your belongings: $43,200." Shareable. |
-| 5 | **Immutable audit timestamp log** | 🔲 | Proves pre-loss to insurers. Simple field, high B2B value. |
-| 6 | **Claim export PDF** | 🔲 | One button. Photos, serials, values, dates. The insurer demo. |
+| 1 | CPSC recall alerts | ✅ | CF proxy + recallChecker + vault badges |
+| 2 | Serial decoder + manufacture date | ✅ | Grok brand-specific rules, Brave finds decoder page |
+| 3 | Water-heater-only hard lock | ✅ | categoryMap deleted, scan hard-coded |
+| 4 | Remaining Life Gauge | ✅ | Color-coded progress bar on results + vault item |
+| 5 | Price Surprise Calculator | ✅ | Replacement cost + emergency premium |
+| 6 | Lead-gen CTAs with URL params | ✅ | `waterheaterplan.com/book?brand=X&age=N...` |
+| 7 | book.html + protection.html | ✅ | Personalized quote, plan recommendation, form |
+| 8 | scan.waterheaterplan.com live | ✅ | Cloudflare Pages, custom domain wired |
+| 9 | Auth/onboarding removed | ✅ | No friction. Straight to scan. |
 
-### Sprint 2 — Technical foundation
-
-| # | Feature | Status | Notes |
-|---|---------|--------|-------|
-| 7 | **Merge recall check into grok-scan** | 🔲 | Run CPSC check in parallel with Brave Search. New items born with recall status. |
-| 8 | **Thumbnail compression** | 🔲 | Canvas-resize to ~800px JPEG on save. Ticking time bomb at 30+ items. |
-| 9 | **Vault search** | 🔲 | Filter by product/brand/model. Essential at 20+ items. |
-| 10 | **Desktop drag-and-drop scan** | 🔲 | Desktop users can't use camera. File drop zone on /scan. |
-
-### Sprint 3 — Monetization
+### Sprint 2 — Lead Capture (THIS WEEK)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 11 | **PWA install prompt** | 🔲 | After first scan: "Add to home screen for recall alerts." |
-| 12 | **Stripe + Guardian paywall** | 🔲 | Free: 10 items. Guardian: unlimited + Sprint 1 features. |
-| 13 | **Service interval reminders** | 🔲 | User sets interval. App reminds. Core Guardian feature. |
+| 10 | **Post-scan email capture** | 🔲 NEXT | After results: "Email me this report." One field. No auth. |
+| 11 | **CF Worker: lead intake** | 🔲 | POST {email, scan data} → Cloudflare D1 + Resend trigger |
+| 12 | **Resend drip sequence** | 🔲 | Day 0 report · Day 3 urgency · Day 14 social proof · Anniversary |
+| 13 | **PWA install prompt** | 🔲 | After first scan: "Add to home screen for recall alerts." |
+| 14 | **/debug route guard** | 🔲 | NODE_ENV check — currently writes to real vault in production |
 
-### Sprint 4 — B2B unlock
+### Sprint 3 — AI Agent Team (MONTH 1–2)
+
+| # | Agent | Status | Notes |
+|---|-------|--------|-------|
+| 15 | **Intake Agent** | 🔲 | Claude API + CF Worker webhook → scores lead urgency → drafts reply |
+| 16 | **Scheduler Agent** | 🔲 | Cal.com API → proposes 3 slots → books on confirmation |
+| 17 | **Nurture Agent** | 🔲 | Resend sequences, Claude-personalized copy per heater age/brand |
+| 18 | **Content Agent** | 🔲 | Weekly Claude blog post → staged for review → SEO publishing |
+| 19 | **Bookkeeper Agent** | 🔲 | Stripe events → P&L digest → emails owner daily |
+| 20 | **Analyst Agent** | 🔲 | Weekly Sunday report: scans + leads + revenue + top opportunity |
+
+### Sprint 4 — B2B Verticals (MONTH 2–3)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 14 | **User auth + cloud sync** | ✅ Done | Magic link (Resend), JWT session, D1 vault_items, IndexedDB sync queue, local-wins merge |
-| 15 | **Insurer sharing layer** | 🔲 | Consent-based verified inventory report. Signed token. API endpoint. |
+| 21 | **Heater Report Card PDF** | 🔲 | Shareable 1-pager: brand, age, urgency, CTA. For real estate + inspectors. |
+| 22 | **Home inspector portal** | 🔲 | $49/mo, unlimited scans, branded PDF output |
+| 23 | **Waterheaterplan.com → Next.js** | 🔲 | Dynamic routing, shared stack, real booking backend |
+| 24 | **Stripe payment** | 🔲 | Plan signup flow. Webhooks → D1 customer record. |
 
-### Sprint 5 — Polish
+### Sprint 5 — Franchise Kit (MONTH 6+)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 16 | **First-run onboarding** | ✅ Done | One screen, once: logo + pitch + email magic link + Skip (local-only) |
-| 17 | **Scan success moment** | 🔲 | 0.8s overlay: checkmark + product name post-save. |
-| 18 | **Offline indicator** | 🔲 | "Online · Grok active" vs "Offline · On-device only" |
-| 19 | **Guard /debug route** | 🔲 | NODE_ENV check. Currently writes to real vault in production. |
-| 20 | **Security audit** | 🔲 | CF Function CORS, rate limiting, IndexedDB scope. |
+| 25 | **White-label config** | 🔲 | Scanner app parameterized: brand name, CTA URLs, accent color |
+| 26 | **Franchisee dashboard** | 🔲 | Leads, bookings, revenue per territory |
+| 27 | **Onboarding playbook** | 🔲 | Written doc: how to go from 0 → 25 plans in 90 days |
+| 28 | **Utility partnership pitch deck** | 🔲 | Dominion Energy — age map → rebate targeting |
 
 ---
 
-## Target Acquirers
+## Milestones
 
-| Company | Why they'd buy | When to approach |
-|---------|---------------|-----------------|
-| **Lemonade** | Tech InsurTech, public, fraud-obsessed, perfect consumer fit | After CPSC press story |
-| **Hippo** | "Proactive home protection" is their brand. We're the missing piece. | After Sprint 1 complete |
-| **Encircle** | They own post-claim. We own pre-claim. Complementary stack. | After 25k users |
-| **Verisk** | They want the aggregate replacement cost database | After 50k+ items |
-| **Branch** | Fast-growing bundled insurer, tech-forward, smaller = faster deal | After Guardian live |
+| Milestone | Unlocks |
+|-----------|---------|
+| 10 plans signed | Proof of concept. Start B2B outreach. |
+| 25 plans signed | Home inspector pilot ($49/mo). |
+| 100 plans signed | Franchise kit v1. Approach 2–3 plumbers in other markets. |
+| 5 franchisees | $1,500 MRR passive. Proof of scale. |
+| 50 franchisees | $15K MRR. Consider acquisition conversation or raise. |
+| 10K scans in D1 | Data moat pitch to Dominion Energy. |
 
 ---
 
 # ═══ PART 4 — CHANGE LOG ═══
 
-### 2026-03-15 — Session 1
-Full build phases 0–7.5. Two-shot scan, Tesseract OCR, Grok-4.20-beta, Brave Search docs, IndexedDB vault, edit/delete, WF logo, favicon, PWA manifest. Live at warrantyfile.com. Both API keys active.
-
-### 2026-03-15 — Session 2
-Desktop restyle (App Shell + TopNav), logo rework (WF+line, no rect), favicon strategy, full tree shake, DEV-NOTES restructured.
-
-### 2026-03-15 — Session 3
-Insurance B2B strategy. Guardian tier. CPSC recall hook. Acquisition path. Priority list reordered.
-
-### 2026-03-16 — Session 5
-- `ExtractedData` made fully flexible: `category?` + `customFields?: Record<string, string|number|null>` added
-- `VaultEvent` interface added to `vault/private.ts` — unified event model for any category
-- `events?: VaultEvent[]` added to `VaultItem` (optional, backward compat — defaults to [])
-- `warranty` and `purchaseDate` made optional in `ExtractedData` (appliances have them, whisky doesn't)
-- Both Grok system prompts now return `category` + `customFields` with category-specific examples
-- `on-device.ts` and `router.ts` map the new fields through the full pipeline
-- Vault item detail renders `customFields` dynamically — camelCase keys auto-formatted, category label as section header
-- `OnDeviceExtractionResult` interface updated to match (category, customFields, optional fields)
-- Architecture: "Everything Vault" vision documented — watches, whisky, wine, collectibles, instruments, vehicles all supported via the same flexible schema
-
-### 2026-03-17 — Auth + Sync + Mfg Date
-- Auth + cloud sync: magic link (Resend), JWT session cookie, D1 users/vault_items, CF Functions
-- Onboarding: first-visit prompt on /, email input + Skip (local-only), stored in localStorage
-- Vault sync: IndexedDB primary, cloud sync queue, mergeFromCloud on login, local-wins conflict
-- Manufacture date: on-device parse (MFG label patterns), results page display, vault alwaysShow
-- DEV-NOTES + README updated to reflect current state
-
-### 2026-03-16 — Session 4
-- CPSC recall alerts: CF proxy (`recall-check.ts`), `recallChecker.ts`, vault badges, item detail banner
-- Valuation fix: `VALUATION_RULES` prompt block, `toNum()` helper, max_tokens 1500→2000
-- `manufactureDate` field: added to ExtractedData, both Grok prompts, FIELDS in vault item
-- Category map: 25 categories, `secondaryHint` added to all, `car/vehicle` category added, precise visual landmarks
-- Router gap fixed: `onDeviceToExtractedData()` now passes `manufactureDate` through
-- `serialDecoder` doc type: Grok adds this for water heaters/HVAC/furnaces so Brave finds the right decoder page
-- Manufacture date prompt: 2-step logic (explicit label first → serial decode fallback → null if uncertain)
-- DEV-NOTES: full rewrite — core architectural pattern documented ("AI understands → Brave verifies"), serial decoder pattern, near-term pipeline merge opportunity, file tree updated
+### 2026-03-20 — Ecosystem Integration + Strategy Rewrite
+- `waterheaterplan.com`: added `book.html` (personalized scan-data quote form), `protection.html` (plan comparison + cost math), `_redirects` for clean URLs, hero CTA → scanner
+- `app/results/page.tsx`: `buildWHPUrl()` helper — all 4 CTAs now pass brand/model/age/fuel/cost/remaining as URL params
+- `app/page.tsx`: removed auth/onboarding entirely — straight to scan, no friction
+- `app/components/OnboardingPrompt.tsx`: updated branding to WaterHeaterVault
+- `wrangler.toml`: renamed project from `warrantyfile` → `waterheater-vault`
+- Deployed `scan.waterheaterplan.com` on Cloudflare Pages (hambomyers/waterheater-vault)
+- Deployed `waterheaterplan.com` updates on Cloudflare Pages (hambomyers/WATERHEATERPLAN)
+- `DEV-NOTES.md`: complete strategic rewrite — WaterHeaterVault ecosystem vision, 4-layer architecture ASCII, 6-agent AI operations team, 3-phase business model, franchise kit plan, data moat strategy, updated build queue
 
 ### 2026-03-18 — WaterHeaterVault Fork (Sessions 5–6)
 **PROJECT RENAMED: WarrantyFile → WaterHeaterVault**
@@ -473,11 +616,10 @@ Insurance B2B strategy. Guardian tier. CPSC recall hook. Acquisition path. Prior
 - `app/components/TopNav.tsx`: brand name → WaterHeaterVault
 - `public/manifest.json`: name/short_name/description → WaterHeaterVault
 - `vault/private.ts`: IndexedDB name `warrantyfile-vault` → `waterheater-vault`
-- `DEV-NOTES.md`: title updated
 
 #### Hard-Lock to Water Heaters
 - `lib/categoryMap.ts`: **deleted** — no multi-category logic exists anymore
-- `app/scan/page.tsx`: removed `categoryInfo` state + `getCategoryInfo` call + Grok identify mode; hard-coded water heater data plate guidance throughout; `processTwoShots` hint hardcoded to `'water heater'`
+- `app/scan/page.tsx`: removed `categoryInfo` state + `getCategoryInfo` call + Grok identify mode; hard-coded water heater data plate guidance; `processTwoShots` hint hardcoded to `'water heater'`
 
 #### ExtractedData Interface (water-heater-only)
 Old generic interface replaced in `brain/on-device.ts`:
@@ -488,26 +630,21 @@ interface ExtractedData {
   estimatedReplacementCost, currentWarranty
 }
 ```
-- `brain/router.ts`: `onDeviceToExtractedData()` updated to map to new fields
-- `app/vault/item/page.tsx`: FIELDS array replaced with water-heater fields
 
 #### Grok Prompt — Water Heater Expert
-`functions/api/grok-scan.ts` — all generic prompts replaced with:
-- `WH_SERIAL_DECODERS`: brand-specific serial → manufacture date decode rules (Rheem, Bradford White, AO Smith, Navien, Rinnai, GE, etc.)
-- `WH_LIFESPAN_RULES`: gas/electric/tankless/heat pump expected lifespans + installed replacement cost ranges
-- `WH_WARRANTY_GUIDE`: common warranty periods by brand
-- `WH_DOCS_INSTRUCTIONS`: always returns 4 docs — serialDecoder, ownerManual, warrantyTerms, recallCheck
-- Identify mode removed (no longer needed — always water heater)
+`functions/api/grok-scan.ts`: WH_SERIAL_DECODERS, WH_LIFESPAN_RULES, WH_WARRANTY_GUIDE, WH_DOCS_INSTRUCTIONS. Identify mode removed.
 
 #### New UI Components
-- `RemainingLifeGauge`: color-coded progress bar (green/amber/red), age + remaining years display — added to `results/page.tsx` and `vault/item/page.tsx`
-- `PriceSurpriseCalculator`: replacement cost + emergency premium (+30%) + monthly savings suggestion — added to `vault/item/page.tsx`
+- `RemainingLifeGauge`: color-coded progress bar on results + vault item
+- `PriceSurpriseCalculator`: replacement cost + emergency premium on vault item
+
+### 2026-03-17 — Auth + Sync + Mfg Date (WarrantyFile era)
+Magic link auth, JWT session, D1 cloud sync, IndexedDB sync queue, manufacture date parsing.
+
+### 2026-03-15 — Sessions 1–4 (WarrantyFile era)
+Full build phases 0–7.5. Two-shot scan, Tesseract OCR, Grok-4.20-beta, Brave Search docs, IndexedDB vault, edit/delete, WF logo, favicon, PWA manifest. CPSC recall alerts. Desktop restyle. Insurance B2B strategy (since pivoted).
 
 #### Lead-Gen CTAs (waterheaterplan.com)
 Added to both `results/page.tsx` and `vault/item/page.tsx` (mobile + desktop):
-- "Book Professional Service Now →" → `https://waterheaterplan.com/book`
-- "Get Protection Plan →" → `https://waterheaterplan.com/protection`
-
-#### Recall Logic
-- `lib/recallChecker.ts`: already CPSC-only — no changes needed
-- `functions/api/recall-check.ts`: already CPSC-only — no changes needed
+- "Book Professional Service Now →" → `waterheaterplan.com/book?[url params]`
+- "Get Protection Plan →" → `waterheaterplan.com/protection?[url params]`
