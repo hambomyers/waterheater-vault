@@ -1,11 +1,11 @@
-name = "warrantyfile"
+name = "waterheater-vault"
 pages_build_output_dir = "out"
 compatibility_date = "2024-01-01"
 
 # D1 binding for auth/sync — uncomment after creating DB:
-#   wrangler d1 create warrantyfile
-#   wrangler d1 execute warrantyfile --file=./migrations/0001_auth_sync.sql
+#   wrangler d1 create waterheater-vault
+#   wrangler d1 execute waterheater-vault --file=./migrations/0001_auth_sync.sql
 # [[d1_databases]]
 # binding = "DB"
-# database_name = "warrantyfile"
+# database_name = "waterheater-vault"
 # database_id = "<paste-id-from-wrangler-d1-create>"
