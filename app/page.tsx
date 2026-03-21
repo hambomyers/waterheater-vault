@@ -18,7 +18,7 @@ export default function HomePage() {
               WaterHeaterVault
             </span>
             <span className="text-white text-opacity-35 text-sm font-light">
-              Know your water heater's age, warranty & recall status.
+              AI Water Heater Scanner for Homeowners &amp; Pros.
             </span>
           </div>
 
@@ -46,7 +46,7 @@ export default function HomePage() {
           <Logo size={72} />
           <div className="space-y-2">
             <div className="text-white text-2xl font-light tracking-[0.1em]">WaterHeaterVault</div>
-            <div className="text-white text-opacity-35 text-base font-light">Know your water heater's age, warranty &amp; recall status.</div>
+            <div className="text-white text-opacity-35 text-base font-light">AI Water Heater Scanner for Homeowners &amp; Pros.</div>
           </div>
           <Link
             href="/scan"
@@ -59,6 +59,12 @@ export default function HomePage() {
             className="text-white text-opacity-25 text-sm font-light hover:text-opacity-60 transition-colors duration-200"
           >
             View vault →
+          </Link>
+          <Link
+            href="/pro/onboard"
+            className="text-white text-opacity-20 text-xs font-light hover:text-opacity-50 transition-colors duration-200"
+          >
+            Are you a plumber? Join as a Pro →
           </Link>
         </div>
       </div>

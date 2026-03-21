@@ -1,143 +1,181 @@
-# Grok Architecture Prompt for WarrantyFile — Phase 3
+# WaterHeaterVault — AI Consultation Context
 
-Copy this entire prompt into Grok and ask for implementation guidance.
-
----
-
-## Context
-
-I'm building **WarrantyFile** — a PWA that lets users snap a photo of a warranty, receipt, or product and instantly extracts structured data + current market valuation into a personal vault (like a spreadsheet of everything you own). Deployed on **Cloudflare Pages** (static export).
-
-### Stack
-- **Framework:** Next.js 14 with `output: 'export'` (static HTML/CSS/JS in `out/` directory)
-- **Hosting:** Cloudflare Pages at warrantyfile.pages.dev / warrantyfile.com
-- **Storage:** IndexedDB on-device (offline-first), `vault/private.ts` using `PrivateVault` class
-- **UI:** TailwindCSS, pure black `#000000` minimalist design, white text, single blue accent `#0066ff`, SF Pro font
-- **PWA:** Service worker (network-first HTML, cached static assets) + manifest
-
-### Design Language
-Tesla/SpaceX-inspired extreme minimalism. Mobile home screen has exactly 3 elements centered on black: "WF" text logo, blue "Snap a photo" oval pill button, white "Vault" oval pill button. No gradients, no heavy shadows, no clutter. Confidence through emptiness.
+Paste this entire document into Grok (or any AI) and ask for implementation guidance, architectural suggestions, or code review. This is the single source of truth for the current project state.
 
 ---
 
-## Current State — Honest Audit
+## What This Is
 
-### What WORKS
-- **Scan flow:** Mobile camera capture on tap, desktop drag-and-drop file import. Both convert image to Blob and call `brainRouter.processImage(blob)`.
-- **Results page:** Shows extracted data fields (product, brand, model, date, warranty, serial, price, valuation) and a "Save to Vault" button.
-- **IndexedDB vault:** `vault/private.ts` has full CRUD — `addItem()`, `getItems()`, `updateItem()`, `deleteItem()`, `getStats()`. Items include `extractedData`, `valuation`, `imageData` (base64 string), `tags`, `notes`.
-- **Layout:** `app/layout.tsx` renders a `BottomNav` component (white oval "Vault" button fixed at bottom, hidden on home page, visible on `/scan` and `/results`).
-- **Build:** `pnpm build` passes with zero errors, static export to `out/`.
+**WaterHeaterVault** is a free AI-powered PWA that tells homeowners the exact age, warranty status, replacement cost, and recall status of their water heater in 60 seconds from a photo.
 
-### What's COMPLETELY MOCK / FAKE
-1. **`brain/on-device.ts`** — `extractFromImage()` tries to `fetch('/api/grok-scan')` but **that endpoint doesn't exist** (the `app/api/` directory was deleted). It always catches the error and falls back to `getMockResult()` which returns `"Sample Product" / "Unknown Brand" / all zeros`. Every scan produces the same fake data.
-2. **`brain/cloud.ts`** — `refreshValuation()` is a placeholder that returns zeros. Not wired to anything.
-3. **`loop/aggregator.ts`**, **`loop/refiner.ts`**, **`loop/cron.ts`** — Entire self-improvement pipeline is scaffold only with `// TODO: Phase 3` everywhere. In-memory signals, localStorage prompts, no real Grok calls.
-4. **`vault/shared.ts`** — `SharedVault` stores signals in-memory only, no Cloudflare KV.
-5. **`config/models.ts`** — `BITNET_CONFIG` points to non-existent ONNX model file. `ModelRegistry` is in-memory only.
+It is **not** a general warranty app. It is a **single-purpose water heater scanner** that functions as the demand-capture layer for `waterheaterplan.com` — a local water heater maintenance plan business in Central Virginia.
 
-### What's BROKEN
-1. **Icon:** `public/icons/192x192.png` exists but browser console says: `Error while trying to use the following icon from the Manifest: https://warrantyfile.com/icons/192x192.png (Download error or resource isn't a valid image)`. The PNG is probably corrupt or placeholder.
-2. **No vault page:** The "Vault" button on the home page links to `/` (itself). There is **no vault contents view** — users can save items to IndexedDB but have no way to see them. This is the biggest UX gap.
-3. **No API endpoint:** `on-device.ts` calls `fetch('/api/grok-scan')` but no such route exists. Needs a CF Pages Function.
-
-### File-by-File Summary
+**The flywheel:**
 ```
-app/
-  layout.tsx          — Root layout, imports BottomNav, wraps children in pb-16 div
-  page.tsx            — Home: WF logo text, blue "Snap a photo" oval, white "Vault" oval
-                        Also has desktop marketing layout with vault stats cards
-  scan/page.tsx       — Camera capture (mobile) + drag-drop (desktop), calls brainRouter
-  results/page.tsx    — Shows extracted data + "Save to Vault" + "Scan Another" buttons
-  components/
-    BottomNav.tsx     — White oval "Vault" button, fixed bottom, hidden on home page
-
-brain/
-  on-device.ts        — extractFromImage(): tries /api/grok-scan, falls back to mock
-  cloud.ts            — refreshValuation(): returns zeros (placeholder)
-  router.ts           — BrainRouter.processImage(): calls on-device.ts, wraps result
-
-vault/
-  private.ts          — IndexedDB PrivateVault: full CRUD, getStats(), works correctly
-  shared.ts           — In-memory SharedVault: scaffold only
-
-loop/
-  aggregator.ts       — SignalAggregator: scaffold with TODOs
-  refiner.ts          — PromptRefiner: scaffold with TODOs
-  cron.ts             — SelfImprovementCron: scaffold with TODOs
-
-config/models.ts      — ModelConfig types + registry, all in-memory
-public/manifest.json  — PWA manifest, references possibly-corrupt icons
-public/sw.js          — Service worker, network-first HTML, cache static
+User scans water heater → Grok decodes serial → Shows age + remaining life + cost
+→ "Book Service" CTA → waterheaterplan.com/book?brand=Rheem&age=9&cost=1800...
+→ $159–$319/yr maintenance plan customer
 ```
 
----
-
-## What I Need — Prioritized
-
-### Priority 1: Wire up real Grok Vision API
-The most important thing is making the scan actually work. When a user snaps a photo, I need real data back.
-
-**Current flow:** Scan page → `brainRouter.processImage(blob)` → `on-device.ts` → `fetch('/api/grok-scan')` → 404 → mock data.
-
-**Desired flow:** Scan page → `brainRouter.processImage(blob)` → `on-device.ts` → `fetch('/api/grok-scan')` → **CF Pages Function** → **Grok Vision API** → structured JSON back to client → display on results page → save to IndexedDB vault.
-
-I need:
-- **Which Grok model supports vision?** (`grok-2-vision-latest`? what's current?)
-- **Exact API request format** for sending a base64 image to Grok Vision
-- **A system prompt** that tells Grok: "Look at this photo of a product/receipt/warranty. Extract structured data AND estimate current market value. Return clean JSON only."
-- **A CF Pages Function** at `functions/api/grok-scan.ts` that:
-  - Accepts base64 image from the client POST
-  - Reads `GROK_API_KEY` from CF environment secrets
-  - Calls Grok Vision API
-  - Returns the structured JSON
-- **How to set `GROK_API_KEY`** as a secret in Cloudflare Pages dashboard
-
-The `on-device.ts` already has the client-side code to call `/api/grok-scan` and parse the response — I just need the server function to exist.
-
-### Priority 2: Build a Vault Contents Page
-Users can save to vault but can't see what's in it. I need a `/vault` page (or make the home page show vault contents) that:
-- Lists all saved items from IndexedDB as clean rows (like a spreadsheet)
-- Shows: product name, brand, date added, estimated value
-- Tapping a row shows the full detail (photo thumbnail, all fields)
-- Clean minimalist design matching the rest of the app
-- Maybe a total value summary at the top
-
-The `vault/private.ts` already has `getItems()` and `getStats()` — the data layer is ready, just needs UI.
-
-### Priority 3: Fix Button Consistency
-On mobile home screen, the "Snap a photo" button and "Vault" button should be **identical size**. Currently:
-- "Snap a photo": `py-5 px-10 text-lg border-2 border-blue-accent rounded-full`
-- "Vault": `py-5 px-10 text-lg border-2 border-white border-opacity-20 rounded-full`
-
-They have the same classes but I want to make sure they render the exact same dimensions and don't overlap. Also the BottomNav "Vault" button on scan/results pages should not overlap with page content.
-
-### Priority 4: Fix PWA Icon
-The `192x192.png` icon is corrupt or placeholder. I need a simple clean "WF" favicon — white text on black background, square. What's the simplest way to generate valid PNG icons programmatically or with a tool?
-
-### Priority 5: Self-Improvement Loop (Future)
-The `loop/` directory has the scaffold for daily self-improvement:
-1. Users optionally correct AI mistakes → anonymized signals stored
-2. Daily CF cron aggregates signals
-3. Grok refines its own extraction prompt based on error patterns
-4. New prompt version deployed
-
-This is Phase 3+ and can wait, but I want the architecture to support it. The key question: should the extraction prompt be stored in CF KV and loaded by the CF Function on each call? That way the cron can update it without redeploying.
+**Owner:** H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia  
+**Live URL:** scan.waterheaterplan.com (Cloudflare Pages)  
+**Repo:** hambomyers/waterheater-vault
 
 ---
 
-## Questions for Grok
+## Tech Stack
 
-1. What's the exact Grok Vision API endpoint, model name, and request format for sending a base64 image?
-2. Can you write me the CF Pages Function (`functions/api/grok-scan.ts`) that proxies to Grok Vision?
-3. What should the system prompt be to get both extraction + valuation in one call as clean JSON?
-4. For the vault page — should it be a new route `/vault` or should the home page `/` show vault contents when items exist and the marketing view when empty?
-5. What's the best way to generate simple "WF" PNG icons at 192x192 and 512x512?
-6. For the self-improvement loop — should the prompt live in CF KV so it can be hot-swapped by the cron?
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 14, `output: 'export'`, all `use client` |
+| Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue |
+| On-device AI | Tesseract.js OCR (offline fallback, ~4MB) |
+| Cloud AI | Grok Vision (xAI API) |
+| Docs search | Brave Search API — live verified URLs, never hardcoded |
+| Storage | IndexedDB (offline-first) + Cloudflare D1 (cloud sync) |
+| Auth | Magic-link via Resend + JWT (no OAuth, no Clerk) |
+| Deployment | Cloudflare Pages — static export + CF Pages Functions |
+| PWA | Service worker + manifest |
 
-### What I Want Back
-- Working CF Pages Function code for `functions/api/grok-scan.ts`
-- The exact Grok Vision API request with a tuned system prompt
-- A vault page component design (React + Tailwind) that reads from IndexedDB
-- Architecture recommendation: where to put the prompt, how to version it
-- Any gotchas with CF Pages Functions + Grok Vision API (size limits, timeouts, costs)
+**Design:** Pure black `#000000`, white SF Pro text, single blue `#0066ff` accent. No gradients. No shadows. Pill buttons. Confidence through emptiness.
+
+---
+
+## Current State — What's Built and Working
+
+Everything listed below is **live and functional** at scan.waterheaterplan.com.
+
+### Core Scanner (Sprint 1 — COMPLETE ✅)
+- Two-shot guided camera scan: Shot 1 (overview) → Shot 2 (data plate label)
+- `functions/api/grok-scan.ts` — CF Pages Function: Grok Vision + Brave Search enrichment, retry on 429, `extractOutermostJson()` parser
+- Grok prompt includes: `WH_SERIAL_DECODERS`, `WH_LIFESPAN_RULES`, `WH_WARRANTY_GUIDE`, `WH_DOCS_INSTRUCTIONS`
+- Brand-specific serial decoding for manufacture date (Rheem, Bradford White, AO Smith, State, Whirlpool, etc.)
+- Brave Search finds live URLs for: owner manual, warranty terms, serial decoder page, support page
+- `functions/api/recall-check.ts` — CPSC SaferProducts API proxy (handles CORS), 7-day cache, conservative 2-field brand+model match
+- `lib/recallChecker.ts` — recall badge logic, `needsRecallCheck()`, `checkItemForRecalls()`
+
+### Results Page (COMPLETE ✅)
+- Brand · Model · Serial · Manufacture Date · Age · Fuel Type · Tank Size
+- **Remaining Life Gauge** — color-coded progress bar (green >5yr, amber 2-5yr, red <2yr)
+- **Price Surprise Calculator** — estimated replacement cost + emergency premium estimate
+- CPSC recall status indicator
+- Docs links: owner manual, warranty terms, serial decoder, support page (all live via Brave)
+- **"Book Professional Service Now →"** → `waterheaterplan.com/book?brand=X&model=Y&age=N&fuel=F&cost=C&remaining=R`
+- **"Get Protection Plan →"** → `waterheaterplan.com/protection?[same params]`
+- "Save to Vault" → IndexedDB
+
+### Vault (COMPLETE ✅)
+- `vault/page.tsx` — list with recall badges, remaining life bar, sort
+- `vault/item/page.tsx` — full detail, inline edit, recall banner, delete
+- `vault/private.ts` — IndexedDB v2: CRUD + `getStats()` + `syncQueue` + `mergeFromCloud()`
+- Cloud sync via magic-link auth: `functions/api/vault/sync.ts`, `item/[id].ts`
+
+### Auth (COMPLETE ✅)
+- `functions/api/auth/send-magic-link.ts` — Resend email + JWT token
+- `functions/api/auth/verify.ts` — validate token, set session cookie, create user in D1
+- `functions/api/auth/me.ts` — return user from session cookie
+- `lib/auth.ts` — `bootstrapAuthAndSync()`, onboarding flags, sync mode
+
+### waterheaterplan.com Integration (COMPLETE ✅)
+- `book.html` — personalized quote form, pre-filled from scan URL params
+- `protection.html` — plan comparison with scan context (age, remaining life, cost)
+- All 4 CTAs in results + vault item pass full context as URL query params
+
+---
+
+## File Structure
+
+```
+waterheater-vault/
+├── app/
+│   ├── layout.tsx              Root layout, metadata, TopNav
+│   ├── globals.css             Tailwind base, black theme, SF Pro
+│   ├── page.tsx                Home: Logo + tagline + Scan + Vault CTAs
+│   ├── scan/page.tsx           Two-shot: idle→cam1→scanning1→guide→cam2→processing
+│   ├── results/page.tsx        Extracted data + Docs + Gauge + Calculator + CTAs + Save
+│   ├── vault/
+│   │   ├── page.tsx            List + background recall check + recall badges
+│   │   └── item/page.tsx       Detail + inline edit + recall banner + delete
+│   ├── debug/page.tsx          Pipeline test (needs NODE_ENV guard)
+│   └── components/
+│       ├── Logo.tsx            SVG: WH text y=42 + thin line y=82
+│       └── TopNav.tsx          Fixed desktop nav: logo + Vault + Scan pill
+│
+├── brain/
+│   ├── on-device.ts            extractFromTwoShots() → POST /api/grok-scan
+│   └── router.ts               BrainRouter singleton
+│
+├── lib/
+│   ├── onDeviceExtractor.ts    Tesseract.js + regex (offline fallback)
+│   ├── recallChecker.ts        CPSC recall check + conservative brand/model match
+│   └── auth.ts                 Magic-link auth, sync mode, bootstrapAuthAndSync
+│
+├── vault/
+│   └── private.ts              IndexedDB v2: VaultItem, CRUD, syncQueue, mergeFromCloud
+│
+├── functions/api/
+│   ├── grok-scan.ts            Grok Vision + Brave Search + serial decoder pattern
+│   ├── recall-check.ts         CPSC SaferProducts proxy
+│   ├── auth/                   send-magic-link · verify · me
+│   └── vault/                  sync (GET/POST) · item/[id] (DELETE)
+│
+├── migrations/0001_auth_sync.sql   users + vault_items D1 schema
+├── wrangler.toml               CF Pages project: waterheater-vault, D1 binding DB
+└── next.config.mjs             output: 'export', images.unoptimized: true
+```
+
+---
+
+## What's NOT Built Yet (Sprint 2 — Current Priority)
+
+| # | Feature | Notes |
+|---|---------|-------|
+| 10 | **Post-scan email capture** | After results: "Email me this report." One field. No auth friction. |
+| 11 | **CF Worker: lead intake** | POST {email, scan data} → D1 `leads` table + Resend trigger |
+| 12 | **Resend drip sequence** | Day 0 PDF report · Day 3 urgency · Day 14 social proof · Anniversary |
+| 13 | **PWA install prompt** | After first scan: "Add to home screen for recall alerts." |
+| 14 | **/debug route guard** | NODE_ENV check — currently exposes debug pipeline in production |
+
+---
+
+## Business Model Context
+
+### Phase 1 — NOW (Local Service)
+- Service area: Waynesboro · Staunton · Harrisonburg · Charlottesville VA
+- Partner: Hamilton Plumbing handles service delivery
+- Plans: Basic $159/yr · Advanced $249/yr · Elite $319/yr
+- Unit economics: CAC ~$0 (organic scan intent) · Avg plan $220 · Gross margin ~60% · 3yr LTV ~$660
+
+### Phase 2 — Month 2–6 (B2B)
+- Home inspectors: $49/mo unlimited scans + branded PDF report
+- Real estate agents: $25/scan "Water Heater Report Card"
+- Property managers: fleet scan + annual service contracts
+
+### Phase 3 — Month 6–12 (Franchise)
+- White-labeled scanner app (their brand, phone, booking URL)
+- $299/mo per territory · 50 licensees = $15K MRR
+
+### Data Moat (Long-term)
+Every scan creates `{brand, model, serial, age, fuelType, zip, manufactureDate}`.
+Strategic buyers: Dominion Energy (rebate targeting), AHS/home warranty cos (pre-policy risk), Rheem/Bradford White (replacement timing), Zillow/Redfin (listing disclosure).
+
+---
+
+## Core Architecture Principle
+
+**"AI understands → Brave verifies."**
+Grok generates search queries. Brave finds the live page. Never a hardcoded URL.
+This applies to: manuals, warranty terms, recall pages, serial decoder pages.
+
+---
+
+## Questions for AI Review
+
+1. **Lead capture UX:** Best way to present the email capture on results page without killing conversion — inline field vs modal vs sticky footer?
+2. **Email drip personalization:** Given `{brand, age, fuelType, remainingLife, replacementCost}`, what's the highest-converting Day 3 urgency email subject line and hook?
+3. **PWA install prompt timing:** Should the "Add to home screen" prompt appear (a) after results load, (b) after save to vault, or (c) on second visit?
+4. **D1 leads table schema:** What fields should I capture at email submission time? (`email, brand, model, serial, manufactureDate, ageYears, fuelType, remainingLifeYears, estimatedCost, zip, scannedAt, source`)
+5. **Recall alert push notifications:** Is there a practical way to send push notifications when a new CPSC recall matches a saved vault item, given this is a static CF Pages site with no persistent server?
+6. **Conversion optimization:** Looking at the funnel (scan → results → CTA click → book.html → form submit), where is the biggest drop-off likely to be and what would you fix first?
+7. **Sprint 2 sequencing:** Given the business goal is "get to 10 signed plans," should I do email capture first or PWA install prompt first?
+8. **AI agent stack:** For the 6-agent operations team (Intake, Scheduler, Nurture, Content, Bookkeeper, Analyst) — n8n self-hosted vs Make.com hosted, given this is a solo founder with ~$50/mo budget for automation?

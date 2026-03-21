@@ -2,7 +2,7 @@
   "name": "waterheater-vault",
   "version": "1.0.0",
   "private": true,
-  "description": "Scan your water heater. Know its exact age, warranty, recall status, and replacement cost — before it fails.",
+  "description": "AI Water Heater Scanner for Homeowners & Pros — free 60-second scan, SaaS pro platform.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,9 +11,12 @@
     "icons": "node scripts/generate-icons.js"
   },
   "dependencies": {
+    "@stripe/stripe-js": "^4.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
     "next": "^14.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",

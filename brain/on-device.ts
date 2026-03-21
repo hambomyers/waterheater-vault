@@ -81,8 +81,8 @@ export async function extractFromImage(imageData: Blob): Promise<GrokScanResult>
 
   const data = await response.json()
 
-  if (data.error === 'not_a_product') {
-    throw new Error(data.message || 'This does not appear to be a product, receipt, or warranty image.')
+  if (data.error === 'not_a_water_heater' || data.error === 'not_a_product') {
+    throw new Error(data.message || 'This does not appear to be a water heater. Please photograph your water heater\'s data plate.')
   }
 
   if (data.error) {
@@ -147,8 +147,8 @@ export async function extractFromTwoShots(
 
   const data = await response.json()
 
-  if (data.error === 'not_a_product') {
-    throw new Error(data.message || 'This does not appear to be a product, receipt, or warranty image.')
+  if (data.error === 'not_a_water_heater' || data.error === 'not_a_product') {
+    throw new Error(data.message || 'This does not appear to be a water heater. Please photograph your water heater\'s data plate.')
   }
   if (data.error) {
     throw new Error(data.message || data.error)

@@ -8,7 +8,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'WaterHeaterVault',
-  description: 'Scan your water heater. Know its exact age, warranty, recall status, and replacement cost — before it fails.',
+  description: 'AI Water Heater Scanner for Homeowners & Pros. Know your water heater\'s age, warranty, recall status, rebates, and replacement cost — free in 60 seconds.',
   manifest: '/manifest.json',
   icons: {
     icon: [

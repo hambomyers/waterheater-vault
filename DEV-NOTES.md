@@ -1,7 +1,7 @@
 # WaterHeaterVault — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*
-*Last updated: 2026-03-20*
+*Last updated: 2026-03-21 — Sprint 2 code complete. Stripe + D1 pros table pending env vars.*
 
 ---
 
@@ -12,67 +12,82 @@
 
 ## What This Is
 
-**WaterHeaterVault** is a free AI scanner that tells homeowners the exact age, warranty status, replacement cost, and recall status of their standard residential storage-tank water heater — in 60 seconds, from a photo.
+**WaterHeaterVault** is a free AI scanner that tells homeowners the exact age, warranty status, replacement cost, recall status, and available utility rebates for their water heater — in 60 seconds, from a photo.
 
-**waterheaterplan.com** is the service business that converts those scans into $159–$319/year maintenance plan customers.
+**waterheaterplan.com/pro** is the SaaS platform that converts scanner traffic into paying pro customers — $29/mo for white-label branding, auto-leads, and a public directory listing.
 
-Together they form a **two-sided demand machine** that no local service competitor can replicate.
+**Entity:** VaultPro LLC (new standalone LLC filed for legal/tax separation). Domains, product names, and branding are 100% unchanged.
 
-**Tagline:** *Know your water heater's age, warranty & recall status.*
+**Tagline:** *AI Water Heater Scanner for Homeowners & Pros*
 
 **One-sentence pitch (consumer):** *"Point your phone at your water heater's data plate — we'll tell you how old it is, how much life it has left, what it'll cost to replace, and whether it's been recalled."*
 
-**One-sentence pitch (service business):** *"We are the Jiffy Lube for the one appliance that fails silently, costs $1,500 overnight, and that 90% of homeowners have never thought about — until water is on the floor."*
+**One-sentence pitch (pro):** *"For $29/mo your name and number appear on every water heater scan in your area — with auto-leads when the heater is in the danger zone."*
 
-**One-sentence pitch (franchise):** *"A turnkey AI-powered customer acquisition machine for water heater service companies. You do the service work. We supply the customers."*
+**One-sentence pitch (investor):** *"The Carfax of water heaters — free to the homeowner, SaaS to the pro, data asset to the enterprise."*
 
 ---
 
-## Business Model — Three Phases
+## Business Model
 
-### Phase 1 — Local Service (NOW)
-The scanner generates high-intent leads. waterheaterplan.com converts them.
+### Layer 1 — Consumer (Free, Always)
+Free scanner builds trust + organic traffic. No service delivery. No local ops.
 
-| Plan | Price | Notes |
-|------|-------|-------|
-| Basic | $159/yr | Annual inspection + flush. Valley discount. |
-| Advanced | $249/yr | Bi-annual + water quality test. Most popular. |
-| Elite | $319/yr | Advanced + Wi-Fi sensor + real-time alerts. |
+| What | Value |
+|------|-------|
+| 60-second AI scan | Age, life, cost, recalls, rebates |
+| PDF Report Card | Branded with matched local pro |
+| Invite My Plumber button | Viral pro acquisition loop |
+| Vault | Saved heaters + recall monitoring |
+
+### Layer 2 — Pro SaaS (NOW — Primary Revenue)
+Screened local contractors pay flat $29/mo. No wrenches. Pure software.
+
+| Feature | What pros get |
+|---------|---------------|
+| White-label branding | Name + number on every scan/PDF in their area |
+| Auto-leads | Notified when heater age > 8yr or remaining < 3yr |
+| Directory listing | `waterheaterplan.com/pro/directory` — SEO-indexed |
+| Multiple pros per zip | Competition is fine — more pros = more coverage |
 
 **Unit economics:**
-- CAC via app scan: ~$0 (organic intent)
-- Average plan: ~$220/yr
-- Gross margin: ~60%
-- 3-yr LTV: ~$660
-- LTV:CAC: 11:1
+- CAC: ~$0 (viral invite loop) or cheap text/email blast
+- Price: $29/mo or $299/yr
+- Gross margin: ~95% (pure SaaS)
+- 12-mo LTV: $299–$348
+- No service delivery, no Hamilton Plumbing, no local ops
 
-**Service area:** Waynesboro · Staunton · Harrisonburg · Charlottesville (expanding)
-**Partner:** Hamilton Plumbing handles service delivery
+**Pro gate:** Grok AI screens Google Business Profile reviews.
+- 4.5+ stars → Stripe checkout → active
+- Re-screen every 30 days (n8n cron)
+- Below 4.5 → auto-paused, email notification
 
-### Phase 2 — B2B Vertical (MONTH 2–6)
+### Layer 3 — B2B Verticals (MONTH 2–6)
 | Customer | Product | Price |
 |----------|---------|-------|
-| Home inspectors | Certified AI scan + branded PDF report | $49/mo unlimited |
+| Home inspectors | Certified AI scan + branded PDF | $49/mo unlimited |
 | Real estate agents | "Water Heater Report Card" per listing | $25/scan |
-| Property managers | Fleet scan + annual service contracts | Custom |
+| Property managers | Fleet scan + ongoing monitoring | Custom |
 
-### Phase 3 — Franchise Kit (MONTH 6–12)
-License the entire system to water heater service companies in other markets.
-- White-labeled scanner app (their brand, their phone number, their booking URL)
-- Pre-built booking flow + email urgency sequences
-- Operational playbook ("here's exactly how we get a customer from scan to signed")
-- **Price: $299/mo per territory**
-- **50 licensees = $15K MRR without touching a single water heater**
+### Layer 4 — Enterprise / Data (MONTH 6+)
+Every scan builds `{brand, model, serial, age, fuelType, zip, manufactureDate}` — a database that doesn't exist anywhere else.
 
-### The Data Moat (LONG TERM)
-Every scan creates: `{brand, model, serial, age, fuelType, zip, manufactureDate}`.
-This database does not exist anywhere — not at manufacturers, not at utilities, not at insurers.
+Strategic buyers: Dominion Energy (rebate targeting), AHS/home warranty cos (pre-policy risk), Rheem/Bradford White (replacement timing), Zillow/Redfin (listing disclosure).
 
-**Strategic value:**
-- Dominion Energy: age map of every water heater in their service area → rebate targeting
-- Home warranty cos (AHS, etc.): pre-policy risk assessment
-- Real estate platforms: listing disclosure tool
-- Manufacturers (Rheem, Bradford White): warranty planning + replacement timing
+### Viral Growth Loop
+```
+Homeowner scans → results page → "Invite my plumber → get branded reports"
+       ↓
+Pro gets invite link → visits /pro/onboard → Grok screens reviews
+       ↓
+4.5+ stars → Stripe $29/mo → branding activated
+       ↓
+Every scan in their area now shows their name/number
+       ↓
+Pro sends the app to every customer → more scans → more invites
+```
+
+**Secondary growth:** Cheap targeted text/email blasts to local plumbers. Ads on "water heater age check" keywords.
 
 ---
 
@@ -131,31 +146,29 @@ This extends to every reference: serial decoders, warranty terms, manuals, recal
 │              │  Remaining Life Gauge        │                       │
 │              │  Price Surprise Calculator   │                       │
 │              │  CPSC Recall Status          │                       │
-│              │  📧 Email capture → CRM      │  ← THE MISSING PIECE  │
+│              │  📧 Email capture → leads    │                       │
+│              │  📄 PDF Report Card          │                       │
+│              │  🔋 Rebate Maximizer Card    │                       │
 │              └──────────┬───────────────────┘                       │
 │                         │                                            │
 │              ┌──────────▼───────────────────┐                       │
-│              │  "Book Now" CTA              │                       │
-│              │  waterheaterplan.com/book    │                       │
-│              │  ?brand=Rheem&age=9          │                       │
-│              │  &fuel=gas&cost=1800         │                       │
-│              │  &remaining=2               │                       │
+│              │  "Invite my plumber"         │                       │
+│              │  → waterheaterplan.com/pro   │  ← VIRAL LOOP         │
 │              └──────────────────────────────┘                       │
 └──────────────────────────────┬───────────────────────────────────────┘
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│  LAYER 2 — SERVICE CONVERSION                                        │
-│  waterheaterplan.com                                                 │
+│  LAYER 2 — PRO SAAS                                                  │
+│  waterheaterplan.com/pro                                             │
 │                                                                      │
-│  /book ──▶ personalized quote (scan data pre-filled)                │
-│  /protection ──▶ plan comparison with scan context                  │
-│  /pricing ──▶ Basic $159 · Advanced $249 · Elite $319               │
-│  /blog ──▶ SEO content engine (AI-generated, human-reviewed)        │
+│  /pro/onboard ──▶ GBP URL → Grok AI screen → Stripe checkout        │
+│  /pro/directory ──▶ public searchable directory of screened pros    │
 │                                                                      │
-│  Lead captured: {email, brand, age, fuel, cost, remaining, zip}     │
-│  Stored: Cloudflare D1                                               │
-│  Triggered: Resend email drip sequence                               │
+│  Pro record: {name, phone, gbpUrl, rating, zip, stripeId, active}   │
+│  Stored: Cloudflare D1 (pros table)                                  │
+│  Payments: Stripe $29/mo or $299/yr                                  │
+│  Re-screen: every 30 days via n8n cron                               │
 └──────────────────────────────┬───────────────────────────────────────┘
                                │
                                ▼
@@ -417,7 +430,7 @@ Still needed: Immutable audit log (timestamp chain — proves pre-loss)
 ## File Structure (current, accurate)
 
 ```
-WARRANTYFILE/
+waterheater-vault/
 ├── app/
 │   ├── layout.tsx              Root layout, metadata, TopNav
 │   ├── globals.css             Tailwind base, black theme, SF Pro
@@ -429,9 +442,11 @@ WARRANTYFILE/
 │   │   └── item/page.tsx       Detail + inline edit + recall banner + delete
 │   ├── debug/page.tsx          Pipeline test (needs NODE_ENV guard)
 │   └── components/
-│       ├── Logo.tsx            SVG: WF y=42 + line y=82, no background rect
+│       ├── Logo.tsx            SVG: WH text y=42 + thin line y=82
 │       ├── TopNav.tsx          Fixed desktop nav: logo + Vault + Scan pill
-│       └── OnboardingPrompt.tsx First-visit: logo + pitch + magic link + Skip
+│       ├── InvitePlumberButton.tsx  Share URL via native share / clipboard copy
+│       ├── RebateMaximizerCard.tsx  Shows utility rebate doc from Grok/Brave
+│       └── PDFReportGenerator.tsx  html2canvas + jsPDF client-side report card
 │
 ├── brain/
 │   ├── on-device.ts            extractFromImage(), extractFromTwoShots() → /api/grok-scan
@@ -451,8 +466,12 @@ WARRANTYFILE/
 ├── functions/api/
 │   ├── grok-scan.ts            CF Function: Grok vision + Brave Search enrichment
 │   │                            Retry on 429, extractOutermostJson() parser
-│   │                            Serial decoder doc type for water heaters / HVAC
+│   │                            Serial decoder + utilityRebate doc type
+│   │                            mode=review-screen → Grok AI pro review gate
 │   ├── recall-check.ts         CF Function: CPSC SaferProducts API proxy (handles CORS)
+│   ├── pro/
+│   │   ├── screen.ts           Grok AI review screening (GBP URL → rating/sentiment → approve/deny)
+│   │   └── checkout.ts         Stripe checkout session creation
 │   ├── auth/
 │   │   ├── send-magic-link.ts  Resend email + JWT token
 │   │   ├── verify.ts           Validate token, set session cookie, create user in D1
@@ -539,44 +558,75 @@ WARRANTYFILE/
 | 8 | scan.waterheaterplan.com live | ✅ | Cloudflare Pages, custom domain wired |
 | 9 | Auth/onboarding removed | ✅ | No friction. Straight to scan. |
 
-### Sprint 2 — Lead Capture (THIS WEEK)
+### Sprint 2 — Pro SaaS Launch ✅ CODE COMPLETE — awaiting Stripe env vars
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 10 | **Post-scan email capture** | 🔲 NEXT | After results: "Email me this report." One field. No auth. |
-| 11 | **CF Worker: lead intake** | 🔲 | POST {email, scan data} → Cloudflare D1 + Resend trigger |
-| 12 | **Resend drip sequence** | 🔲 | Day 0 report · Day 3 urgency · Day 14 social proof · Anniversary |
-| 13 | **PWA install prompt** | 🔲 | After first scan: "Add to home screen for recall alerts." |
-| 14 | **/debug route guard** | 🔲 | NODE_ENV check — currently writes to real vault in production |
+| 10 | **InvitePlumberButton** | ✅ | Native share / clipboard. On results + vault item. |
+| 11 | **PDFReportGenerator** | ✅ | html2canvas + jsPDF lazy-loaded. Pro branding slot built in. |
+| 12 | **RebateMaximizerCard** | ✅ | utilityRebate doc type + Brave-verified link on results page. |
+| 13 | **/pro/onboard page** | ✅ | Form → Grok AI screen → approved/denied → Stripe checkout. |
+| 14 | **/pro/directory page** | ✅ | Public searchable list from D1 pros table. Empty-state CTA. |
+| 15 | **Stripe CF Function** | ✅ | `/api/pro/checkout` creates Stripe Checkout session (sub). |
+| 16 | **D1 pros table** | ✅ | `0003_pros.sql` run locally + remote. Table live. |
+| 17 | **Post-scan email capture** | 🔲 NEXT | "Email me this report" → D1 leads table + Resend |
+| 18 | **/debug route guard** | 🔲 | NODE_ENV check |
+| 19 | **Add Stripe env vars → deploy** | 🔲 BLOCKING | See Stripe Setup section below |
 
-### Sprint 3 — AI Agent Team (MONTH 1–2)
+---
 
-| # | Agent | Status | Notes |
-|---|-------|--------|-------|
-| 15 | **Intake Agent** | 🔲 | Claude API + CF Worker webhook → scores lead urgency → drafts reply |
-| 16 | **Scheduler Agent** | 🔲 | Cal.com API → proposes 3 slots → books on confirmation |
-| 17 | **Nurture Agent** | 🔲 | Resend sequences, Claude-personalized copy per heater age/brand |
-| 18 | **Content Agent** | 🔲 | Weekly Claude blog post → staged for review → SEO publishing |
-| 19 | **Bookkeeper Agent** | 🔲 | Stripe events → P&L digest → emails owner daily |
-| 20 | **Analyst Agent** | 🔲 | Weekly Sunday report: scans + leads + revenue + top opportunity |
+## Stripe Setup (one-time — required before /pro/onboard works end-to-end)
 
-### Sprint 4 — B2B Verticals (MONTH 2–3)
+**Step 1 — Create products in Stripe Dashboard**
+1. Go to [dashboard.stripe.com/products](https://dashboard.stripe.com/products)
+2. **Add product** → Name: `WaterHeaterVault Pro`
+3. Add price: **$29.00 / month** (recurring) → copy `price_...` ID → this is `STRIPE_PRICE_ID_MONTHLY`
+4. Add price: **$299.00 / year** (recurring) → copy `price_...` ID → this is `STRIPE_PRICE_ID_ANNUAL`
+
+**Step 2 — Get your secret key**
+- [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) → Reveal secret key → `sk_live_...`
+
+**Step 3 — Add to Cloudflare Pages**
+- CF Dashboard → waterheater-vault project → Settings → Environment Variables → Add:
+
+| Variable | Value |
+|----------|-------|
+| `STRIPE_SECRET_KEY` | `sk_live_...` |
+| `STRIPE_PRICE_ID_MONTHLY` | `price_...` (the $29/mo price) |
+| `STRIPE_PRICE_ID_ANNUAL` | `price_...` (the $299/yr price) |
+
+**Step 4 — Deploy**
+- Push to `main` or trigger a manual redeploy in CF Pages.
+- `/pro/onboard` will be fully functional after deploy.
+
+**Step 5 — Set up Stripe webhook (for subscription activation)**
+- Stripe Dashboard → Developers → Webhooks → Add endpoint
+- URL: `https://scan.waterheaterplan.com/api/pro/webhook` *(build this in Sprint 3)*
+- Events to listen for: `checkout.session.completed`, `customer.subscription.deleted`
+- This activates/deactivates pros in D1 automatically after payment.
+
+> **Testing first?** Use `sk_test_...` keys and Stripe test mode. Test card: `4242 4242 4242 4242`.
+
+---
+
+### Sprint 3 — Pro Growth (MONTH 1–2)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 21 | **Heater Report Card PDF** | 🔲 | Shareable 1-pager: brand, age, urgency, CTA. For real estate + inspectors. |
-| 22 | **Home inspector portal** | 🔲 | $49/mo, unlimited scans, branded PDF output |
-| 23 | **Waterheaterplan.com → Next.js** | 🔲 | Dynamic routing, shared stack, real booking backend |
-| 24 | **Stripe payment** | 🔲 | Plan signup flow. Webhooks → D1 customer record. |
+| 19 | **n8n 30-day re-screen cron** | 🔲 | Re-run Grok review screen on every active pro monthly |
+| 20 | **Auto-lead delivery** | 🔲 | CF Worker: when scan age>8yr or remaining<3yr → email matched zip pros |
+| 21 | **Sensor upsell** | 🔲 | Drop-ship thermometer/leak detector. ~20% margin. Shown in PDF + vault. |
+| 22 | **Home inspector tier** | 🔲 | $49/mo unlimited scans + branded PDF |
+| 23 | **Content Agent** | 🔲 | Weekly Claude blog post → SEO publishing |
 
-### Sprint 5 — Franchise Kit (MONTH 6+)
+### Sprint 4 — Enterprise / Data (MONTH 3+)
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 25 | **White-label config** | 🔲 | Scanner app parameterized: brand name, CTA URLs, accent color |
-| 26 | **Franchisee dashboard** | 🔲 | Leads, bookings, revenue per territory |
-| 27 | **Onboarding playbook** | 🔲 | Written doc: how to go from 0 → 25 plans in 90 days |
-| 28 | **Utility partnership pitch deck** | 🔲 | Dominion Energy — age map → rebate targeting |
+| 24 | **Anonymized heater registry export** | 🔲 | D1 → CSV/API for enterprise buyers |
+| 25 | **Utility rebate partnership** | 🔲 | Dominion Energy pilot — age map → rebate targeting |
+| 26 | **Home warranty API** | 🔲 | AHS / Cinch — pre-policy risk score per heater |
+| 27 | **Real estate embed** | 🔲 | Listing disclosure widget for Zillow/Redfin |
 
 ---
 
@@ -584,16 +634,30 @@ WARRANTYFILE/
 
 | Milestone | Unlocks |
 |-----------|---------|
-| 10 plans signed | Proof of concept. Start B2B outreach. |
-| 25 plans signed | Home inspector pilot ($49/mo). |
-| 100 plans signed | Franchise kit v1. Approach 2–3 plumbers in other markets. |
-| 5 franchisees | $1,500 MRR passive. Proof of scale. |
-| 50 franchisees | $15K MRR. Consider acquisition conversation or raise. |
-| 10K scans in D1 | Data moat pitch to Dominion Energy. |
+| 10 active pros | Proof of concept. $290/mo MRR. |
+| 50 active pros | $1,450/mo. Pitch home inspector tier. |
+| 200 active pros | $5,800/mo. Hire first VA for pro support. |
+| 500 active pros | $14,500/mo. Consider raise or acquisition conversation. |
+| 10K scans in D1 | Data moat pitch to Dominion Energy + home warranty cos. |
 
 ---
 
 # ═══ PART 4 — CHANGE LOG ═══
+
+### 2026-03-21 — MAJOR PIVOT: Pure SaaS + New LLC
+- **Strategic shift:** Dropped local service model entirely. No Hamilton Plumbing. No service delivery. Pure SaaS.
+- **Entity:** VaultPro LLC filed (new standalone entity for legal/tax separation). Domains/branding unchanged.
+- **New features added:**
+  - `InvitePlumberButton.tsx` — primary viral loop. Native share / clipboard. On results + vault.
+  - `PDFReportGenerator.tsx` — html2canvas + jsPDF client-side report card. Branded when pro active in zip.
+  - `RebateMaximizerCard.tsx` — live utility rebate via Brave-verified `utilityRebate` doc type.
+  - `app/pro/onboard/page.tsx` — 90-second pro signup: GBP URL → Grok AI screen → Stripe checkout.
+  - `app/pro/directory/page.tsx` — public searchable directory of screened pros.
+- **Grok prompt updates:** Added `utilityRebate` doc type. Added `WH_REVIEW_SCREEN` prompt for `mode=review-screen`.
+- **New env vars:** `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID_MONTHLY`, `STRIPE_PRICE_ID_ANNUAL`.
+- **New npm packages:** `html2canvas`, `jspdf`, `@stripe/stripe-js`.
+- **Treeshaked:** All "Book Professional Service" / "Get Protection Plan" CTAs removed from results + vault. All Hamilton Plumbing refs removed.
+- **README + DEV-NOTES:** Full rewrite for new SaaS model.
 
 ### 2026-03-20 — Ecosystem Integration + Strategy Rewrite
 - `waterheaterplan.com`: added `book.html` (personalized scan-data quote form), `protection.html` (plan comparison + cost math), `_redirects` for clean URLs, hero CTA → scanner

@@ -5,6 +5,9 @@ import Link from 'next/link'
 import { ProcessingResult } from '../../brain/router'
 import { privateVault, normalizeDocs } from '../../vault/private'
 import { ExtractedData } from '../../brain/on-device'
+import InvitePlumberButton from '../components/InvitePlumberButton'
+import PDFReportGenerator from '../components/PDFReportGenerator'
+import RebateMaximizerCard from '../components/RebateMaximizerCard'
 
 function RemainingLifeGauge({ remainingLifeYears, ageYears }: { remainingLifeYears: number; ageYears: number }) {
   const totalLife = ageYears + remainingLifeYears
@@ -157,17 +160,7 @@ export default function ResultsPage() {
   const { extractedData, processingMethod, confidence } = scanResult
   const docs = normalizeDocs(scanResult.docs)
 
-  const buildWHPUrl = (path: string) => {
-    const p = new URLSearchParams()
-    if (extractedData.brand && extractedData.brand !== 'Unknown') p.set('brand', extractedData.brand)
-    if (extractedData.model && extractedData.model !== 'Unknown') p.set('model', extractedData.model)
-    if (extractedData.ageYears > 0) p.set('age', String(extractedData.ageYears))
-    if (extractedData.fuelType && extractedData.fuelType !== 'unknown') p.set('fuel', extractedData.fuelType)
-    if (extractedData.estimatedReplacementCost > 0) p.set('cost', String(extractedData.estimatedReplacementCost))
-    if (extractedData.remainingLifeYears > 0) p.set('remaining', String(extractedData.remainingLifeYears))
-    const qs = p.toString()
-    return `https://waterheaterplan.com/${path}${qs ? '?' + qs : ''}`
-  }
+  const rebateDoc = docs.find(d => d.type === 'utilityRebate') ?? null
 
   return (
     <div className="min-h-screen bg-black">
@@ -225,22 +218,13 @@ export default function ResultsPage() {
             ))}
           </div>
 
-          {/* Lead-Gen CTAs */}
+          {/* Rebate Maximizer */}
+          <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
+
+          {/* Viral CTA + PDF */}
           <div className="space-y-3">
-            <a
-              href={buildWHPUrl('book')}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center w-full py-4 px-8 bg-blue-accent text-white rounded-full font-medium text-base active:scale-[0.97] transition-all"
-            >
-              Book Professional Service Now →
-            </a>
-            <a
-              href={buildWHPUrl('protection')}
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center w-full py-4 px-8 bg-transparent border-2 border-blue-accent text-white rounded-full font-medium text-base active:scale-[0.97] transition-all"
-            >
-              Get Protection Plan →
-            </a>
+            <InvitePlumberButton extractedData={extractedData} />
+            <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
           </div>
 
           {/* Email Capture */}
@@ -338,16 +322,15 @@ export default function ResultsPage() {
             </div>
           </div>
 
-          {/* Lead-Gen CTAs */}
+          {/* Rebate Maximizer */}
+          <div className="mb-5">
+            <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
+          </div>
+
+          {/* Viral CTA + PDF */}
           <div className="flex gap-4 mb-6">
-            <a href={buildWHPUrl('book')} target="_blank" rel="noopener noreferrer"
-              className="flex-1 py-3.5 rounded-full bg-blue-accent text-white text-sm font-medium text-center hover:bg-opacity-90 transition-colors duration-200">
-              Book Professional Service Now →
-            </a>
-            <a href={buildWHPUrl('protection')} target="_blank" rel="noopener noreferrer"
-              className="flex-1 py-3.5 rounded-full border border-blue-accent text-white text-sm font-medium text-center hover:bg-blue-accent hover:bg-opacity-10 transition-all duration-200">
-              Get Protection Plan →
-            </a>
+            <InvitePlumberButton extractedData={extractedData} />
+            <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
           </div>
 
           {/* Email Capture */}

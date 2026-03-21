@@ -1,42 +1,84 @@
-# WarrantyFile
+# WaterHeaterVault
 
-**Warranties, manuals, pics.**
+**Free AI water heater scanner for homeowners. SaaS platform for local pros.**
 
-Snap a photo. It's filed forever.
+*Consumer product:* `scan.waterheaterplan.com` — free 60-second AI scan (age, life, cost, recalls, rebates, PDF)  
+*Pro product:* `waterheaterplan.com/pro` — $29/mo white-label leads platform for screened local contractors
+
+> **Entity note:** Operated by VaultPro LLC (new standalone entity, filed separately for legal/tax separation). All domains, branding, and code are unchanged.
 
 ---
 
-## What it is
+## How It Works
 
-A minimalist PWA that turns photos of warranties, receipts, and product labels into a clean, editable vault. Works offline. No password — optional magic-link sync keeps your vault on any device. Local-only by default.
+```
+Consumer scans heater (free)
+       ↓
+Results: age · life · cost · recalls · rebates · PDF
+       ↓
+"Invite my plumber → get branded reports" button  ← PRIMARY VIRAL LOOP
+       ↓
+Pro sees branded scan PDFs with their name/number
+       ↓
+Pro pays $29/mo at waterheaterplan.com/pro
+       ↓
+Auto-leads delivered when heater age > 8yr or life < 3yr
+```
 
-Two-shot guided scan: first photo identifies the product, second targets the serial/model label. Grok-4 handles precise extraction, valuation, and surfacing real manual/warranty links via Brave Search. Tesseract OCR handles basic offline extraction when you're not connected.
+**Pro gate:** Grok AI screens Google Business Profile reviews (4.5+ stars required). Auto-pause if re-screen fails.
+
+---
+
+## What It Does
+
+Two-shot guided camera scan — photo 1 is the unit overview, photo 2 targets the data plate. **Grok Vision AI** decodes the serial number (brand-specific manufacture date rules), estimates remaining life, calculates replacement cost, checks CPSC recall status, and surfaces real manual + warranty links via **Brave Search.**
+
+Results page shows:
+- Brand · Model · Serial · Manufacture Date
+- Remaining Life Gauge (color-coded: green/amber/red)
+- Price Surprise Calculator (replacement cost + emergency premium)
+- Rebate Maximizer Card (live utility rebate via Brave Search)
+- CPSC Recall Status
+- One-click PDF Report Card (branded with pro name/number if applicable)
+- **"Invite my plumber → get branded reports"** viral CTA
+- Direct links: owner manual, warranty terms, serial decoder, rebate program
+
+---
 
 ## Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Framework | Next.js 14 — static export, all `use client` |
-| Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue |
-| On-device AI | Tesseract.js OCR (offline, ~4MB, instant) |
-| Cloud AI | Grok-4.20-beta via xAI API |
-| Docs search | Brave Search API — live verified manual/warranty URLs |
-| Storage | IndexedDB — private, offline-first; optional D1 cloud sync via magic-link auth |
-| Deployment | Cloudflare Pages — static site + CF Pages Functions |
+| Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue accent |
+| On-device AI | Tesseract.js OCR (offline fallback, ~4MB) |
+| Cloud AI | Grok Vision (xAI API) — serial decode, age, cost, docs, review screening |
+| Docs search | Brave Search API — live verified URLs (never hardcoded) |
+| Storage | IndexedDB (offline-first) + Cloudflare D1 (cloud sync + leads + pros) |
+| Auth | Magic-link via Resend + JWT (no Clerk, no OAuth) |
+| Payments | Stripe Checkout — Pro $29/mo or $299/yr |
+| PDF | html2canvas + jsPDF — client-side report card generation |
+| Deployment | Cloudflare Pages — static export + CF Pages Functions |
 | PWA | Service worker + manifest, installable on iOS/Android |
+
+---
 
 ## Routes
 
 | Route | What it does |
 |-------|-------------|
-| `/` | Home — WF logo, Scan, Vault |
+| `/` | Home — logo + Scan + Vault + Pro CTAs |
 | `/scan` | Two-shot guided camera scan |
-| `/results` | Extracted data + docs links + save |
-| `/vault` | Saved items (mobile cards / desktop table) |
-| `/vault/item?id=xxx` | Item detail, inline editing, delete |
-| `/debug` | Dev tool — full pipeline test with step logs |
+| `/results` | Scan results + rebate card + PDF + invite button + save |
+| `/vault` | Saved heaters — recall badges, life gauge, list |
+| `/vault/item?id=xxx` | Item detail — inline edit, recall banner, PDF, invite |
+| `/pro/onboard` | Pro signup: GBP URL → Grok AI screen → Stripe checkout |
+| `/pro/directory` | Public searchable directory of screened pros |
+| `/debug` | Dev pipeline test (NODE_ENV guard needed) |
 
-## Dev commands
+---
+
+## Dev Commands
 
 ```bash
 pnpm install
@@ -45,20 +87,85 @@ pnpm build        # Static export → out/
 pnpm icons        # Regenerate all icons from SVG (run after logo changes)
 ```
 
-## Deployment
+---
 
-Cloudflare Pages auto-deploys from `main`.
+## New npm Packages Required
 
-**Required secrets in CF Pages → Settings → Environment Variables:**
-
-| Key | What it does |
-|-----|-------------|
-| `GROK_API_KEY` | xAI Grok Vision API key |
-| `BRAVE_API_KEY` | Brave Search API key (manual/warranty link enrichment) |
-| `RESEND_API_KEY` | Resend.com — magic link emails (for auth/sync) |
-| `JWT_SECRET` | Sign/verify tokens (32+ chars) |
-| D1 binding `DB` | Cloudflare D1 — users + vault_items (see wrangler.toml) |
+```bash
+pnpm add html2canvas jspdf
+pnpm add @stripe/stripe-js
+```
 
 ---
 
-See [DEV-NOTES.md](./DEV-NOTES.md) for full architecture, decisions, and progress.
+## Deployment
+
+Cloudflare Pages auto-deploys from `main` branch.  
+Consumer URL: **scan.waterheaterplan.com**  
+Pro URL: **waterheaterplan.com/pro**
+
+**Required secrets — CF Pages → Settings → Environment Variables:**
+
+| Key | Purpose |
+|-----|---------|
+| `GROK_API_KEY` | xAI Grok Vision API + review screening |
+| `BRAVE_API_KEY` | Brave Search — live doc, decoder, rebate, review URLs |
+| `RESEND_API_KEY` | Resend.com — magic link + lead emails |
+| `JWT_SECRET` | Sign/verify tokens (32+ chars) |
+| `STRIPE_SECRET_KEY` | Stripe server-side — create checkout sessions |
+| `STRIPE_PRICE_ID_MONTHLY` | Stripe Price ID for $29/mo Pro plan |
+| `STRIPE_PRICE_ID_ANNUAL` | Stripe Price ID for $299/yr Pro plan |
+| `DB` | Cloudflare D1 binding — users, vault_items, leads, pros |
+
+### Stripe Setup (one-time — required before `/pro/onboard` works)
+
+1. [dashboard.stripe.com/products](https://dashboard.stripe.com/products) → **Add product** → `WaterHeaterVault Pro`
+2. Add price: **$29.00 / month** recurring → copy `price_...` → `STRIPE_PRICE_ID_MONTHLY`
+3. Add price: **$299.00 / year** recurring → copy `price_...` → `STRIPE_PRICE_ID_ANNUAL`
+4. [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) → copy secret key → `STRIPE_SECRET_KEY`
+5. Add all three to CF Pages env vars → redeploy
+
+> Testing? Use `sk_test_...` keys. Test card: `4242 4242 4242 4242`.
+
+**Stripe webhook** (Sprint 3 — activates/deactivates pros automatically):
+- Stripe → Developers → Webhooks → `https://scan.waterheaterplan.com/api/pro/webhook`
+- Events: `checkout.session.completed`, `customer.subscription.deleted`
+
+### D1 Migrations
+
+```bash
+# Run after cloning or adding new migrations:
+wrangler d1 execute waterheater-vault --file=migrations/0001_auth_sync.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0002_leads.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0003_pros.sql --remote
+```
+
+`0003_pros.sql` status: ✅ run locally + remote (2026-03-21)
+
+---
+
+## Build Status
+
+| Sprint | What | Status |
+|--------|------|--------|
+| Sprint 1 | Scanner, results, vault, auth, WHP integration | ✅ Live |
+| Sprint 2 | InvitePlumberButton, PDF, RebateCard, /pro/onboard, /pro/directory, D1 pros table | ✅ Code complete — deploy after Stripe env vars |
+| Sprint 3 | Stripe webhook, auto-leads, n8n re-screen, email capture | 🔲 Next |
+
+---
+
+## Business Model
+
+| Layer | What | Revenue |
+|-------|------|---------|
+| Consumer | Free scanner — viral acquisition | $0 (growth engine) |
+| Pro SaaS | $29/mo or $299/yr per contractor | MRR |
+| Data moat | Anonymized heater registry | Strategic asset |
+
+**Pro value prop:** Screened pros get white-label branding on every scan/PDF from homeowners in their area, plus auto-leads when heaters hit critical age. Multiple pros allowed per zip — competition is fine.
+
+**Growth engine:** Every PDF report has the pro's name/number. Every scan has "Invite my plumber" → viral loop that signs up more pros.
+
+---
+
+See [DEV-NOTES.md](./DEV-NOTES.md) for full architecture, all decisions, and the build queue.

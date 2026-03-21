@@ -4,6 +4,8 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { privateVault, VaultItem, VaultDocs, VaultDocItem, normalizeDocs } from '../../../vault/private'
+import InvitePlumberButton from '../../components/InvitePlumberButton'
+import PDFReportGenerator from '../../components/PDFReportGenerator'
 
 // ── Field definitions ──────────────────────────────────────────────────────
 
@@ -361,16 +363,13 @@ function VaultItemContent() {
             </div>
           )}
 
-          {/* Lead-Gen CTAs */}
+          {/* Viral CTA + PDF */}
           <div className="space-y-3">
-            <a href="https://waterheaterplan.com/book" target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center w-full py-4 px-8 bg-blue-accent text-white rounded-full font-medium text-base active:scale-[0.97] transition-all">
-              Book Professional Service Now →
-            </a>
-            <a href="https://waterheaterplan.com/protection" target="_blank" rel="noopener noreferrer"
-              className="flex items-center justify-center w-full py-4 px-8 bg-transparent border-2 border-blue-accent text-white rounded-full font-medium text-base active:scale-[0.97] transition-all">
-              Get Protection Plan →
-            </a>
+            <InvitePlumberButton extractedData={item.extractedData} />
+            <PDFReportGenerator
+              extractedData={item.extractedData}
+              imageBase64={item.imageData ?? undefined}
+            />
           </div>
 
           {/* Docs & Links */}
@@ -591,16 +590,13 @@ function VaultItemContent() {
             </div>
           )}
 
-          {/* Lead-Gen CTAs — desktop */}
+          {/* Viral CTA + PDF — desktop */}
           <div className="flex gap-4 mb-6">
-            <a href="https://waterheaterplan.com/book" target="_blank" rel="noopener noreferrer"
-              className="flex-1 py-3.5 rounded-full bg-blue-accent text-white text-sm font-medium text-center hover:bg-opacity-90 transition-colors duration-200">
-              Book Professional Service Now →
-            </a>
-            <a href="https://waterheaterplan.com/protection" target="_blank" rel="noopener noreferrer"
-              className="flex-1 py-3.5 rounded-full border border-blue-accent text-white text-sm font-medium text-center hover:bg-blue-accent hover:bg-opacity-10 transition-all duration-200">
-              Get Protection Plan →
-            </a>
+            <InvitePlumberButton extractedData={item.extractedData} />
+            <PDFReportGenerator
+              extractedData={item.extractedData}
+              imageBase64={item.imageData ?? undefined}
+            />
           </div>
 
           {/* Docs — full width below */}

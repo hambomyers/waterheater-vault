@@ -59,7 +59,32 @@ Always return a "docs" array. For water heaters, ALWAYS include ALL of:
 2. { "type": "ownerManual", "label": "Owner Manual", "searchQuery": "[Brand] [Model] water heater owner manual PDF" }
 3. { "type": "warrantyTerms", "label": "Warranty Terms", "searchQuery": "[Brand] water heater warranty terms [Model]" }
 4. { "type": "recallCheck", "label": "CPSC Recall Check", "searchQuery": "[Brand] [Model] water heater CPSC recall site:cpsc.gov" }
-Replace [Brand] and [Model] with the actual detected values.
+5. { "type": "utilityRebate", "label": "Utility Rebate Programs", "searchQuery": "water heater utility rebate [fuelType] [zip] DSIRE energystar" }
+Replace [Brand], [Model], [fuelType], and [zip] with actual detected/inferred values.
+`
+
+// ── Pro Review Screening Prompt ───────────────────────────────────────────────
+
+const WH_REVIEW_SCREEN = `You are a quality-screening AI for WaterHeaterVault Pro — a platform that connects homeowners with trusted local water heater contractors.
+
+You will receive the business name and Google Business Profile URL. Using the provided review data (passed as context), assess whether this business meets the 4.5+ star threshold.
+
+Return ONLY a single valid JSON object:
+{
+  "approved": true or false,
+  "rating": average star rating as a number (e.g. 4.7),
+  "reviewCount": total number of reviews as integer,
+  "sentiment": "positive" | "mixed" | "negative",
+  "businessName": "exact business name",
+  "summary": "1-2 sentence plain English summary of the review profile",
+  "redFlags": ["array of specific issues if any — e.g. 'Multiple recent 1-star reviews about no-shows', 'Owner responds aggressively to complaints'"]
+}
+
+CRITICAL RULES:
+1. approved = true ONLY if rating >= 4.5 AND no serious red flags (safety complaints, fraud, aggressive behavior).
+2. Even with 4.5+ stars, approved = false if there are recent patterns of: safety incidents, unlicensed work claims, fraud allegations, or hostile owner responses.
+3. redFlags array must be empty [] if there are no issues.
+4. Be objective. This gate protects homeowners.
 `
 
 const WH_SYSTEM = `You are WaterHeaterVault's expert AI — the world's best water heater identification and analysis engine.
@@ -175,6 +200,31 @@ async function callGrok(
   })
 }
 
+// ── Review screening Grok call ───────────────────────────────────────────────
+async function callGrokReviewScreen(
+  apiKey: string,
+  businessName: string,
+  gbpUrl: string,
+  reviewContext: string,
+): Promise<Response> {
+  return fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'grok-4.20-beta',
+      messages: [
+        { role: 'system', content: WH_REVIEW_SCREEN },
+        {
+          role: 'user',
+          content: `Business: ${businessName}\nGoogle Business Profile URL: ${gbpUrl}\n\nReview context from Brave Search:\n${reviewContext}`,
+        },
+      ],
+      max_tokens: 800,
+      temperature: 0.1,
+    }),
+  })
+}
+
 // ── Request handler ───────────────────────────────────────────────────────────
 export const onRequest = async (context: any) => {
   const corsHeaders = {
@@ -192,6 +242,74 @@ export const onRequest = async (context: any) => {
     const categoryHint = formData.get('category') as string | null
     const mode = formData.get('mode') as string | null
 
+    // ── Review screening mode ──
+    if (mode === 'review-screen') {
+      const gbpUrl = formData.get('gbpUrl') as string | null
+      const businessName = formData.get('businessName') as string | null
+
+      if (!gbpUrl || !businessName) {
+        return new Response(JSON.stringify({ error: 'gbpUrl and businessName required for review-screen mode' }), {
+          status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      }
+
+      const grokKey = context.env.GROK_API_KEY
+      const braveKey = context.env.BRAVE_API_KEY
+
+      if (!grokKey) {
+        return new Response(
+          JSON.stringify({ error: 'API key not configured', message: 'GROK_API_KEY is not set.' }),
+          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
+      }
+
+      // Use Brave to fetch review context for this business
+      let reviewContext = 'No review data found via search.'
+      if (braveKey) {
+        const searchQuery = `${businessName} Google reviews rating plumber`
+        const braveResult = await braveSearch(braveKey, searchQuery)
+        if (braveResult) reviewContext = `Top search result URL: ${braveResult}`
+      }
+
+      const screenResponse = await callGrokReviewScreen(grokKey, businessName, gbpUrl, reviewContext)
+      if (!screenResponse.ok) {
+        return new Response(
+          JSON.stringify({ error: 'grok_api_error', message: userFriendlyError(screenResponse.status) }),
+          { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
+      }
+
+      const screenData = await screenResponse.json()
+      const screenContent = screenData.choices?.[0]?.message?.content
+      if (!screenContent) {
+        return new Response(
+          JSON.stringify({ error: 'empty_response', message: 'Grok returned empty screening response.' }),
+          { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
+      }
+
+      const rawJson = extractOutermostJson(screenContent)
+      if (!rawJson) {
+        return new Response(
+          JSON.stringify({ error: 'parse_error', message: 'Could not parse screening response.' }),
+          { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
+      }
+
+      try {
+        const parsed = JSON.parse(rawJson)
+        return new Response(JSON.stringify(parsed), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        })
+      } catch {
+        return new Response(
+          JSON.stringify({ error: 'parse_error', message: 'Could not parse screening JSON.' }),
+          { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
+      }
+    }
+
+    // ── Standard scan mode ──
     if (!shot1) {
       return new Response(JSON.stringify({ error: 'No image provided' }), {
         status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -264,7 +382,7 @@ export const onRequest = async (context: any) => {
 
     if (braveKey && rawDocs.length > 0) {
       const enriched = await Promise.all(
-        rawDocs.slice(0, 4).map(async (doc: any) => {
+        rawDocs.slice(0, 5).map(async (doc: any) => {
           if (!doc.searchQuery) return { ...doc, url: null }
           const url = await braveSearch(braveKey, doc.searchQuery)
           return { type: doc.type, label: doc.label, url, searchQuery: doc.searchQuery }
