@@ -31,16 +31,17 @@ Auto-leads delivered when heater age > 8yr or life < 3yr
 
 ## What It Does
 
-Two-shot guided camera scan — photo 1 is the unit overview, photo 2 targets the data plate. **Grok Vision AI** decodes the serial number (brand-specific manufacture date rules), estimates remaining life, calculates replacement cost, checks CPSC recall status, and surfaces real manual + warranty links via **Brave Search.**
+**Label-first** two-shot scan — Shot 1 is the data plate (authoritative, required). Shot 2 is the full unit (optional, skip button available). **Grok Vision AI** decodes the serial number using brand-specific manufacture date rules, estimates remaining life, calculates a full price breakdown, checks CPSC recall status, and surfaces real manual + warranty links via **Brave Search.**
 
 Results page shows:
-- Brand · Model · Serial · Manufacture Date
+- Brand · Model · Serial · Manufacture Date · Age · Fuel Type
 - Remaining Life Gauge (color-coded: green/amber/red)
-- Price Surprise Calculator (replacement cost + emergency premium)
+- **Fair Price Breakdown** — unit cost, labor, planned total (green) vs emergency total (red) vs national chain reference
 - Rebate Maximizer Card (live utility rebate via Brave Search)
 - CPSC Recall Status
-- One-click PDF Report Card (branded with pro name/number if applicable)
-- **"Invite my plumber → get branded reports"** viral CTA
+- One-click PDF Report Card (branded with matched pro)
+- **"Text my plumber this report"** — personal homeowner invite (not a sales pitch)
+- TCPA-compliant email/SMS capture — explicit written consent checkbox, phone field
 - Direct links: owner manual, warranty terms, serial decoder, rebate program
 
 ---
@@ -68,12 +69,13 @@ Results page shows:
 | Route | What it does |
 |-------|-------------|
 | `/` | **Homeowner landing** — headline + Scan CTA + proof pills + pro link |
-| `/scan` | Two-shot guided camera scan |
-| `/results` | Scan results + rebate card + PDF + invite button + save |
+| `/scan` | Label-first guided scan — data plate required, unit overview optional |
+| `/results` | Results: gauge, price breakdown, rebate card, PDF, invite, TCPA capture |
 | `/vault` | Saved heaters — recall badges, life gauge, list |
 | `/vault/item?id=xxx` | Item detail — inline edit, recall banner, PDF, invite |
-| `/pro` | **Pro marketing page** — how it works, pricing, quality gate |
-| `/pro/onboard` | Pro signup: GBP URL → Grok AI screen → Stripe checkout |
+| `/pro` | **Pro marketing page** — $49/mo, how it works, pricing, quality gate |
+| `/pro/claim` | **Free plumber claim** — invited plumber claims unit, TCPA consent, upsell |
+| `/pro/onboard` | Full pro signup: GBP URL → Grok AI screen → Stripe $49/mo checkout |
 | `/pro/directory` | Public searchable directory of screened pros |
 | `/pro/dashboard` | Pro sees weekly scan counts by zip |
 | `/debug` | Dev pipeline test (NODE_ENV guard needed) |
@@ -136,13 +138,23 @@ Alias: **scan.waterheaterplan.com** → same app
 ### D1 Migrations
 
 ```bash
-# Run after cloning or adding new migrations:
+# Run in order after cloning:
 wrangler d1 execute waterheater-vault --file=migrations/0001_auth_sync.sql --remote
 wrangler d1 execute waterheater-vault --file=migrations/0002_leads.sql --remote
 wrangler d1 execute waterheater-vault --file=migrations/0003_pros.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0004_scan_events.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0005_pro_claims.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0006_leads_sms.sql --remote
 ```
 
-`0003_pros.sql` status: ✅ run locally + remote (2026-03-21)
+| Migration | What | Status |
+|-----------|------|--------|
+| `0001_auth_sync.sql` | users table | ✅ run |
+| `0002_leads.sql` | leads table | ✅ run |
+| `0003_pros.sql` | pros table | ✅ run (2026-03-21) |
+| `0004_scan_events.sql` | anonymous scan events | ✅ run |
+| `0005_pro_claims.sql` | free plumber claims | 🔲 **needs run** |
+| `0006_leads_sms.sql` | adds phone + sms_consent to leads | 🔲 **needs run** |
 
 ---
 
@@ -150,9 +162,11 @@ wrangler d1 execute waterheater-vault --file=migrations/0003_pros.sql --remote
 
 | Sprint | What | Status |
 |--------|------|--------|
-| Sprint 1 | Scanner, results, vault, auth, WHP integration | ✅ Live |
-| Sprint 2 | InvitePlumberButton, PDF, RebateCard, /pro/onboard, /pro/directory, D1 pros table | ✅ Code complete — deploy after Stripe env vars |
-| Sprint 3 | Stripe webhook, auto-leads, n8n re-screen, email capture | 🔲 Next |
+| Sprint 1 | Scanner, results, vault, auth, recall, rebates, PDF | ✅ Live |
+| Sprint 2 | InvitePlumberButton, /pro/onboard, /pro/directory, Stripe integration | ✅ Code complete |
+| Sprint 3 | Label-first scan, shot1Note, single-shot fast path, Google doc fallback | ✅ Shipped |
+| Sprint 4 | TCPA gate, $49 pricing, /pro/claim, PriceBreakdownCard, auto-lead trigger, treeshake | ✅ Shipped 2026-03-22 |
+| Sprint 5 | Stripe webhook, D1 serial cache, n8n monthly re-screen, home_id schema | 🔲 Next |
 
 ---
 
@@ -166,7 +180,20 @@ wrangler d1 execute waterheater-vault --file=migrations/0003_pros.sql --remote
 
 **Pro value prop:** Screened pros get white-label branding on every scan/PDF from homeowners in their area, plus auto-leads when heaters hit critical age. Multiple pros allowed per zip — competition is fine.
 
-**Growth engine:** Every PDF report has the pro's name/number. Every scan has "Invite my plumber" → viral loop that signs up more pros.
+**The invite flow:**
+```
+Homeowner scans → "Text my plumber this report" → plumber gets personal message with report link
+       ↓
+Plumber visits /pro/claim → free unit claim → TCPA SMS consent → success
+       ↓
+Upsell: "Get leads from every scan in your zip — $49/mo"
+       ↓
+/pro/onboard → GBP URL → Grok screens reviews → Stripe $49/mo → active
+```
+
+**Auto-lead:** When homeowner submits email + heater is age >8yr or <3yr remaining, system queries active pros in that zip and sends them a lead notification via Resend. No homeowner contact shared without TCPA consent.
+
+**Growth engine:** Every PDF report has the pro's name/number. Every scan has "Text my plumber" → viral loop that seeds the pro directory organically.
 
 ---
 
