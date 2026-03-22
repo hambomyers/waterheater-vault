@@ -1,69 +1,45 @@
-const MAX_RETRIES = 2
-
 function userFriendlyError(status: number): string {
   switch (status) {
     case 401: return 'Invalid API key. Check GROK_API_KEY in Cloudflare Pages settings.'
     case 429: return 'Rate limit reached. Please wait a moment and try again.'
-    case 404: return 'Grok model not found. The model name may have changed — check xAI docs.'
-    case 413: return 'Image too large. Please use a smaller photo (under 20MB).'
+    case 404: return 'Grok model not found.'
+    case 413: return 'Image too large. Try a lower-resolution photo.'
     default:  return `Grok API error (${status}). Please try again.`
   }
 }
 
-// ── Water Heater System Prompts ───────────────────────────────────────────────
+// ── Minimal label-reader prompt ───────────────────────────────────────────────
+// Grok reads 7 fields only. All derived fields are computed server-side below.
 
-const WH_SERIAL_DECODERS = `
-BRAND SERIAL NUMBER DECODE RULES (use to determine manufactureDate from serialNumber):
-- Rheem / Ruud: positions 1-4 = week+year e.g. "0115" = Jan 2015. Or "F15" = June 2015 (A=Jan…L=Dec).
-- AO Smith / American / State / Reliance / Whirlpool WH: 2-digit year + 2-digit week in positions 1-4, e.g. "1506" = 2015 week 6.
-- Bradford White: position 1 = decade code (A=00s,B=10s,C=20s), position 2 = year within decade (A=0,B=1…J=9), position 3 = month (A=Jan…L=Dec). e.g. "BEF..." = 2014 June.
-- Navien: "YY" + "WW" encoded in first 4 chars. e.g. "2312" = 2023 week 12.
-- Rinnai: 4-digit year+month in first 4 chars e.g. "2308" = Aug 2023.
-- GE / GE Appliances: letter-number-letter format, year = position 2 (A=2001, B=2002…).
-- Kenmore (Sears): first 3 digits are factory code; date encoded varies — use brand-specific decoder.
-- Lochinvar / Weil-McLain: first 2 digits = year, next 2 = week.
-- If serial is ambiguous: return your best YYYY-MM estimate with note "(from serial — verify)".
-`
+const WH_SYSTEM = `You are a water heater data plate reader. Read ONLY what is physically printed on the label in the image.
 
-const WH_LIFESPAN_RULES = `
-LIFESPAN + REPLACEMENT COST RULES:
-- Gas tank water heater: typical lifespan 8–12 years. Use 10 as midpoint.
-- Electric tank water heater: typical lifespan 10–15 years. Use 12 as midpoint.
-- Tankless (gas or electric): typical lifespan 15–20 years. Use 18 as midpoint.
-- Heat pump water heater: typical lifespan 10–15 years. Use 13 as midpoint.
-- remainingLifeYears = max(0, expectedLifespan - ageYears). Adjust down if unit shows signs of age/corrosion.
-- estimatedReplacementCost:
-    Gas tank 30-50 gal: $900–$1,400 installed
-    Gas tank 50-75 gal: $1,100–$1,800 installed
-    Electric tank: $700–$1,200 installed
-    Tankless gas: $1,500–$2,500 installed
-    Tankless electric: $800–$1,500 installed
-    Heat pump: $1,200–$2,000 installed
-  Use the midpoint of the applicable range.
-`
+Return ONLY valid JSON, no markdown, no explanation:
+{
+  "brand": "exact brand name (Rheem|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
+  "model": "model number exactly as printed, or null",
+  "serialNumber": "serial number exactly as printed — look for S/N, Serial No., standalone alphanumeric string 8-20 chars",
+  "manufactureDate": "YYYY-MM decoded from serial — REQUIRED if serial present",
+  "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
+  "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
+  "confidence": 0.0-1.0
+}
 
-const WH_WARRANTY_GUIDE = `
-COMMON WATER HEATER WARRANTY PERIODS (use if label is unclear):
-- Rheem Professional / Marathon: 6-year or 10-year tank warranty
-- Bradford White: 6-year residential tank, 1-year parts
-- AO Smith Signature: 6-year or 12-year depending on model
-- Navien / Rinnai tankless: 12–15 year heat exchanger, 5-year parts
-- State Select: 6-year tank, 1-year parts
-- Kenmore: 6-year tank
-Return the warranty string exactly as printed on the label if visible. Otherwise use the above guide.
-`
+If not a water heater data plate: {"error":"not_wh","message":"brief description"}
 
-const WH_DOCS_INSTRUCTIONS = `
-Always return a "docs" array. For water heaters, ALWAYS include ALL of:
-1. { "type": "serialDecoder", "label": "Serial Date Decoder", "searchQuery": "[Brand] water heater serial number manufacture date decoder" }
-2. { "type": "ownerManual", "label": "Owner Manual", "searchQuery": "[Brand] [Model] water heater owner manual PDF" }
-3. { "type": "warrantyTerms", "label": "Warranty Terms", "searchQuery": "[Brand] water heater warranty terms [Model]" }
-4. { "type": "recallCheck", "label": "CPSC Recall Check", "searchQuery": "[Brand] [Model] water heater CPSC recall site:cpsc.gov" }
-5. { "type": "utilityRebate", "label": "Utility Rebate Programs", "searchQuery": "water heater utility rebate [fuelType] [zip] DSIRE energystar" }
-Replace [Brand], [Model], [fuelType], and [zip] with actual detected/inferred values.
-`
+SERIAL DATE DECODERS:
+• Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
+• AO Smith/American/Reliance/Whirlpool: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
+• Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
+• State ProLine/Select: same as AO Smith (year+week)
+• Navien NPE/NFC/NCB/NHB: YYWW e.g. "2312"=2023wk12≈Mar2023
+• Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
+• Noritz: YYWW in first 4 chars
+• Bosch: first 6 = YYYYWW
+• GE: letter=factory next digit=year (A=2001,B=2002…)
+• Lochinvar/Weil-McLain: first 2=year next 2=week
+• Unknown: best YYYY-MM estimate with "(est)" appended`
 
-// ── Pro Review Screening Prompt ───────────────────────────────────────────────
+// ── Review screening prompt (unchanged) ──────────────────────────────────────
 
 const WH_REVIEW_SCREEN = `You are a quality-screening AI for WaterHeaterVault Pro — a platform that connects homeowners with trusted local water heater contractors.
 
@@ -77,63 +53,106 @@ Return ONLY a single valid JSON object:
   "sentiment": "positive" | "mixed" | "negative",
   "businessName": "exact business name",
   "summary": "1-2 sentence plain English summary of the review profile",
-  "redFlags": ["array of specific issues if any — e.g. 'Multiple recent 1-star reviews about no-shows', 'Owner responds aggressively to complaints'"]
+  "redFlags": ["array of specific issues if any"]
 }
 
 CRITICAL RULES:
-1. approved = true ONLY if rating >= 4.5 AND no serious red flags (safety complaints, fraud, aggressive behavior).
-2. Even with 4.5+ stars, approved = false if there are recent patterns of: safety incidents, unlicensed work claims, fraud allegations, or hostile owner responses.
-3. redFlags array must be empty [] if there are no issues.
-4. Be objective. This gate protects homeowners.
+1. approved = true ONLY if rating >= 4.5 AND no serious red flags.
+2. approved = false if recent patterns of safety incidents, unlicensed work, fraud, or hostile owner responses.
+3. redFlags = [] if no issues. Be objective — this gate protects homeowners.
 `
 
-const WH_SYSTEM = `You are WaterHeaterVault's expert AI — the world's best water heater identification and analysis engine.
-You ONLY analyze water heaters. You know every major brand's serial number encoding system by heart.
+// ── Server-side derived field computation ────────────────────────────────────
+// Computes everything Grok doesn't need to — age, costs, warranty, docs, etc.
 
-${WH_SERIAL_DECODERS}
+function computeDerivedFields(parsed: any): any {
+  const currentYear = new Date().getFullYear()
+  const fuel = (parsed.fuelType || 'unknown').toLowerCase()
+  const brand = (parsed.brand || '').toLowerCase()
+  const gal = parsed.tankSizeGallons || 0
 
-${WH_LIFESPAN_RULES}
+  // Age from manufactureDate
+  let mfgYear = 0
+  if (parsed.manufactureDate) {
+    mfgYear = parseInt(String(parsed.manufactureDate).replace(/\(.*\)/, '').trim().split('-')[0]) || 0
+  }
+  const ageYears = mfgYear > 1980 ? Math.max(0, currentYear - mfgYear) : 0
 
-${WH_WARRANTY_GUIDE}
+  // Expected lifespan
+  let expectedLife = 10
+  if (fuel.includes('tankless')) {
+    expectedLife = (brand.includes('navien') || brand.includes('rinnai') || brand.includes('noritz')) ? 20 : 18
+  } else if (fuel === 'electric') {
+    expectedLife = 12
+  } else if (fuel === 'heat-pump' || fuel === 'heat_pump') {
+    expectedLife = 13
+  }
+  const remainingLifeYears = Math.max(0, expectedLife - ageYears)
 
-Return ONLY a single valid JSON object. No markdown, no text before or after:
-{
-  "product": "Water Heater (e.g. 'Rheem 40-Gal Gas Water Heater')",
-  "brand": "exact brand name (Rheem|AO Smith|Bradford White|GE|Navien|Rinnai|State|Reliance|American|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
-  "model": "model number from label or null",
-  "serialNumber": "full serial number exactly as printed",
-  "manufactureDate": "YYYY-MM decoded from serial or label — REQUIRED, use decoder rules above",
-  "tankSizeGallons": tank capacity as integer (e.g. 40, 50, 75) or null if tankless,
-  "fuelType": "gas|electric|tankless|unknown",
-  "ageYears": calculated as (current year - manufacture year) as number,
-  "remainingLifeYears": calculated remaining life as number (see lifespan rules),
-  "estimatedReplacementCost": estimated installed replacement cost in USD as integer (see cost rules),
-  "currentWarranty": "warranty as printed on label or inferred from brand guide",
-  "confidence": overall extraction confidence 0.0-1.0,
-  "shot1Note": "optional — only populate if Shot 2 (overview) does not match label data or is not a water heater. E.g. 'Shot 2 appears to be a paper cup, not a water heater.' or 'Unit appears heavily corroded — may affect remaining life estimate.' Leave null if no issues.",
-  "priceBreakdown": {
-    "unitLow": low end unit-only cost in USD (e.g. 700),
-    "unitHigh": high end unit-only cost in USD (e.g. 1400),
-    "laborLow": low end labor+permits in USD (e.g. 400),
-    "laborHigh": high end labor+permits in USD (e.g. 800),
-    "emergencyPremiumLow": low end emergency surcharge in USD (e.g. 400),
-    "emergencyPremiumHigh": high end emergency surcharge in USD (e.g. 700),
-    "nationalChainLow": low end national chain (Home Depot Install / Roto-Rooter) total in USD (e.g. 2200),
-    "nationalChainHigh": high end national chain total in USD (e.g. 3400)
-  },
-  "docs": [ ... always 4 entries per docs instructions above ... ]
+  // Replacement cost
+  let costMid = 1150, unitLow = 700, unitHigh = 1100, laborLow = 400, laborHigh = 800
+  let emLow = 400, emHigh = 700, ncLow = 2200, ncHigh = 3400
+  if (fuel.includes('tankless')) {
+    if (fuel.includes('electric')) {
+      costMid = 1150; unitLow = 600; unitHigh = 1000; laborLow = 500; laborHigh = 900; emLow = 450; emHigh = 800; ncLow = 2400; ncHigh = 3800
+    } else {
+      costMid = 2000; unitLow = 900; unitHigh = 1800; laborLow = 600; laborHigh = 1000; emLow = 500; emHigh = 900; ncLow = 2800; ncHigh = 4200
+    }
+  } else if (fuel === 'heat-pump' || fuel === 'heat_pump') {
+    costMid = 1600; unitLow = 900; unitHigh = 1400; laborLow = 600; laborHigh = 900; emLow = 500; emHigh = 800; ncLow = 2600; ncHigh = 4000
+  } else if (fuel === 'electric') {
+    costMid = 950; unitLow = 500; unitHigh = 900; laborLow = 350; laborHigh = 700; emLow = 350; emHigh = 600; ncLow = 1800; ncHigh = 2800
+  } else if (gal >= 50) {
+    costMid = 1450; unitLow = 800; unitHigh = 1300; laborLow = 450; laborHigh = 850; emLow = 450; emHigh = 750; ncLow = 2500; ncHigh = 3700
+  }
+
+  // Warranty
+  let warranty = 'See manufacturer documentation'
+  if (brand.includes('navien')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
+  else if (brand.includes('rinnai')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
+  else if (brand.includes('noritz')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
+  else if (brand.includes('bosch')) warranty = '15-year heat exchanger, 6-year parts'
+  else if (brand.includes('lochinvar')) warranty = '10-year heat exchanger, 5-year parts'
+  else if (brand.includes('bradford')) warranty = '6-year tank, 1-year parts'
+  else if (brand.includes('rheem') || brand.includes('ruud')) warranty = '6-year tank, 1-year parts'
+  else if (brand.includes('ao smith') || brand.includes('a.o. smith')) warranty = '6–12-year tank (model dependent)'
+  else if (brand.includes('state') || brand.includes('american') || brand.includes('reliance')) warranty = '6-year tank, 1-year parts'
+  else if (brand.includes('ge') || brand.includes('kenmore') || brand.includes('whirlpool')) warranty = '6-year tank, 1-year parts'
+
+  // Product label
+  const b = parsed.brand || 'Water Heater'
+  const m = parsed.model ? ` ${parsed.model}` : ''
+  let pType = `${gal > 0 ? gal + '-Gal ' : ''}Gas Water Heater`
+  if (fuel.includes('tankless')) pType = `Tankless ${fuel.includes('electric') ? 'Electric' : 'Gas'} Water Heater`
+  else if (fuel === 'heat-pump' || fuel === 'heat_pump') pType = `${gal > 0 ? gal + '-Gal ' : ''}Heat Pump Water Heater`
+  else if (fuel === 'electric') pType = `${gal > 0 ? gal + '-Gal ' : ''}Electric Water Heater`
+
+  // Docs (template — Brave enriches URLs after)
+  const bq = parsed.brand || 'water heater'
+  const mq = parsed.model || ''
+  const fq = fuel.includes('gas') ? 'gas' : 'electric'
+  const docs = [
+    { type: 'serialDecoder', label: 'Serial Date Decoder', searchQuery: `${bq} water heater serial number manufacture date decoder` },
+    { type: 'ownerManual',   label: 'Owner Manual',        searchQuery: `${bq} ${mq} water heater owner manual PDF`.trim() },
+    { type: 'warrantyTerms', label: 'Warranty Terms',      searchQuery: `${bq} water heater warranty terms ${mq}`.trim() },
+    { type: 'recallCheck',   label: 'CPSC Recall Check',   searchQuery: `${bq} ${mq} water heater recall site:cpsc.gov`.trim() },
+    { type: 'utilityRebate', label: 'Utility Rebate',      searchQuery: `${fq} water heater utility rebate DSIRE energystar` },
+  ]
+
+  return {
+    ...parsed,
+    product: `${b}${m} ${pType}`,
+    fuelType: fuel,
+    ageYears,
+    remainingLifeYears,
+    estimatedReplacementCost: costMid,
+    currentWarranty: parsed.currentWarranty || warranty,
+    depreciationRate: expectedLife > 0 ? parseFloat((1 / expectedLife).toFixed(3)) : 0.1,
+    shot1Note: parsed.shot1Note || null,
+    priceBreakdown: { unitLow, unitHigh, laborLow, laborHigh, emergencyPremiumLow: emLow, emergencyPremiumHigh: emHigh, nationalChainLow: ncLow, nationalChainHigh: ncHigh },
+    docs,
+  }
 }
-
-CRITICAL RULES:
-0. FIRST PRIORITY: Read serialNumber and model directly off the label — these are the two most important fields. Scan the label for number+letter combinations. Serial numbers are typically 8–20 alphanumeric characters. Model numbers appear near "Model No." or "Model". Get these right before anything else.
-1. manufactureDate is REQUIRED — always decode from serial using brand rules above. Never return null if you have a serial number.
-2. ageYears and remainingLifeYears are REQUIRED — always calculate them.
-3. estimatedReplacementCost is REQUIRED — always return a realistic integer.
-4. Shot 1 (label) is AUTHORITATIVE. Never override label data with guesses.
-5. If Shot 1 shows something other than a water heater data plate: { "error": "not_a_water_heater", "message": "This appears to be a [X], not a water heater data plate." }
-6. If overview shot doesn't match — extract normally from Shot 1 and put the observation in shot1Note. Never fail the scan because of a bad overview shot.
-
-${WH_DOCS_INSTRUCTIONS}`
 
 // ── JSON extraction ───────────────────────────────────────────────────────────
 // Finds the outermost {...} block by counting brackets — handles nested objects.
@@ -199,19 +218,30 @@ async function callGrok(
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot1Base64}`, detail: 'high' } },
       ]
 
-  return fetch('https://api.x.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'grok-4.20-beta',
-      messages: [
-        { role: 'system', content: WH_SYSTEM },
-        { role: 'user', content: userContent },
-      ],
-      max_tokens: 2000,
-      temperature: 0.1,
-    }),
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 25000)
+  try {
+    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'grok-2-vision-1212',
+        messages: [
+          { role: 'system', content: WH_SYSTEM },
+          { role: 'user', content: userContent },
+        ],
+        max_tokens: 500,
+        temperature: 0.1,
+      }),
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+    return res
+  } catch (err: any) {
+    clearTimeout(timeout)
+    if (err.name === 'AbortError') throw new Error('Scan timed out — xAI API took too long. Please try again.')
+    throw err
+  }
 }
 
 // ── Review screening Grok call ───────────────────────────────────────────────
@@ -355,17 +385,17 @@ export const onRequest = async (context: any) => {
       )
     }
 
-    // ── Step 1: Call Grok ──
-    let grokResponse: Response | null = null
+    // ── Step 1: Call Grok (single attempt — fast fail) ──
+    let grokResponse: Response
     let lastStatus = 0
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
       grokResponse = await callGrok(grokKey, shot1, shot2, categoryHint)
       lastStatus = grokResponse.status
-      if (grokResponse.status === 429 && attempt < MAX_RETRIES) {
-        await new Promise((r) => setTimeout(r, 1500 * attempt))
-        continue
-      }
-      break
+    } catch (err: any) {
+      return new Response(
+        JSON.stringify({ error: 'timeout', message: err.message || 'Scan timed out. Please try again.' }),
+        { status: 504, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      )
     }
 
     if (!grokResponse || !grokResponse.ok) {
@@ -403,34 +433,26 @@ export const onRequest = async (context: any) => {
       )
     }
 
-    if (parsed.error === 'not_a_water_heater' || parsed.error) {
+    if (parsed.error) {
       return new Response(JSON.stringify(parsed), { headers: { 'Content-Type': 'application/json', ...corsHeaders } })
     }
 
-    // ── Step 2: Brave Search — enrich each doc with a verified URL ──
-    const braveKey = context.env.BRAVE_API_KEY
-    const rawDocs: any[] = Array.isArray(parsed.docs) ? parsed.docs : []
+    // ── Step 2: Compute all derived fields server-side ──
+    parsed = computeDerivedFields(parsed)
 
-    if (braveKey && rawDocs.length > 0) {
-      const enriched = await Promise.all(
-        rawDocs.slice(0, 5).map(async (doc: any) => {
+    // ── Step 3: Brave Search — enrich docs with verified URLs ──
+    const braveKey = context.env.BRAVE_API_KEY
+    if (braveKey && Array.isArray(parsed.docs)) {
+      parsed.docs = await Promise.all(
+        parsed.docs.slice(0, 5).map(async (doc: any) => {
           if (!doc.searchQuery) return { ...doc, url: null }
           const url = await braveSearch(braveKey, doc.searchQuery)
           return { type: doc.type, label: doc.label, url, searchQuery: doc.searchQuery }
         })
       )
-      parsed.docs = enriched
-    } else {
-      // No Brave key or no docs — keep stubs with null URLs so frontend can show Google fallback
-      parsed.docs = rawDocs.map((doc: any) => ({
-        type: doc.type,
-        label: doc.label,
-        url: null,
-        searchQuery: doc.searchQuery,
-      }))
     }
 
-    // ── Step 3: Record scan event for pro dashboard ──────────────────────────
+    // ── Step 4: Record scan event for pro dashboard ───────────────────────────
     if (context.env.DB && parsed.ageYears != null) {
       const cf = (context.request as any).cf ?? {}
       const zip = cf.postalCode ?? null
