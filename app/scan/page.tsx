@@ -121,7 +121,8 @@ export default function ScanPage() {
         if (videoRef.current) videoRef.current.srcObject = stream
       }, 50)
     } catch {
-      setError('Camera access denied. Please allow camera permissions and try again.')
+      filePickerShotRef.current = forShot
+      fileInputRef.current?.click()
     }
   }
 
@@ -352,20 +353,12 @@ export default function ScanPage() {
                   Any angle, upside down — just clear 🙂 We'll tell you what to snap next.
                 </p>
               </div>
-              <div className="space-y-3">
-                <button
+              <button
                   onClick={() => openCamera(1)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  Take Photo with Camera
+                  Scan my water heater →
                 </button>
-                <button
-                  onClick={() => { filePickerShotRef.current = 1; fileInputRef.current?.click() }}
-                  className="w-full min-h-[48px] py-4 px-10 border border-white border-opacity-20 text-white text-opacity-70 rounded-full font-light text-base active:scale-[0.97] focus:outline-none touch-manipulation"
-                >
-                  Choose from Gallery
-                </button>
-              </div>
             </div>
           )}
 
@@ -430,20 +423,12 @@ export default function ScanPage() {
                 Any angle, upside down — just clear 🙂
               </p>
 
-              <div className="space-y-3">
-                <button
+              <button
                   onClick={() => openCamera(2)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  Take Photo of Label
+                  Scan the data plate →
                 </button>
-                <button
-                  onClick={() => { filePickerShotRef.current = 2; fileInputRef.current?.click() }}
-                  className="w-full min-h-[48px] py-4 px-10 border border-white border-opacity-20 text-white text-opacity-70 rounded-full font-light text-base active:scale-[0.97] focus:outline-none touch-manipulation"
-                >
-                  Choose from Gallery
-                </button>
-              </div>
 
               {!isOnline && (
                 <button
