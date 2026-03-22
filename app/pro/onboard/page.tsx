@@ -69,8 +69,7 @@ export default function ProOnboardPage() {
     if (query.length < 2) { setSuggestions([]); setShowSuggestions(false); return }
     setSuggestionsLoading(true)
     try {
-      const city = detectedCity?.split(',')[0] ?? ''
-      const res = await fetch(`/api/pro/search-business?q=${encodeURIComponent(query)}&city=${encodeURIComponent(city)}`)
+      const res = await fetch(`/api/pro/search-business?q=${encodeURIComponent(query)}&zip=${encodeURIComponent(zip)}`)
       const data: BusinessSuggestion[] = res.ok ? await res.json() : []
       setSuggestions(data)
       setShowSuggestions(data.length > 0)
@@ -79,7 +78,7 @@ export default function ProOnboardPage() {
     } finally {
       setSuggestionsLoading(false)
     }
-  }, [detectedCity])
+  }, [zip])
 
   useEffect(() => {
     if (autocompleteDebounce.current) clearTimeout(autocompleteDebounce.current)
@@ -204,18 +203,26 @@ export default function ProOnboardPage() {
               ))}
             </div>
 
-            {/* City detection banner */}
-            {detectedCity && !cityDismissed && (
-              <div className="flex items-center justify-between gap-3 rounded-2xl border border-blue-accent border-opacity-25 bg-blue-accent bg-opacity-5 px-4 py-3 mb-4">
-                <span className="text-white text-opacity-60 text-sm font-light">
-                  📍 Detected near <span className="text-white font-medium">{detectedCity}</span> — correct?
-                </span>
-                <button type="button" onClick={() => setCityDismissed(true)} className="text-white text-opacity-25 hover:text-opacity-50 text-lg leading-none shrink-0" aria-label="Dismiss">×</button>
-              </div>
-            )}
-
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Business name with autocomplete */}
+              {/* ZIP first — drives accurate autocomplete */}
+              <div>
+                <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">
+                  Service Zip Code
+                  {detectedCity && zip && <span className="ml-2 text-blue-accent text-opacity-60 normal-case tracking-normal font-light">auto-filled — correct if wrong</span>}
+                </label>
+                <input
+                  type="text"
+                  value={zip}
+                  onChange={e => setZip(e.target.value)}
+                  placeholder="22401"
+                  required
+                  maxLength={5}
+                  autoFocus
+                  className="w-full rounded-full border border-white border-opacity-15 bg-transparent px-5 py-3.5 text-white text-sm placeholder:text-white placeholder:text-opacity-25 focus:outline-none focus:border-blue-accent transition-colors"
+                />
+              </div>
+
+              {/* Business name with autocomplete — uses typed zip for location accuracy */}
               <div className="relative">
                 <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">
                   Business Name
@@ -231,7 +238,8 @@ export default function ProOnboardPage() {
                   placeholder="Acme Plumbing & Heating"
                   required
                   autoComplete="off"
-                  className="w-full rounded-full border border-white border-opacity-15 bg-transparent px-5 py-3.5 text-white text-sm placeholder:text-white placeholder:text-opacity-25 focus:outline-none focus:border-blue-accent transition-colors"
+                  disabled={zip.length < 5}
+                  className="w-full rounded-full border border-white border-opacity-15 bg-transparent px-5 py-3.5 text-white text-sm placeholder:text-white placeholder:text-opacity-25 focus:outline-none focus:border-blue-accent transition-colors disabled:opacity-40"
                 />
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-2xl border border-white border-opacity-10 bg-black shadow-2xl overflow-hidden">
@@ -263,21 +271,6 @@ export default function ProOnboardPage() {
                   onChange={e => setPhone(e.target.value)}
                   placeholder="(555) 000-0000"
                   required
-                  className="w-full rounded-full border border-white border-opacity-15 bg-transparent px-5 py-3.5 text-white text-sm placeholder:text-white placeholder:text-opacity-25 focus:outline-none focus:border-blue-accent transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">
-                  Service Zip Code
-                  {detectedCity && zip && !cityDismissed && <span className="ml-2 text-blue-accent text-opacity-60 normal-case tracking-normal font-light">auto-filled</span>}
-                </label>
-                <input
-                  type="text"
-                  value={zip}
-                  onChange={e => setZip(e.target.value)}
-                  placeholder="22401"
-                  required
-                  maxLength={5}
                   className="w-full rounded-full border border-white border-opacity-15 bg-transparent px-5 py-3.5 text-white text-sm placeholder:text-white placeholder:text-opacity-25 focus:outline-none focus:border-blue-accent transition-colors"
                 />
               </div>

@@ -8,7 +8,7 @@ export const onRequest = async (context: any) => {
 
   const url = new URL(context.request.url)
   const query = url.searchParams.get('q')?.trim()
-  const city = url.searchParams.get('city')?.trim() ?? ''
+  const zip = url.searchParams.get('zip')?.trim() ?? ''
 
   if (!query || query.length < 2) {
     return new Response(JSON.stringify([]), { headers: { 'Content-Type': 'application/json', ...cors } })
@@ -20,8 +20,8 @@ export const onRequest = async (context: any) => {
   }
 
   try {
-    const searchQuery = city
-      ? `${query} plumber water heater ${city} site:google.com/maps OR google.com/maps`
+    const searchQuery = zip
+      ? `${query} plumber water heater ${zip} site:google.com/maps OR google.com/maps`
       : `${query} plumber water heater google business profile`
 
     const braveRes = await fetch(
