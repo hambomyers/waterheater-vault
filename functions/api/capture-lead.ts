@@ -36,7 +36,7 @@ function buildDayZeroEmail(lead: LeadPayload): string {
   const cost = lead.estimatedReplacementCost ? `$${lead.estimatedReplacementCost.toLocaleString()}` : '~$1,500–$2,200'
   const fuel = lead.fuelType && lead.fuelType !== 'unknown' ? lead.fuelType.charAt(0).toUpperCase() + lead.fuelType.slice(1) : 'Standard'
   const { label, color, copy } = urgencyLabel(remaining)
-  const bookUrl = `https://waterheaterplan.com/book?brand=${encodeURIComponent(lead.brand || '')}&age=${age}&fuel=${encodeURIComponent(lead.fuelType || '')}&cost=${lead.estimatedReplacementCost || ''}&remaining=${remaining}`
+  const bookUrl = `https://waterheaterplan.com/scan`
   const totalLife = age + remaining
   const pct = totalLife > 0 ? Math.round((remaining / totalLife) * 100) : 50
   const barFilled = Math.round(pct / 5)
@@ -53,7 +53,7 @@ function buildDayZeroEmail(lead: LeadPayload): string {
         <!-- Header -->
         <tr><td style="padding-bottom:32px;border-bottom:1px solid #222;">
           <p style="margin:0;color:#0066ff;font-size:13px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;">Water Heater Plan</p>
-          <p style="margin:4px 0 0;color:#888;font-size:13px;font-weight:300;">Central Virginia · waterheaterplan.com</p>
+          <p style="margin:4px 0 0;color:#888;font-size:13px;font-weight:300;">waterheaterplan.com</p>
         </td></tr>
 
         <!-- Title -->
@@ -117,8 +117,8 @@ function buildDayZeroEmail(lead: LeadPayload): string {
 
         <!-- Footer -->
         <tr><td style="border-top:1px solid #1a1a1a;padding-top:24px;">
-          <p style="margin:0 0 4px;color:#444;font-size:12px;font-weight:300;">Water Heater Plan · Central Virginia</p>
-          <p style="margin:0;color:#333;font-size:12px;font-weight:300;">You received this because you scanned your water heater at scan.waterheaterplan.com. We'll send one reminder when your heater approaches its 10-year mark — that's it.</p>
+          <p style="margin:0 0 4px;color:#444;font-size:12px;font-weight:300;">Water Heater Plan · waterheaterplan.com</p>
+          <p style="margin:0;color:#333;font-size:12px;font-weight:300;">You received this because you scanned your water heater at waterheaterplan.com/scan. We'll send one reminder when your heater approaches its 10-year mark — that's it.</p>
         </td></tr>
 
       </table>

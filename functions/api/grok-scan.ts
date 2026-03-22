@@ -399,6 +399,24 @@ export const onRequest = async (context: any) => {
       }))
     }
 
+    // ── Step 3: Record scan event for pro dashboard ──────────────────────────
+    if (context.env.DB && parsed.ageYears != null) {
+      const cf = (context.request as any).cf ?? {}
+      const zip = cf.postalCode ?? null
+      context.env.DB.prepare(
+        `INSERT INTO scan_events (id, zip, brand, age_years, fuel_type, remaining_life_years, scanned_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        crypto.randomUUID(),
+        zip,
+        parsed.brand ?? null,
+        parsed.ageYears ?? null,
+        parsed.fuelType ?? null,
+        parsed.remainingLifeYears ?? null,
+        new Date().toISOString()
+      ).run().catch(() => { /* non-critical — don't fail the scan */ })
+    }
+
     return new Response(JSON.stringify(parsed), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
