@@ -354,7 +354,7 @@ export default function ScanPage() {
                   Any angle, upside down — just clear 🙂 We'll tell you what to snap next.
                 </p>
               </div>
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center">
                 <button
                   onClick={() => openCamera(1)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
@@ -363,7 +363,7 @@ export default function ScanPage() {
                 </button>
                 <button
                   onClick={() => { filePickerShotRef.current = 1; galleryInputRef.current?.click() }}
-                  className="w-3/4 min-h-[44px] py-3 px-8 border border-white border-opacity-20 text-white text-opacity-40 rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
+                  className="mt-10 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-50 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Photo Gallery
                 </button>
@@ -432,7 +432,7 @@ export default function ScanPage() {
                 Any angle, upside down — just clear 🙂
               </p>
 
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center">
                 <button
                   onClick={() => openCamera(2)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
@@ -441,7 +441,7 @@ export default function ScanPage() {
                 </button>
                 <button
                   onClick={() => { filePickerShotRef.current = 2; galleryInputRef.current?.click() }}
-                  className="w-3/4 min-h-[44px] py-3 px-8 border border-white border-opacity-20 text-white text-opacity-40 rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
+                  className="mt-10 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-50 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Photo Gallery
                 </button>
