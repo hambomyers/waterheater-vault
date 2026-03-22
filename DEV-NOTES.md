@@ -107,6 +107,73 @@ Pro sends the app to every customer → more scans → more invites
 
 ---
 
+## The Long Horizon — What We Are Actually Building
+
+*This does not change daily operations. It changes how we evaluate every design decision.*
+
+**We are not building a water heater scanner.**
+We are building the first scalable, permissioned, longitudinal digital-twin layer
+for America's aging residential mechanical infrastructure —
+the operating system for the slow-motion renewal of the largest pool of
+depreciating capital assets on Earth.
+
+The water heater data plate is the single best entry point in the entire economy:
+
+```
+  ✓  Machine-readable serial + manufacture date  →  Grok reads it in one shot, >99% accuracy
+  ✓  Predictable failure physics                 →  anode depletion, sediment, 8–12yr MTTF
+  ✓  High-consequence failure                    →  flooding, $2k–3k emergency, insurance claim
+  ✓  Short enough cycle for data flywheel        →  continuous scans, true longitudinal records
+  ✓  No other home system has all four at once
+```
+
+America's 140 million homes are entering a 15–25 year mechanical renewal supercycle.
+The current system for managing it — Google searches, plumber roulette, Sunday floods —
+is medieval. Insurance carriers lose $13B+/yr on water damage alone.
+Utilities need flexible load data as electrification accelerates.
+Real estate, lenders, manufacturers, and home robots all need the same thing:
+accurate, continuously updated prediction of when each physical system will fail.
+
+Every scan is a new node in the Residential Mechanical Longevity OS.
+
+### Two North Stars (resolve every design decision)
+```
+  1.  Maximum homeowner trust + lifelong relationship
+      → They must voluntarily keep scanning every new appliance, forever.
+      → Free always. No paywall. No manipulation. Real data only.
+
+  2.  Maximum purity + quantity of longitudinal serial-level data per home
+      → Every scan captures: serial · model · brand · age · fuel · zip · home_id
+      → Clean D1 records. Serial cache. No guessed fields.
+```
+
+### The Expansion Path
+```
+  Year 1   Water heaters     Wedge. Standardized serials. Nail it completely.
+  Year 2   HVAC units        Furnaces + AC. Data plates. Same scan flow.
+           Tankless water     Already a variant we handle.
+  Year 3   Water softeners   Salt systems. Predictable service cycle.
+  Year 5   Electrical panels Harder. Requires licensed inspector layer.
+           Roofs              No serial — but zip + material + age = actuarial data.
+
+  Each category: same scanner · same annual loop · same data moat
+  Plumbers → HVAC techs → electricians → roofers
+  One OS. Different trade verticals.
+```
+
+### What the Current Product Actually Is
+The scanner, the plumber invite, the annual email loop, the $49/mo subscription —
+these are the **first blood test** in what becomes a full Home Mechanical Health Platform.
+
+Plumbers and early revenue are oxygen for years 1–3.
+They are not the company we are building.
+The company we are building is the central nervous system
+for residential physical longevity in the 21st century.
+
+*"Energy + AI is enough — if the energy is pointed at the right horizon."*
+
+---
+
 # ═══ PART 2 — TECHNICAL ARCHITECTURE ═══
 *Changes when a stack decision changes.*
 
