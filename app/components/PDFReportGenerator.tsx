@@ -152,6 +152,25 @@ export default function PDFReportGenerator({
           </div>
         </div>
 
+        {/* Manufacturer service reminder */}
+        <div style={{
+          margin: '0 0 32px 0',
+          padding: '16px 20px',
+          borderRadius: '8px',
+          border: '1px solid rgba(0,102,255,0.25)',
+          background: 'rgba(0,102,255,0.06)',
+        }}>
+          <span style={{ color: '#0066ff', fontWeight: 500, fontSize: '13px' }}>
+            Your manufacturer requires yearly professional service
+          </span>
+          {extractedData.fuelType === 'tankless' && (
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}> (tankless units often need two per year)</span>
+          )}
+          <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px' }}>
+            . Most homeowners have never done it once.
+          </span>
+        </div>
+
         {/* Pro branding footer or default CTA */}
         <div style={{
           borderTop: '1px solid rgba(255,255,255,0.08)',

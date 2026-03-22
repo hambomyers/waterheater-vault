@@ -352,12 +352,20 @@ export default function ScanPage() {
                   Any angle, upside down — just clear 🙂 We'll tell you what to snap next.
                 </p>
               </div>
-              <button
-                onClick={() => openCamera(1)}
-                className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
-              >
-                Open Camera
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => openCamera(1)}
+                  className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
+                >
+                  Take Photo with Camera
+                </button>
+                <button
+                  onClick={() => { filePickerShotRef.current = 1; fileInputRef.current?.click() }}
+                  className="w-full min-h-[48px] py-4 px-10 border border-white border-opacity-20 text-white text-opacity-70 rounded-full font-light text-base active:scale-[0.97] focus:outline-none touch-manipulation"
+                >
+                  Choose from Gallery
+                </button>
+              </div>
             </div>
           )}
 
@@ -422,12 +430,20 @@ export default function ScanPage() {
                 Any angle, upside down — just clear 🙂
               </p>
 
-              <button
-                onClick={() => openCamera(2)}
-                className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
-              >
-                Snap the Label
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => openCamera(2)}
+                  className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
+                >
+                  Take Photo of Label
+                </button>
+                <button
+                  onClick={() => { filePickerShotRef.current = 2; fileInputRef.current?.click() }}
+                  className="w-full min-h-[48px] py-4 px-10 border border-white border-opacity-20 text-white text-opacity-70 rounded-full font-light text-base active:scale-[0.97] focus:outline-none touch-manipulation"
+                >
+                  Choose from Gallery
+                </button>
+              </div>
 
               {!isOnline && (
                 <button
@@ -619,7 +635,7 @@ export default function ScanPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 if (f) handleFileSelect(f, filePickerShotRef.current)

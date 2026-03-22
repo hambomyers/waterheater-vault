@@ -1,9 +1,9 @@
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
-type Step = 'form' | 'screening' | 'approved' | 'denied' | 'checkout' | 'error'
+type Step = 'form' | 'screening' | 'approved' | 'denied' | 'success' | 'error'
 
 interface ScreenResult {
   approved: boolean
@@ -15,6 +15,17 @@ interface ScreenResult {
   summary: string
 }
 
+interface BusinessSuggestion {
+  title: string
+  url: string
+  snippet: string
+  phone: string | null
+  isGbp: boolean
+  gbpUrl: string | null
+}
+
+const PRO_PROFILE_KEY = 'whv-pro-profile'
+
 export default function ProOnboardPage() {
   const [step, setStep] = useState<Step>('form')
   const [gbpUrl, setGbpUrl] = useState('')
@@ -25,6 +36,67 @@ export default function ProOnboardPage() {
   const [errorMsg, setErrorMsg] = useState('')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
 
+  // IP geo-detect
+  const [detectedCity, setDetectedCity] = useState<string | null>(null)
+  const [cityDismissed, setCityDismissed] = useState(false)
+
+  // Business autocomplete
+  const [suggestions, setSuggestions] = useState<BusinessSuggestion[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
+  const autocompleteDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // ── On mount: check ?success=1 and IP detect ────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('success') === '1') {
+      setStep('success')
+      return
+    }
+
+    fetch('/api/detect-location')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.postalCode) setZip(data.postalCode)
+        if (data?.city) setDetectedCity(`${data.city}${data.region ? ', ' + data.region : ''}`)
+      })
+      .catch(() => { /* non-critical */ })
+  }, [])
+
+  // ── Business name autocomplete (debounced 350ms) ─────────────────────────
+  const fetchSuggestions = useCallback(async (query: string) => {
+    if (query.length < 2) { setSuggestions([]); setShowSuggestions(false); return }
+    setSuggestionsLoading(true)
+    try {
+      const city = detectedCity?.split(',')[0] ?? ''
+      const res = await fetch(`/api/pro/search-business?q=${encodeURIComponent(query)}&city=${encodeURIComponent(city)}`)
+      const data: BusinessSuggestion[] = res.ok ? await res.json() : []
+      setSuggestions(data)
+      setShowSuggestions(data.length > 0)
+    } catch {
+      setSuggestions([])
+    } finally {
+      setSuggestionsLoading(false)
+    }
+  }, [detectedCity])
+
+  useEffect(() => {
+    if (autocompleteDebounce.current) clearTimeout(autocompleteDebounce.current)
+    autocompleteDebounce.current = setTimeout(() => fetchSuggestions(name), 350)
+    return () => { if (autocompleteDebounce.current) clearTimeout(autocompleteDebounce.current) }
+  }, [name, fetchSuggestions])
+
+  const applyAutoFill = (s: BusinessSuggestion) => {
+    setName(s.title)
+    if (s.phone) setPhone(s.phone)
+    if (s.gbpUrl) setGbpUrl(s.gbpUrl)
+    setSuggestions([])
+    setShowSuggestions(false)
+    nameInputRef.current?.blur()
+  }
+
+  // ── Form submit ──────────────────────────────────────────────────────────
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!gbpUrl.trim() || !name.trim() || !phone.trim() || !zip.trim()) return
@@ -61,17 +133,14 @@ export default function ProOnboardPage() {
 
   const handleCheckout = async () => {
     try {
+      // Persist profile so success page can offer JSON download
+      const profile = { businessName: name, phone, zip, gbpUrl, rating: screenResult?.rating, billingCycle, screenedAt: new Date().toISOString() }
+      sessionStorage.setItem(PRO_PROFILE_KEY, JSON.stringify(profile))
+
       const res = await fetch('/api/pro/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessName: name,
-          phone,
-          zip,
-          gbpUrl,
-          rating: screenResult?.rating,
-          billingCycle,
-        }),
+        body: JSON.stringify(profile),
       })
       if (!res.ok) throw new Error('Checkout failed')
       const { url } = await res.json()
@@ -80,6 +149,18 @@ export default function ProOnboardPage() {
       setErrorMsg(err.message || 'Could not start checkout. Please try again.')
       setStep('error')
     }
+  }
+
+  const handleDownloadProfile = () => {
+    const raw = sessionStorage.getItem(PRO_PROFILE_KEY)
+    if (!raw) return
+    const blob = new Blob([raw], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `WaterHeaterVault_Pro_Profile.json`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -123,17 +204,56 @@ export default function ProOnboardPage() {
               ))}
             </div>
 
+            {/* City detection banner */}
+            {detectedCity && !cityDismissed && (
+              <div className="flex items-center justify-between gap-3 rounded-2xl border border-blue-accent border-opacity-25 bg-blue-accent bg-opacity-5 px-4 py-3 mb-4">
+                <span className="text-white text-opacity-60 text-sm font-light">
+                  📍 Detected near <span className="text-white font-medium">{detectedCity}</span> — correct?
+                </span>
+                <button type="button" onClick={() => setCityDismissed(true)} className="text-white text-opacity-25 hover:text-opacity-50 text-lg leading-none shrink-0" aria-label="Dismiss">×</button>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">Business Name</label>
+              {/* Business name with autocomplete */}
+              <div className="relative">
+                <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">
+                  Business Name
+                  {suggestionsLoading && <span className="ml-2 text-white text-opacity-25 normal-case tracking-normal">searching…</span>}
+                </label>
                 <input
+                  ref={nameInputRef}
                   type="text"
                   value={name}
-                  onChange={e => setName(e.target.value)}
+                  onChange={e => { setName(e.target.value); setShowSuggestions(true) }}
+                  onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
                   placeholder="Acme Plumbing & Heating"
                   required
+                  autoComplete="off"
                   className="w-full rounded-full border border-white border-opacity-15 bg-transparent px-5 py-3.5 text-white text-sm placeholder:text-white placeholder:text-opacity-25 focus:outline-none focus:border-blue-accent transition-colors"
                 />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-2xl border border-white border-opacity-10 bg-black shadow-2xl overflow-hidden">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onMouseDown={() => applyAutoFill(s)}
+                        className="w-full text-left px-5 py-3.5 hover:bg-white hover:bg-opacity-5 border-b border-white border-opacity-5 last:border-0 transition-colors"
+                      >
+                        <div className="text-white text-sm font-medium truncate">{s.title}</div>
+                        {(s.phone || s.isGbp) && (
+                          <div className="flex gap-3 mt-0.5">
+                            {s.phone && <span className="text-blue-accent text-xs font-light">{s.phone}</span>}
+                            {s.isGbp && <span className="text-green-400 text-xs font-light">✓ Google listing</span>}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                    <div className="px-5 py-2 text-white text-opacity-20 text-xs font-light">Tap a result to auto-fill</div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">Phone Number</label>
@@ -147,7 +267,10 @@ export default function ProOnboardPage() {
                 />
               </div>
               <div>
-                <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">Service Zip Code</label>
+                <label className="block text-white text-opacity-50 text-xs font-light uppercase tracking-wider mb-2">
+                  Service Zip Code
+                  {detectedCity && zip && !cityDismissed && <span className="ml-2 text-blue-accent text-opacity-60 normal-case tracking-normal font-light">auto-filled</span>}
+                </label>
                 <input
                   type="text"
                   value={zip}
@@ -317,6 +440,43 @@ export default function ProOnboardPage() {
             >
               Try again
             </button>
+          </div>
+        )}
+
+        {/* ── STEP: SUCCESS (post-Stripe ?success=1) ── */}
+        {step === 'success' && (
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-full bg-green-500 bg-opacity-15 border border-green-500 border-opacity-30 flex items-center justify-center mx-auto mb-6">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <h2 className="text-white text-2xl font-light mb-3">You're in.</h2>
+            <p className="text-white text-opacity-50 text-base font-light mb-8 max-w-sm mx-auto">
+              Your branding is activating across scans in your zip. You'll get a notification when a heater in your area hits critical age.
+            </p>
+            <div className="rounded-2xl border border-white border-opacity-8 bg-white bg-opacity-[0.02] p-6 text-left space-y-3 mb-8">
+              {[
+                { icon: '📍', text: 'White-label branding active on local scans' },
+                { icon: '⚡', text: 'Auto-leads enabled for critical age heaters' },
+                { icon: '🌐', text: 'Directory listing published' },
+                { icon: '🔄', text: 'Monthly re-screen scheduled' },
+              ].map(item => (
+                <div key={item.icon} className="flex items-center gap-3">
+                  <span className="text-base">{item.icon}</span>
+                  <span className="text-white text-opacity-55 text-sm font-light">{item.text}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={handleDownloadProfile}
+              className="w-full py-4 px-8 border border-white border-opacity-15 text-white text-opacity-60 rounded-full font-light text-sm hover:border-opacity-25 hover:text-opacity-80 active:scale-[0.97] transition-all"
+            >
+              ↓ Download my business profile as JSON
+            </button>
+            <p className="text-white text-opacity-20 text-xs font-light mt-3">
+              Local backup of your Pro profile
+            </p>
           </div>
         )}
 

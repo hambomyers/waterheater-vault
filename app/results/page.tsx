@@ -99,6 +99,40 @@ function EmailCapture({ extractedData }: { extractedData: ExtractedData }) {
   )
 }
 
+function SocialShare({ extractedData }: { extractedData: ExtractedData }) {
+  const [copied, setCopied] = useState(false)
+  const scanUrl = 'https://scan.waterheaterplan.com'
+  const msg = `My ${extractedData.brand} water heater is ${extractedData.ageYears} years old with ~${extractedData.remainingLifeYears} years left. Found out in 60 seconds: ${scanUrl}`
+  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(scanUrl)}&quote=${encodeURIComponent(msg)}`
+  const smsUrl = `sms:?body=${encodeURIComponent(msg)}`
+
+  const copyNextdoor = async () => {
+    try {
+      await navigator.clipboard.writeText(`${msg}\n\nFree for everyone — no signup needed.`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch { /* clipboard blocked */ }
+  }
+
+  return (
+    <div className="rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 p-5">
+      <div className="text-white font-medium text-sm mb-1">Share your results</div>
+      <div className="text-white text-opacity-45 text-xs font-light mb-4">Let your neighbors know — most people have no idea how old their heater is.</div>
+      <div className="flex gap-2 flex-wrap">
+        <a href={smsUrl} className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-white border-opacity-15 text-white text-opacity-70 text-sm font-light hover:border-opacity-30 transition-colors">
+          💬 Text
+        </a>
+        <a href={fbUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-white border-opacity-15 text-white text-opacity-70 text-sm font-light hover:border-opacity-30 transition-colors">
+          Facebook
+        </a>
+        <button onClick={copyNextdoor} className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-white border-opacity-15 text-white text-opacity-70 text-sm font-light hover:border-opacity-30 transition-colors">
+          {copied ? '✓ Copied for Nextdoor' : 'Nextdoor'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function ResultsPage() {
   const [scanResult, setScanResult] = useState<ProcessingResult | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -218,6 +252,15 @@ export default function ResultsPage() {
             ))}
           </div>
 
+          {/* Manufacturer Service Reminder */}
+          <div className="rounded-2xl border border-blue-accent border-opacity-20 bg-blue-accent bg-opacity-5 px-5 py-4">
+            <p className="text-white text-sm font-light leading-relaxed">
+              <span className="text-blue-accent font-medium">Your manufacturer requires yearly professional service</span>
+              {extractedData.fuelType === 'tankless' ? ' (tankless units often need two per year)' : ''}.
+              {' '}Most homeowners have never done it once. You just checked — good move.
+            </p>
+          </div>
+
           {/* Rebate Maximizer */}
           <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
 
@@ -226,6 +269,9 @@ export default function ResultsPage() {
             <InvitePlumberButton extractedData={extractedData} />
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
           </div>
+
+          {/* Social Share */}
+          <SocialShare extractedData={extractedData} />
 
           {/* Email Capture */}
           <EmailCapture extractedData={extractedData} />
@@ -322,6 +368,15 @@ export default function ResultsPage() {
             </div>
           </div>
 
+          {/* Manufacturer Service Reminder */}
+          <div className="rounded-2xl border border-blue-accent border-opacity-20 bg-blue-accent bg-opacity-5 px-6 py-4 mb-5">
+            <p className="text-white text-sm font-light leading-relaxed">
+              <span className="text-blue-accent font-medium">Your manufacturer requires yearly professional service</span>
+              {extractedData.fuelType === 'tankless' ? ' (tankless units often need two per year)' : ''}.
+              {' '}Most homeowners have never done it once. You just checked — good move.
+            </p>
+          </div>
+
           {/* Rebate Maximizer */}
           <div className="mb-5">
             <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
@@ -331,6 +386,11 @@ export default function ResultsPage() {
           <div className="flex gap-4 mb-6">
             <InvitePlumberButton extractedData={extractedData} />
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
+          </div>
+
+          {/* Social Share */}
+          <div className="mb-6">
+            <SocialShare extractedData={extractedData} />
           </div>
 
           {/* Email Capture */}
