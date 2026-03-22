@@ -254,6 +254,23 @@ export const onRequest = async (context: any) => {
     const shot2 = formData.get('shot2') as string | null
     const categoryHint = formData.get('category') as string | null
     const mode = formData.get('mode') as string | null
+    const serialHint = (formData.get('serialHint') as string | null)?.trim() || null
+
+    // ── Serial cache: skip Grok if we've seen this serial before ──────────────
+    if (serialHint && context.env.DB) {
+      const cached = await context.env.DB.prepare(
+        `SELECT grok_result_json FROM serial_cache WHERE serial_number = ?`
+      ).bind(serialHint).first().catch(() => null)
+
+      if (cached?.grok_result_json) {
+        context.env.DB.prepare(
+          `UPDATE serial_cache SET hit_count = hit_count + 1, last_hit_at = ? WHERE serial_number = ?`
+        ).bind(new Date().toISOString(), serialHint).run().catch(() => {})
+        return new Response(cached.grok_result_json as string, {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders, 'X-Cache': 'HIT' },
+        })
+      }
+    }
 
     // ── Review screening mode ──
     if (mode === 'review-screen') {
@@ -430,7 +447,26 @@ export const onRequest = async (context: any) => {
       ).run().catch(() => { /* non-critical — don't fail the scan */ })
     }
 
-    return new Response(JSON.stringify(parsed), {
+    const finalJson = JSON.stringify(parsed)
+
+    // ── Write to serial cache for future scans ────────────────────────────────
+    if (context.env.DB && parsed.serialNumber) {
+      context.env.DB.prepare(`
+        INSERT INTO serial_cache (serial_number, grok_result_json, brand, hit_count, created_at, last_hit_at)
+        VALUES (?, ?, ?, 1, ?, ?)
+        ON CONFLICT(serial_number) DO UPDATE SET
+          grok_result_json = excluded.grok_result_json,
+          last_hit_at = excluded.last_hit_at
+      `).bind(
+        parsed.serialNumber,
+        finalJson,
+        parsed.brand || null,
+        new Date().toISOString(),
+        new Date().toISOString()
+      ).run().catch(() => {})
+    }
+
+    return new Response(finalJson, {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
 

@@ -1,0 +1,15 @@
+name = "waterheater-reminder-cron"
+main = "workers/reminder-cron.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "waterheater-vault"
+database_id = "15010cce-24bc-450a-b49f-74d73b82ca38"
+
+[triggers]
+crons = ["0 14 1 1,4,7,10 *"]
+
+# Deploy: wrangler deploy --config wrangler.workers.toml
+# One-time setup after deploy:
+#   wrangler secret put RESEND_API_KEY --config wrangler.workers.toml

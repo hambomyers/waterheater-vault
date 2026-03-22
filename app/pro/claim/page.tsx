@@ -154,11 +154,41 @@ function ClaimPageInner() {
       ) : (
         /* Success state */
         <div className="space-y-6">
-          <div className="rounded-2xl border border-green-500 border-opacity-30 bg-green-500 bg-opacity-10 p-6 text-center">
-            <div className="text-green-400 text-2xl mb-2">✓</div>
-            <div className="text-white font-medium text-lg mb-1">You're in the loop</div>
+          {/* Report card — what the homeowner already saw */}
+          <div className="rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 overflow-hidden">
+            <div className="px-5 py-3 border-b border-white border-opacity-5">
+              <span className="text-white text-opacity-40 text-xs font-light uppercase tracking-wider">Homeowner's scan report</span>
+            </div>
+            <div className="divide-y divide-white divide-opacity-5">
+              <div className="flex justify-between items-center px-5 py-3.5">
+                <span className="text-white text-opacity-50 text-sm font-light">Unit</span>
+                <span className="text-white text-sm font-light">{brand}{model && model !== 'Unknown' ? ` ${model}` : ''}</span>
+              </div>
+              {age != null && age > 0 && (
+                <div className="flex justify-between items-center px-5 py-3.5">
+                  <span className="text-white text-opacity-50 text-sm font-light">Age</span>
+                  <span className="text-white text-sm font-light">{age} years</span>
+                </div>
+              )}
+              {remaining != null && (
+                <div className="flex justify-between items-center px-5 py-3.5">
+                  <span className="text-white text-opacity-50 text-sm font-light">Remaining life</span>
+                  <span className={`text-sm font-medium ${remaining < 3 ? 'text-red-400' : remaining < 5 ? 'text-amber-400' : 'text-green-400'}`}>
+                    ~{remaining} yr{remaining === 1 ? '' : 's'}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-center px-5 py-3.5 bg-blue-accent bg-opacity-5">
+                <span className="text-white text-sm font-light">Reminder opt-in</span>
+                <span className="text-green-400 text-sm font-medium">✓ Opted in</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-green-500 border-opacity-30 bg-green-500 bg-opacity-8 px-5 py-4">
+            <div className="text-green-400 font-medium text-sm mb-1">✓ You own this relationship</div>
             <div className="text-white text-opacity-50 text-sm font-light leading-relaxed">
-              We'll notify you when this {brand} needs service and when the replacement window opens.
+              This homeowner has already opted in to service reminders. You'll get first notice when this {brand} needs attention{remaining != null && remaining < 3 ? ' — replacement window is open now' : age != null && age > 8 ? ' — service is overdue' : ''}.
             </div>
           </div>
 

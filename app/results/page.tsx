@@ -297,6 +297,16 @@ export default function ResultsPage() {
             <RemainingLifeGauge remainingLifeYears={extractedData.remainingLifeYears} ageYears={extractedData.ageYears} />
           </div>
 
+          {/* PRIMARY CTA — Save to Vault */}
+          <div className="space-y-2">
+            {saveError && <div className="px-4 py-3 rounded-2xl bg-red-500 bg-opacity-15 text-red-300 text-sm font-light text-center">{saveError}</div>}
+            <button onClick={handleSaveToVault} disabled={isSaving}
+              className="w-full py-4 px-8 bg-blue-accent text-white rounded-full font-medium text-base disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.97] transition-all touch-manipulation">
+              {isSaving ? 'Saving…' : 'Save to My Vault →'}
+            </button>
+            <p className="text-white text-opacity-25 text-xs text-center font-light">Free · Permanent record · Annual service reminders</p>
+          </div>
+
           {/* Data Card */}
           <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5 space-y-3">
             <div className="flex items-center justify-between mb-1">
@@ -342,10 +352,10 @@ export default function ResultsPage() {
           {/* Rebate Maximizer */}
           <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
 
-          {/* Viral CTA + PDF */}
+          {/* Secondary CTAs */}
           <div className="space-y-3">
-            <InvitePlumberButton extractedData={extractedData} />
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
+            <InvitePlumberButton extractedData={extractedData} />
           </div>
 
           {/* Social Share */}
@@ -382,13 +392,8 @@ export default function ResultsPage() {
             </div>
           )}
 
-          {/* Vault Actions */}
-          <div className="space-y-3 pt-2">
-            {saveError && <div className="px-4 py-3 rounded-2xl bg-red-500 bg-opacity-15 text-red-300 text-sm font-light text-center">{saveError}</div>}
-            <button onClick={handleSaveToVault} disabled={isSaving}
-              className="w-full py-4 px-8 bg-white bg-opacity-10 text-white rounded-full font-medium text-base disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.97] transition-all">
-              {isSaving ? 'Saving…' : 'Save to Vault'}
-            </button>
+          {/* Bottom action */}
+          <div className="pt-2">
             <button onClick={handleScanAnother}
               className="w-full py-3 text-white text-opacity-40 font-light text-sm">
               Scan Another
@@ -423,6 +428,16 @@ export default function ResultsPage() {
           {/* Remaining Life Gauge */}
           <div className="rounded-2xl border border-white border-opacity-8 p-6 mb-5">
             <RemainingLifeGauge remainingLifeYears={extractedData.remainingLifeYears} ageYears={extractedData.ageYears} />
+          </div>
+
+          {/* PRIMARY CTA — Save to Vault */}
+          <div className="mb-6">
+            {saveError && <div className="px-4 py-3 rounded-2xl bg-red-500 bg-opacity-15 text-red-300 text-sm font-light text-center mb-3">{saveError}</div>}
+            <button onClick={handleSaveToVault} disabled={isSaving}
+              className="w-full py-4 px-8 bg-blue-accent text-white rounded-full font-medium text-base disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-90 active:scale-[0.97] transition-all">
+              {isSaving ? 'Saving…' : 'Save to My Vault →'}
+            </button>
+            <p className="text-white text-opacity-25 text-xs text-center font-light mt-2">Free · Permanent record · Annual service reminders</p>
           </div>
 
           {/* Fields */}
@@ -477,10 +492,10 @@ export default function ResultsPage() {
             <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
           </div>
 
-          {/* Viral CTA + PDF */}
+          {/* Secondary CTAs */}
           <div className="flex gap-4 mb-6">
-            <InvitePlumberButton extractedData={extractedData} />
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
+            <InvitePlumberButton extractedData={extractedData} />
           </div>
 
           {/* Social Share */}
