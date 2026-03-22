@@ -49,6 +49,7 @@ export default function ScanPage() {
   const shot1BlobRef = useRef<Blob | null>(null)
   const shot2BlobRef = useRef<Blob | null>(null)
   const filePickerShotRef = useRef<1 | 2>(1)
+  const grokResultRef = useRef<Promise<any> | null>(null)
   // Track phase + active shot in refs so orientation listener can read them
   const phaseRef = useRef<Phase>('idle')
   const activeShotRef = useRef<1 | 2>(1)
@@ -133,9 +134,11 @@ export default function ScanPage() {
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    ctx.drawImage(video, 0, 0)
+    const MAX_W = 1600
+    const scale = Math.min(1, MAX_W / video.videoWidth)
+    canvas.width = Math.round(video.videoWidth * scale)
+    canvas.height = Math.round(video.videoHeight * scale)
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
     canvas.toBlob(
       (blob) => {
         if (!blob) return
@@ -150,7 +153,7 @@ export default function ScanPage() {
         }
       },
       'image/jpeg',
-      0.92
+      0.72
     )
   }
 
@@ -192,6 +195,8 @@ export default function ScanPage() {
   const runOnDeviceExtraction = async (blob: Blob) => {
     setPhase('scanning-1')
     setError(null)
+    // ── Fire Grok immediately in background while user sees guide screen ──
+    grokResultRef.current = brainRouter.processImage(blob, { useCloud: true })
     try {
       const preview = await brainRouter.extractOnDevicePreview(blob)
       setOnDevicePreview(preview)
@@ -211,7 +216,6 @@ export default function ScanPage() {
     setError(null)
 
     if (!isOnline) {
-      // Offline: save on-device data from Shot 1 only
       try {
         const result = await brainRouter.processImage(s1, {
           useCloud: false,
@@ -227,13 +231,13 @@ export default function ScanPage() {
     }
 
     try {
-      const result = await brainRouter.processTwoShots(s1, s2, 'water heater')
+      // Label (Shot 1) is authoritative — use already-in-flight Grok result if available
+      const result = await (grokResultRef.current ?? brainRouter.processImage(s1, { useCloud: true }))
       sessionStorage.setItem('scan-result', JSON.stringify(result))
       window.location.href = '/results'
     } catch (err) {
       const msg = err instanceof Error ? friendlyError(err.message) : 'Processing failed.'
       setError(msg)
-      // Fall back to on-device if we have it
       if (onDevicePreview) {
         try {
           const fallback = await brainRouter.processImage(s1, { useCloud: false, onDevicePreview })
@@ -434,7 +438,8 @@ export default function ScanPage() {
                     if (!shot1BlobRef.current) return
                     setPhase('processing')
                     try {
-                      const result = await brainRouter.processImage(shot1BlobRef.current, { useCloud: true })
+                      // Await already-in-flight Grok call started on Shot 1
+                      const result = await (grokResultRef.current ?? brainRouter.processImage(shot1BlobRef.current, { useCloud: true }))
                       sessionStorage.setItem('scan-result', JSON.stringify(result))
                       window.location.href = '/results'
                     } catch (err) {

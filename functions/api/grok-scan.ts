@@ -125,12 +125,13 @@ Return ONLY a single valid JSON object. No markdown, no text before or after:
 }
 
 CRITICAL RULES:
+0. FIRST PRIORITY: Read serialNumber and model directly off the label — these are the two most important fields. Scan the label for number+letter combinations. Serial numbers are typically 8–20 alphanumeric characters. Model numbers appear near "Model No." or "Model". Get these right before anything else.
 1. manufactureDate is REQUIRED — always decode from serial using brand rules above. Never return null if you have a serial number.
 2. ageYears and remainingLifeYears are REQUIRED — always calculate them.
 3. estimatedReplacementCost is REQUIRED — always return a realistic integer.
-4. In two-shot mode: Shot 1 (label) is AUTHORITATIVE. Shot 2 (overview) is verification only — never override label data with overview guesses.
-5. If Shot 1 (label) shows something other than a water heater data plate: { "error": "not_a_water_heater", "message": "This appears to be a [X], not a water heater data plate." }
-6. If Shot 2 (overview) doesn't match the label — paper cup, wrong object, etc. — extract normally from Shot 1 and put the observation in shot1Note. Never fail the scan because of a bad Shot 2.
+4. Shot 1 (label) is AUTHORITATIVE. Never override label data with guesses.
+5. If Shot 1 shows something other than a water heater data plate: { "error": "not_a_water_heater", "message": "This appears to be a [X], not a water heater data plate." }
+6. If overview shot doesn't match — extract normally from Shot 1 and put the observation in shot1Note. Never fail the scan because of a bad overview shot.
 
 ${WH_DOCS_INSTRUCTIONS}`
 
