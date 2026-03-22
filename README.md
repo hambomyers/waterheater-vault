@@ -3,7 +3,7 @@
 **Free AI water heater scanner for homeowners. SaaS platform for local pros.**
 
 *Consumer product:* `scan.waterheaterplan.com` — free 60-second AI scan (age, life, cost, recalls, rebates, PDF)  
-*Pro product:* `waterheaterplan.com/pro` — $29/mo white-label leads platform for screened local contractors
+*Pro product:* `waterheaterplan.com/pro` — $49/mo white-label leads platform for screened local contractors
 
 > **Entity note:** Operated by VaultPro LLC (new standalone entity, filed separately for legal/tax separation). All domains, branding, and code are unchanged.
 
@@ -20,7 +20,7 @@ Results: age · life · cost · recalls · rebates · PDF
        ↓
 Pro sees branded scan PDFs with their name/number
        ↓
-Pro pays $29/mo at waterheaterplan.com/pro
+Pro pays $49/mo at waterheaterplan.com/pro
        ↓
 Auto-leads delivered when heater age > 8yr or life < 3yr
 ```
@@ -56,7 +56,7 @@ Results page shows:
 | Docs search | Brave Search API — live verified URLs (never hardcoded) |
 | Storage | IndexedDB (offline-first) + Cloudflare D1 (cloud sync + leads + pros) |
 | Auth | Magic-link via Resend + JWT (no Clerk, no OAuth) |
-| Payments | Stripe Checkout — Pro $29/mo or $299/yr |
+| Payments | Stripe Checkout — Pro $49/mo or $499/yr |
 | PDF | html2canvas + jsPDF — client-side report card generation |
 | Deployment | Cloudflare Pages — static export + CF Pages Functions |
 | PWA | Service worker + manifest, installable on iOS/Android |
@@ -115,15 +115,15 @@ Alias: **scan.waterheaterplan.com** → same app
 | `RESEND_API_KEY` | Resend.com — magic link + lead emails |
 | `JWT_SECRET` | Sign/verify tokens (32+ chars) |
 | `STRIPE_SECRET_KEY` | Stripe server-side — create checkout sessions |
-| `STRIPE_PRICE_ID_MONTHLY` | Stripe Price ID for $29/mo Pro plan |
-| `STRIPE_PRICE_ID_ANNUAL` | Stripe Price ID for $299/yr Pro plan |
+| `STRIPE_PRICE_ID_MONTHLY` | Stripe Price ID for $49/mo Pro plan |
+| `STRIPE_PRICE_ID_ANNUAL` | Stripe Price ID for $499/yr Pro plan |
 | `DB` | Cloudflare D1 binding — users, vault_items, leads, pros |
 
 ### Stripe Setup (one-time — required before `/pro/onboard` works)
 
 1. [dashboard.stripe.com/products](https://dashboard.stripe.com/products) → **Add product** → `WaterHeaterVault Pro`
-2. Add price: **$29.00 / month** recurring → copy `price_...` → `STRIPE_PRICE_ID_MONTHLY`
-3. Add price: **$299.00 / year** recurring → copy `price_...` → `STRIPE_PRICE_ID_ANNUAL`
+2. Add price: **$49.00 / month** recurring → copy `price_...` → `STRIPE_PRICE_ID_MONTHLY`
+3. Add price: **$499.00 / year** recurring → copy `price_...` → `STRIPE_PRICE_ID_ANNUAL`
 4. [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) → copy secret key → `STRIPE_SECRET_KEY`
 5. Add all three to CF Pages env vars → redeploy
 
@@ -161,7 +161,7 @@ wrangler d1 execute waterheater-vault --file=migrations/0003_pros.sql --remote
 | Layer | What | Revenue |
 |-------|------|---------|
 | Consumer | Free scanner — viral acquisition | $0 (growth engine) |
-| Pro SaaS | $29/mo or $299/yr per contractor | MRR |
+| Pro SaaS | $49/mo or $499/yr per contractor | MRR |
 | Data moat | Anonymized heater registry | Strategic asset |
 
 **Pro value prop:** Screened pros get white-label branding on every scan/PDF from homeowners in their area, plus auto-leads when heaters hit critical age. Multiple pros allowed per zip — competition is fine.

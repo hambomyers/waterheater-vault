@@ -182,7 +182,7 @@ export default function ProOnboardPage() {
               <div className="text-white text-opacity-30 text-xs font-light uppercase tracking-widest mb-3">WaterHeaterVault Pro</div>
               <h1 className="text-white text-3xl font-light mb-3">Join as a Pro</h1>
               <p className="text-white text-opacity-50 text-base font-light leading-relaxed">
-                Get your name and number on every water heater scan in your area. Auto-leads when heaters are in the danger zone. $29/mo — no contracts.
+                Get your name and number on every water heater scan in your area. Auto-leads when heaters are in the danger zone. $49/mo — no contracts.
               </p>
             </div>
 
@@ -372,7 +372,7 @@ export default function ProOnboardPage() {
                       : 'border-white border-opacity-10 text-white text-opacity-50 hover:border-opacity-20'
                   }`}
                 >
-                  <div className="font-medium text-lg">$29</div>
+                  <div className="font-medium text-lg">$49</div>
                   <div className="text-sm font-light text-opacity-60">per month</div>
                 </button>
                 <button
@@ -383,10 +383,10 @@ export default function ProOnboardPage() {
                       : 'border-white border-opacity-10 text-white text-opacity-50 hover:border-opacity-20'
                   }`}
                 >
-                  <div className="font-medium text-lg">$299</div>
+                  <div className="font-medium text-lg">$499</div>
                   <div className="text-sm font-light text-opacity-60">per year</div>
                   <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-green-500 text-black text-xs font-medium px-2 py-0.5 rounded-full">
-                    Save $49
+                    Save $89
                   </div>
                 </button>
               </div>
@@ -396,7 +396,7 @@ export default function ProOnboardPage() {
               onClick={handleCheckout}
               className="w-full py-4 px-8 bg-blue-accent text-white rounded-full font-medium text-base hover:bg-opacity-90 active:scale-[0.97] transition-all"
             >
-              {billingCycle === 'annual' ? 'Start for $299/yr →' : 'Start for $29/mo →'}
+              {billingCycle === 'annual' ? 'Start for $499/yr →' : 'Start for $49/mo →'}
             </button>
             <p className="text-white text-opacity-25 text-xs text-center font-light mt-3">
               Cancel anytime. Re-screened monthly. Branding activates instantly.

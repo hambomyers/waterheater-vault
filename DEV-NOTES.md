@@ -15,7 +15,7 @@
 **WaterHeaterVault** is a free AI scanner that tells homeowners the exact age, warranty status, replacement cost, recall status, and available utility rebates for their water heater — in 60 seconds, from a photo.
 
 **waterheaterplan.com** is the homeowner-first entry point. The free scanner IS the growth engine.
-**waterheaterplan.com/pro** is the SaaS platform that converts scanner traffic into paying pro customers — $29/mo for white-label branding, auto-leads, and a public directory listing.
+**waterheaterplan.com/pro** is the SaaS platform that converts scanner traffic into paying pro customers — $49/mo for white-label branding, auto-leads, and a public directory listing.
 
 **Entity:** VaultPro LLC (new standalone LLC filed for legal/tax separation). Domains, product names, and branding are 100% unchanged.
 
@@ -23,7 +23,7 @@
 
 **One-sentence pitch (consumer):** *"Point your phone at your water heater's data plate — we'll tell you how old it is, how much life it has left, what it'll cost to replace, and whether it's been recalled."*
 
-**One-sentence pitch (pro):** *"For $29/mo your name and number appear on every water heater scan in your area — with auto-leads when the heater is in the danger zone."*
+**One-sentence pitch (pro):** *"For $49/mo your name and number appear on every water heater scan in your area — with auto-leads when the heater is in the danger zone."*
 
 **One-sentence pitch (investor):** *"The Carfax of water heaters — free to the homeowner, SaaS to the pro, data asset to the enterprise."*
 
@@ -42,7 +42,7 @@ Free scanner builds trust + organic traffic. No service delivery. No local ops.
 | Vault | Saved heaters + recall monitoring |
 
 ### Layer 2 — Pro SaaS (NOW — Primary Revenue)
-Screened local contractors pay flat $29/mo. No wrenches. Pure software.
+Screened local contractors pay flat $49/mo. No wrenches. Pure software.
 
 | Feature | What pros get |
 |---------|---------------|
@@ -53,9 +53,9 @@ Screened local contractors pay flat $29/mo. No wrenches. Pure software.
 
 **Unit economics:**
 - CAC: ~$0 (viral invite loop) or cheap text/email blast
-- Price: $29/mo or $299/yr
+- Price: $49/mo or $499/yr
 - Gross margin: ~95% (pure SaaS)
-- 12-mo LTV: $299–$348
+- 12-mo LTV: $499–$588
 - No service delivery, no Hamilton Plumbing, no local ops
 
 **Pro gate:** Grok AI screens Google Business Profile reviews.
@@ -81,7 +81,7 @@ Homeowner scans → results page → "Invite my plumber → get branded reports"
        ↓
 Pro gets invite link → visits /pro/onboard → Grok screens reviews
        ↓
-4.5+ stars → Stripe $29/mo → branding activated
+4.5+ stars → Stripe $49/mo → branding activated
        ↓
 Every scan in their area now shows their name/number
        ↓
@@ -236,7 +236,7 @@ This extends to every reference: serial decoders, warranty terms, manuals, recal
 │                                                                      │
 │  Pro record: {name, phone, gbpUrl, rating, zip, stripeId, active}   │
 │  Stored: Cloudflare D1 (pros table)                                  │
-│  Payments: Stripe $29/mo or $299/yr                                  │
+│  Payments: Stripe $49/mo or $499/yr                                  │
 │  Re-screen: every 30 days via n8n cron                               │
 └──────────────────────────────┬───────────────────────────────────────┘
                                │
@@ -670,8 +670,8 @@ waterheater-vault/
 **Step 1 — Create products in Stripe Dashboard**
 1. Go to [dashboard.stripe.com/products](https://dashboard.stripe.com/products)
 2. **Add product** → Name: `WaterHeaterVault Pro`
-3. Add price: **$29.00 / month** (recurring) → copy `price_...` ID → this is `STRIPE_PRICE_ID_MONTHLY`
-4. Add price: **$299.00 / year** (recurring) → copy `price_...` ID → this is `STRIPE_PRICE_ID_ANNUAL`
+3. Add price: **$49.00 / month** (recurring) → copy `price_...` ID → this is `STRIPE_PRICE_ID_MONTHLY`
+4. Add price: **$499.00 / year** (recurring) → copy `price_...` ID → this is `STRIPE_PRICE_ID_ANNUAL`
 
 **Step 2 — Get your secret key**
 - [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) → Reveal secret key → `sk_live_...`
@@ -682,8 +682,8 @@ waterheater-vault/
 | Variable | Value |
 |----------|-------|
 | `STRIPE_SECRET_KEY` | `sk_live_...` |
-| `STRIPE_PRICE_ID_MONTHLY` | `price_...` (the $29/mo price) |
-| `STRIPE_PRICE_ID_ANNUAL` | `price_...` (the $299/yr price) |
+| `STRIPE_PRICE_ID_MONTHLY` | `price_...` (the $49/mo price) |
+| `STRIPE_PRICE_ID_ANNUAL` | `price_...` (the $499/yr price) |
 
 **Step 4 — Deploy**
 - Push to `main` or trigger a manual redeploy in CF Pages.
@@ -724,10 +724,10 @@ waterheater-vault/
 
 | Milestone | Unlocks |
 |-----------|---------|
-| 10 active pros | Proof of concept. $290/mo MRR. |
-| 50 active pros | $1,450/mo. Pitch home inspector tier. |
-| 200 active pros | $5,800/mo. Hire first VA for pro support. |
-| 500 active pros | $14,500/mo. Consider raise or acquisition conversation. |
+| 10 active pros | Proof of concept. $490/mo MRR. |
+| 50 active pros | $2,450/mo. Pitch home inspector tier. |
+| 200 active pros | $9,800/mo. Hire first VA for pro support. |
+| 500 active pros | $24,500/mo. Consider raise or acquisition conversation. |
 | 10K scans in D1 | Data moat pitch to Dominion Energy + home warranty cos. |
 
 ---
@@ -754,7 +754,7 @@ waterheater-vault/
 
 | Decision | Old Thinking | New Thinking |
 |---|---|---|
-| Pro pricing | $29/mo | $49/mo (credible for trade tool, still 100x cheaper than Angi) |
+| Pro pricing | $29/mo | $49/mo flat · $499/yr · credible trade tool price, still 30x cheaper than Angi |
 | First plumber touch | Straight to Stripe | Free unit claim → taste value → upsell |
 | Invite vs directory | Two separate flows | One product: invite = free entry + viral, directory = paid upsell |
 | Shot 2 | Required two-shot | Optional, skip button, single-shot fast path |

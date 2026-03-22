@@ -168,7 +168,7 @@ export default function ProDashboardPage() {
 
             <div className="pt-2">
               <Link href="/pro/onboard" className="text-white text-opacity-25 text-xs font-light hover:text-opacity-50 transition-colors">
-                Not a Pro yet? Join for $29/mo →
+                Not a Pro yet? Join for $49/mo →
               </Link>
             </div>
           </div>

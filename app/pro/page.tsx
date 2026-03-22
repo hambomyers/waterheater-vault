@@ -97,7 +97,7 @@ export default function ProPage() {
             <div className="container">
               <div className="hero-eyebrow">WaterHeaterVault Pro</div>
               <h1 className="hero-title">Your name on every water heater<br /><strong>scan in your area.</strong></h1>
-              <p className="hero-sub">Homeowners scan their water heater free. When theirs is aging out, you get the lead. $29/mo &mdash; no contracts, no wrenches, pure software.</p>
+              <p className="hero-sub">Homeowners scan their water heater free. When theirs is aging out, you get the lead. $49/mo &mdash; no contracts, no wrenches, pure software.</p>
               <div className="hero-actions">
                 <Link href="/pro/onboard" className="btn-primary">Join as a Pro &rarr;</Link>
                 <Link href="/pro/directory" className="btn-ghost">Browse directory</Link>
@@ -113,7 +113,7 @@ export default function ProPage() {
                   { n: '60s', l: 'Average scan time' },
                   { n: '$1,500+', l: 'Avg replacement job value' },
                   { n: '8yr', l: 'Lead trigger threshold' },
-                  { n: '$29', l: 'Per month, flat rate' },
+                  { n: '$49', l: 'Per month, flat rate' },
                 ].map(s => (
                   <div key={s.l} className="stat">
                     <div className="stat-number">{s.n}</div>
@@ -148,7 +148,7 @@ export default function ProPage() {
           <section className="section" style={{borderTop:'none'}}>
             <div className="container">
               <div className="section-label">What you get</div>
-              <h2 className="section-title">Everything. $29/mo.</h2>
+              <h2 className="section-title">Everything. $49/mo.</h2>
               <p className="section-sub">No per-lead fees. No setup fees. No territory exclusivity.</p>
               <div className="features-grid">
                 {[
@@ -177,7 +177,7 @@ export default function ProPage() {
               <div className="pricing-grid">
                 <div className="price-card">
                   <div className="price-cycle">Monthly</div>
-                  <div className="price-amount">$29<span>/ mo</span></div>
+                  <div className="price-amount">$49<span>/ mo</span></div>
                   <div className="price-save">&nbsp;</div>
                   <ul className="price-features">
                     {['White-label branding in your zip','Auto-leads (age >8yr or life <3yr)','Directory listing','Branded PDF reports','AI-screened quality badge'].map(l => <li key={l}>{l}</li>)}
@@ -185,10 +185,10 @@ export default function ProPage() {
                   <Link href="/pro/onboard" className="btn-ghost" style={{width:'100%',justifyContent:'center'}}>Get started &rarr;</Link>
                 </div>
                 <div className="price-card featured">
-                  <div className="price-badge">Save $49</div>
+                  <div className="price-badge">Save $89</div>
                   <div className="price-cycle">Annual</div>
-                  <div className="price-amount">$299<span>/ yr</span></div>
-                  <div className="price-save">2 months free vs monthly</div>
+                  <div className="price-amount">$499<span>/ yr</span></div>
+                  <div className="price-save">Save $89 vs monthly</div>
                   <ul className="price-features">
                     {['Everything in monthly','Priority listing in directory','Early access to new features','Annual re-screen included','Lock in current price forever'].map(l => <li key={l}>{l}</li>)}
                   </ul>
