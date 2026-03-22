@@ -353,12 +353,20 @@ export default function ScanPage() {
                   Any angle, upside down — just clear 🙂 We'll tell you what to snap next.
                 </p>
               </div>
-              <button
+              <div className="space-y-3">
+                <button
                   onClick={() => openCamera(1)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Scan my water heater →
                 </button>
+                <button
+                  onClick={() => { filePickerShotRef.current = 1; fileInputRef.current?.click() }}
+                  className="w-full py-2 text-white text-opacity-30 font-light text-sm touch-manipulation"
+                >
+                  or choose from gallery
+                </button>
+              </div>
             </div>
           )}
 
@@ -423,12 +431,20 @@ export default function ScanPage() {
                 Any angle, upside down — just clear 🙂
               </p>
 
-              <button
+              <div className="space-y-3">
+                <button
                   onClick={() => openCamera(2)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Scan the data plate →
                 </button>
+                <button
+                  onClick={() => { filePickerShotRef.current = 2; fileInputRef.current?.click() }}
+                  className="w-full py-2 text-white text-opacity-30 font-light text-sm touch-manipulation"
+                >
+                  or choose from gallery
+                </button>
+              </div>
 
               {!isOnline && (
                 <button
