@@ -33,6 +33,8 @@ function RemainingLifeGauge({ remainingLifeYears, ageYears }: { remainingLifeYea
 
 function EmailCapture({ extractedData }: { extractedData: ExtractedData }) {
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [smsConsent, setSmsConsent] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -46,6 +48,8 @@ function EmailCapture({ extractedData }: { extractedData: ExtractedData }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim(),
+          phone: smsConsent ? phone.trim() : null,
+          smsConsent,
           brand: extractedData.brand,
           model: extractedData.model,
           serialNumber: extractedData.serialNumber,
@@ -74,27 +78,54 @@ function EmailCapture({ extractedData }: { extractedData: ExtractedData }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 p-5">
-      <div className="text-white font-medium mb-1">📧 Email me this report</div>
-      <div className="text-white text-opacity-50 text-sm font-light mb-4">Free copy + a reminder before your heater fails.</div>
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          placeholder="you@email.com"
-          required
-          className="flex-1 rounded-full border border-white border-opacity-20 bg-transparent px-4 py-2.5 text-white text-sm placeholder:text-white placeholder:text-opacity-30 focus:outline-none focus:border-blue-accent"
-        />
-        <button
-          type="submit"
-          disabled={status === 'loading'}
-          className="rounded-full bg-blue-accent px-5 py-2.5 text-white text-sm font-medium disabled:opacity-60 whitespace-nowrap"
-        >
-          {status === 'loading' ? '…' : 'Send →'}
-        </button>
+    <div className="rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 p-5 space-y-4">
+      <div>
+        <div className="text-white font-medium mb-1">📧 Email me this report</div>
+        <div className="text-white text-opacity-50 text-sm font-light">Free copy + a reminder before your heater fails.</div>
+      </div>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <div className="flex gap-2">
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="you@email.com"
+            required
+            className="flex-1 rounded-full border border-white border-opacity-20 bg-transparent px-4 py-2.5 text-white text-sm placeholder:text-white placeholder:text-opacity-30 focus:outline-none focus:border-blue-accent"
+          />
+          <button
+            type="submit"
+            disabled={status === 'loading'}
+            className="rounded-full bg-blue-accent px-5 py-2.5 text-white text-sm font-medium disabled:opacity-60 whitespace-nowrap"
+          >
+            {status === 'loading' ? '…' : 'Send →'}
+          </button>
+        </div>
+
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={smsConsent}
+            onChange={e => setSmsConsent(e.target.checked)}
+            className="mt-0.5 accent-blue-500 w-4 h-4 shrink-0"
+          />
+          <span className="text-white text-opacity-35 text-xs font-light leading-relaxed">
+            Text me annual service reminders too — I consent to receive automated reminder texts from WaterHeaterPlan. Msg &amp; data rates may apply. Reply STOP anytime.
+          </span>
+        </label>
+
+        {smsConsent && (
+          <input
+            type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
+            placeholder="Your mobile number"
+            required={smsConsent}
+            className="w-full rounded-full border border-white border-opacity-20 bg-transparent px-4 py-2.5 text-white text-sm placeholder:text-white placeholder:text-opacity-30 focus:outline-none focus:border-blue-accent"
+          />
+        )}
       </form>
-      {status === 'error' && <p className="mt-2 text-red-300 text-sm font-light">{errorMsg}</p>}
+      {status === 'error' && <p className="text-red-300 text-sm font-light">{errorMsg}</p>}
     </div>
   )
 }
