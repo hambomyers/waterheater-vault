@@ -1,7 +1,7 @@
 # WaterHeaterVault — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*
-*Last updated: 2026-03-21 — Sprint 2 code complete. Stripe + D1 pros table pending env vars.*
+*Last updated: 2026-03-22 — Homeowner-first homepage. /pro marketing page. scan_events D1 table live.*
 
 ---
 
@@ -14,6 +14,7 @@
 
 **WaterHeaterVault** is a free AI scanner that tells homeowners the exact age, warranty status, replacement cost, recall status, and available utility rebates for their water heater — in 60 seconds, from a photo.
 
+**waterheaterplan.com** is the homeowner-first entry point. The free scanner IS the growth engine.
 **waterheaterplan.com/pro** is the SaaS platform that converts scanner traffic into paying pro customers — $29/mo for white-label branding, auto-leads, and a public directory listing.
 
 **Entity:** VaultPro LLC (new standalone LLC filed for legal/tax separation). Domains, product names, and branding are 100% unchanged.
@@ -128,7 +129,7 @@ This extends to every reference: serial decoders, warranty terms, manuals, recal
 
 ┌──────────────────────────────────────────────────────────────────────┐
 │  LAYER 1 — DEMAND CAPTURE                                            │
-│  scan.waterheaterplan.com  (WaterHeaterVault PWA)                   │
+│  waterheaterplan.com  (homeowner landing → /scan → /results)        │
 │                                                                      │
 │  [Camera] ──▶ [Two-Shot Scan] ──▶ [Grok Vision AI]                 │
 │                                         │                            │
@@ -154,6 +155,7 @@ This extends to every reference: serial decoders, warranty terms, manuals, recal
 │              ┌──────────▼───────────────────┐                       │
 │              │  "Invite my plumber"         │                       │
 │              │  → waterheaterplan.com/pro   │  ← VIRAL LOOP         │
+│              │  (homeowner → / → /scan)     │  ← ENTRY POINT        │
 │              └──────────────────────────────┘                       │
 └──────────────────────────────┬───────────────────────────────────────┘
                                │
@@ -434,12 +436,17 @@ waterheater-vault/
 ├── app/
 │   ├── layout.tsx              Root layout, metadata, TopNav
 │   ├── globals.css             Tailwind base, black theme, SF Pro
-│   ├── page.tsx                Home: Logo + tagline + Scan + Vault CTAs
+│   ├── page.tsx                Homeowner landing: headline + Scan CTA + proof pills + pro link
 │   ├── scan/page.tsx           Two-shot: idle→camera-1→scanning-1→guide→camera-2→processing
 │   ├── results/page.tsx        Extracted data + Docs + Save to Vault (inline error state)
 │   ├── vault/
 │   │   ├── page.tsx            List + background recall check + recall badges
 │   │   └── item/page.tsx       Detail + inline edit + recall banner + delete
+│   ├── pro/
+│   │   ├── page.tsx            Pro marketing: how it works, pricing, quality gate, directory link
+│   │   ├── onboard/page.tsx    Pro signup: GBP URL → Grok AI screen → Stripe checkout
+│   │   ├── directory/page.tsx  Public searchable directory of screened pros
+│   │   └── dashboard/page.tsx  Pro weekly scan counts by zip
 │   ├── debug/page.tsx          Pipeline test (needs NODE_ENV guard)
 │   └── components/
 │       ├── Logo.tsx            SVG: WH text y=42 + thin line y=82
@@ -471,7 +478,8 @@ waterheater-vault/
 │   ├── recall-check.ts         CF Function: CPSC SaferProducts API proxy (handles CORS)
 │   ├── pro/
 │   │   ├── screen.ts           Grok AI review screening (GBP URL → rating/sentiment → approve/deny)
-│   │   └── checkout.ts         Stripe checkout session creation
+│   │   ├── checkout.ts         Stripe checkout session creation
+│   │   └── stats.ts            GET /api/pro/stats?zip= → thisWeek/lastWeek/critical counts
 │   ├── auth/
 │   │   ├── send-magic-link.ts  Resend email + JWT token
 │   │   ├── verify.ts           Validate token, set session cookie, create user in D1

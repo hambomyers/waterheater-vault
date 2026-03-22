@@ -67,13 +67,15 @@ Results page shows:
 
 | Route | What it does |
 |-------|-------------|
-| `/` | Home — logo + Scan + Vault + Pro CTAs |
+| `/` | **Homeowner landing** — headline + Scan CTA + proof pills + pro link |
 | `/scan` | Two-shot guided camera scan |
 | `/results` | Scan results + rebate card + PDF + invite button + save |
 | `/vault` | Saved heaters — recall badges, life gauge, list |
 | `/vault/item?id=xxx` | Item detail — inline edit, recall banner, PDF, invite |
+| `/pro` | **Pro marketing page** — how it works, pricing, quality gate |
 | `/pro/onboard` | Pro signup: GBP URL → Grok AI screen → Stripe checkout |
 | `/pro/directory` | Public searchable directory of screened pros |
+| `/pro/dashboard` | Pro sees weekly scan counts by zip |
 | `/debug` | Dev pipeline test (NODE_ENV guard needed) |
 
 ---
@@ -101,8 +103,8 @@ pnpm add @stripe/stripe-js
 ## Deployment
 
 Cloudflare Pages auto-deploys from `main` branch.  
-Consumer URL: **scan.waterheaterplan.com**  
-Pro URL: **waterheaterplan.com/pro**
+Primary URL: **waterheaterplan.com** (homeowner landing at `/`, pro marketing at `/pro`)  
+Alias: **scan.waterheaterplan.com** → same app
 
 **Required secrets — CF Pages → Settings → Environment Variables:**
 
