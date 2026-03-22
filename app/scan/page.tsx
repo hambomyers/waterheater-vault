@@ -359,11 +359,11 @@ export default function ScanPage() {
                   onClick={() => openCamera(1)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  Scan my water heater →
+                  Snap the whole unit →
                 </button>
                 <button
                   onClick={() => { filePickerShotRef.current = 1; galleryInputRef.current?.click() }}
-                  className="mt-10 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-50 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
+                  className="mt-14 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-70 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Photo Gallery
                 </button>
@@ -437,11 +437,11 @@ export default function ScanPage() {
                   onClick={() => openCamera(2)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  Scan the data plate →
+                  Snap the serial tag →
                 </button>
                 <button
                   onClick={() => { filePickerShotRef.current = 2; galleryInputRef.current?.click() }}
-                  className="mt-10 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-50 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
+                  className="mt-14 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-70 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Photo Gallery
                 </button>
