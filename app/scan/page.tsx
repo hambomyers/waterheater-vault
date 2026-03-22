@@ -348,10 +348,10 @@ export default function ScanPage() {
           {phase === 'idle' && (
             <div className="w-full max-w-sm space-y-8 text-center">
               <div>
-                <p className="text-white text-opacity-60 font-light text-sm mb-1">Step 1 of 2</p>
-                <p className="text-white text-lg font-light">Snap an overview photo</p>
+                <p className="text-white text-opacity-60 font-light text-sm mb-1">Step 1 — data plate</p>
+                <p className="text-white text-lg font-light">Snap the data plate label</p>
                 <p className="text-white text-opacity-40 text-sm mt-2 font-light">
-                  Any angle, upside down — just clear 🙂 We'll tell you what to snap next.
+                  The silver sticker on the side of your tank — has brand, serial, and date.
                 </p>
               </div>
               <div className="flex flex-col items-center">
@@ -359,7 +359,7 @@ export default function ScanPage() {
                   onClick={() => openCamera(1)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  Snap the whole unit →
+                  Snap the data plate →
                 </button>
                 <button
                   onClick={() => { filePickerShotRef.current = 1; galleryInputRef.current?.click() }}
@@ -380,7 +380,7 @@ export default function ScanPage() {
                 </div>
               )}
               <div className="animate-pulse text-white text-opacity-60 font-light">
-                Identifying product…
+                Reading label…
               </div>
             </div>
           )}
@@ -400,12 +400,9 @@ export default function ScanPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">✅</span>
                   <div>
-                    <p className="text-white font-medium text-base">
-                      Got it! Now snap the{' '}
-                      <span className="text-blue-accent">data plate label</span>.
-                    </p>
+                    <p className="text-white font-medium text-base">Label captured!</p>
                     <p className="text-white text-opacity-60 font-light text-sm mt-1 leading-relaxed">
-                      It's the silver sticker on the side or front of the tank — has brand, model, serial number, and manufacture date.
+                      Optional: snap the full unit for a visual condition check — or skip straight to your results.
                     </p>
                   </div>
                 </div>
@@ -417,33 +414,37 @@ export default function ScanPage() {
                       </span>
                     </div>
                   )}
-                <div className="pt-1 border-t border-white border-opacity-8">
-                  <p className="text-white text-opacity-35 text-xs font-light leading-relaxed">
-                    <span className="text-white text-opacity-50">Can't find it?</span>{' '}
-                    Try the top of the unit or look for a cardboard tag near the base.
-                  </p>
-                </div>
               </div>
-
-              <div className="text-white text-opacity-40 text-xs text-center font-light">
-                Step 2 of 2
-              </div>
-              <p className="text-white text-opacity-35 text-xs text-center font-light -mt-1">
-                Any angle, upside down — just clear 🙂
-              </p>
 
               <div className="flex flex-col items-center">
                 <button
                   onClick={() => openCamera(2)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  Snap the serial tag →
+                  Add overview photo →
                 </button>
                 <button
                   onClick={() => { filePickerShotRef.current = 2; galleryInputRef.current?.click() }}
-                  className="mt-14 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-70 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
+                  className="mt-4 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-70 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Photo Gallery
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!shot1BlobRef.current) return
+                    setPhase('processing')
+                    try {
+                      const result = await brainRouter.processImage(shot1BlobRef.current, { useCloud: true })
+                      sessionStorage.setItem('scan-result', JSON.stringify(result))
+                      window.location.href = '/results'
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed')
+                      setPhase('guide')
+                    }
+                  }}
+                  className="mt-10 w-full py-3 text-white text-opacity-35 font-light text-sm touch-manipulation"
+                >
+                  Skip — show my results now
                 </button>
               </div>
 

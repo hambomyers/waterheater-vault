@@ -19,6 +19,7 @@ export interface ProcessingResult {
   processingMethod: 'on-device' | 'grok-vision'
   confidence: number
   imageBase64?: string
+  shot1Note?: string | null
 }
 
 export interface OnDevicePreview {
@@ -162,6 +163,7 @@ class BrainRouter {
       processingMethod: 'grok-vision',
       confidence: result.valuation.confidence,
       imageBase64,
+      shot1Note: result.shot1Note ?? null,
     }
   }
 

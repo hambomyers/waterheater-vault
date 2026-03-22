@@ -273,6 +273,16 @@ export default function ResultsPage() {
           {/* Social Share */}
           <SocialShare extractedData={extractedData} />
 
+          {/* Shot 1 Observation Note */}
+          {scanResult.shot1Note && (
+            <div className="rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 px-5 py-4">
+              <p className="text-white text-opacity-40 text-xs font-light leading-relaxed">
+                <span className="text-white text-opacity-60 font-medium">AI observed: </span>
+                {scanResult.shot1Note}
+              </p>
+            </div>
+          )}
+
           {/* Email Capture */}
           <EmailCapture extractedData={extractedData} />
 
@@ -392,6 +402,16 @@ export default function ResultsPage() {
           <div className="mb-6">
             <SocialShare extractedData={extractedData} />
           </div>
+
+          {/* Shot 1 Observation Note */}
+          {scanResult.shot1Note && (
+            <div className="rounded-2xl border border-white border-opacity-8 bg-white bg-opacity-3 px-6 py-4 mb-5">
+              <p className="text-white text-opacity-40 text-xs font-light leading-relaxed">
+                <span className="text-white text-opacity-55 font-medium">AI observed: </span>
+                {scanResult.shot1Note}
+              </p>
+            </div>
+          )}
 
           {/* Email Capture */}
           <div className="mb-6">

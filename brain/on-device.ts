@@ -41,6 +41,7 @@ export interface GrokScanResult {
     confidence: number
   }
   docs: GrokDocs
+  shot1Note?: string | null
 }
 
 // Convert Blob to base64 string (without data URL prefix)
@@ -155,6 +156,7 @@ export async function extractFromTwoShots(
   }
 
   return {
+    shot1Note: data.shot1Note || null,
     extractedData: {
       product: data.product || 'Water Heater',
       brand: data.brand || 'Unknown',

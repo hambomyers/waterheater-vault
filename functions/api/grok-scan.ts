@@ -110,6 +110,7 @@ Return ONLY a single valid JSON object. No markdown, no text before or after:
   "estimatedReplacementCost": estimated installed replacement cost in USD as integer (see cost rules),
   "currentWarranty": "warranty as printed on label or inferred from brand guide",
   "confidence": overall extraction confidence 0.0-1.0,
+  "shot1Note": "optional — only populate if Shot 2 (overview) does not match label data or is not a water heater. E.g. 'Shot 2 appears to be a paper cup, not a water heater.' or 'Unit appears heavily corroded — may affect remaining life estimate.' Leave null if no issues.",
   "docs": [ ... always 4 entries per docs instructions above ... ]
 }
 
@@ -117,7 +118,9 @@ CRITICAL RULES:
 1. manufactureDate is REQUIRED — always decode from serial using brand rules above. Never return null if you have a serial number.
 2. ageYears and remainingLifeYears are REQUIRED — always calculate them.
 3. estimatedReplacementCost is REQUIRED — always return a realistic integer.
-4. If image shows something other than a water heater: { "error": "not_a_water_heater", "message": "This appears to be a [X], not a water heater." }
+4. In two-shot mode: Shot 1 (label) is AUTHORITATIVE. Shot 2 (overview) is verification only — never override label data with overview guesses.
+5. If Shot 1 (label) shows something other than a water heater data plate: { "error": "not_a_water_heater", "message": "This appears to be a [X], not a water heater data plate." }
+6. If Shot 2 (overview) doesn't match the label — paper cup, wrong object, etc. — extract normally from Shot 1 and put the observation in shot1Note. Never fail the scan because of a bad Shot 2.
 
 ${WH_DOCS_INSTRUCTIONS}`
 
@@ -175,9 +178,9 @@ async function callGrok(
 
   const userContent: any[] = isTwoShot
     ? [
-        { type: 'text', text: 'Shot 1 — wide overview of the water heater unit. Use to identify brand, tank size, and fuel type from the unit appearance.' },
+        { type: 'text', text: 'Shot 1 — DATA PLATE LABEL. This is the authoritative data source. Read every character with maximum precision: serial number, model number, brand, manufacture date, warranty info, BTU/wattage, tank capacity in gallons. All key output fields must come from this image.' },
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot1Base64}`, detail: 'high' } },
-        { type: 'text', text: 'Shot 2 — close-up of the data plate / serial label. Read every character precisely: serial number, model number, manufacture date, warranty info, BTU/wattage, tank capacity.' },
+        { type: 'text', text: 'Shot 2 — full unit overview for visual verification only. Does this physical unit appear to match the label data from Shot 1? Note condition, rust, or damage. If this image does NOT appear to be a water heater (e.g. it is a paper cup, a person, a random object), describe what it actually is in the shot1Note field.' },
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot2Base64}`, detail: 'high' } },
       ]
     : [
