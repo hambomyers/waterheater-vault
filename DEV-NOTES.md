@@ -1,7 +1,7 @@
 # WaterHeaterVault — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*
-*Last updated: 2026-03-22 — Homeowner-first homepage. /pro marketing page. scan_events D1 table live.*
+*Last updated: 2026-03-22 — Label-first scan architecture. Homeowner homepage. /pro marketing page. scan_events D1 live. GROK_API_KEY restored.*
 
 ---
 
@@ -275,14 +275,18 @@ This extends to every reference: serial decoders, warranty terms, manuals, recal
 ║                        USER'S DEVICE                          ║
 ║                                                               ║
 ║   ┌──────────┐    ┌─────────────────────────────────────┐    ║
-║   │  Camera  │───▶│           /scan  (two-shot)          │    ║
+║   │  Camera  │───▶│           /scan  (label-first)       │    ║
 ║   │  or File │    │                                      │    ║
-║   └──────────┘    │  1. Shot 1 — overview photo          │    ║
-║                   │  2. Tesseract.js OCR  ◀── offline    │    ║
-║                   │  3. Category detect → categoryMap    │    ║
-║                   │  4. Guide screen with location hint  │    ║
-║                   │     + secondary hint ("Can't find?") │    ║
-║                   │  5. Shot 2 — serial/model label      │    ║
+║   └──────────┘    │  1. Shot 1 — DATA PLATE LABEL        │    ║
+║                   │     (serial, model, brand, date)     │    ║
+║                   │     ← GROUND TRUTH, always first     │    ║
+║                   │     ← results ready after this shot  │    ║
+║                   │                                      │    ║
+║                   │  2. Shot 2 — full unit overview      │    ║
+║                   │     (OPTIONAL verification)          │    ║
+║                   │     ← Grok checks: does unit match   │    ║
+║                   │       label? visual condition notes  │    ║
+║                   │     ← flags paper cup / wrong unit   │    ║
 ║                   └──────────────┬──────────────────────┘    ║
 ║                                  │                           ║
 ║              ┌───────────────────┤                           ║
@@ -581,6 +585,17 @@ waterheater-vault/
 | 18 | **/debug route guard** | 🔲 | NODE_ENV check |
 | 19 | **Add Stripe env vars → deploy** | 🔲 BLOCKING | See Stripe Setup section below |
 
+### Sprint 2.5 — Scan Quality + UX (IN PROGRESS)
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 20 | **Label-first scan** | 🔲 NEXT | Reverse shot order: data plate first → unit overview second (optional). Label = ground truth. |
+| 21 | **Single-shot fast path** | 🔲 | If Shot 1 label is clean → show results immediately. Shot 2 is optional "verify unit" step. |
+| 22 | **shot1Note mismatch field** | 🔲 | Grok returns `shot1Note` if overview doesn't match label data (paper cup detection). Show on results. |
+| 23 | **Doc links Google fallback** | 🔲 | When Brave URL is null, show `google.com/search?q=...` fallback link instead of dead row. |
+| 24 | **GROK_API_KEY restored** | ✅ | `wrangler pages secret put` — live in production. |
+| 25 | **Button UX** | ✅ | Blue camera primary + 70%-opacity gallery pill, mt-14 spacing, fat-finger safe. |
+
 ---
 
 ## Stripe Setup (one-time — required before /pro/onboard works end-to-end)
@@ -651,6 +666,16 @@ waterheater-vault/
 ---
 
 # ═══ PART 4 — CHANGE LOG ═══
+
+### 2026-03-22 — Label-First Architecture + Homepage Strategy
+- **Scan flow redesign (planned):** Reverse shot order — data plate label FIRST (ground truth), unit overview SECOND (optional verification). Label gives Grok everything it needs in one shot. Overview becomes prank detection + condition check. Single-shot fast path if label is clean.
+- **Homepage:** `app/page.tsx` rewritten homeowner-first — headline, single blue CTA, 4 proof pills, pro link at bottom. TopNav hides on `/`.
+- **`/pro` marketing page:** `app/pro/page.tsx` created — full pro pitch, pricing, quality gate, directory link. TopNav hides on `/pro`.
+- **Button UX:** Single blue camera button + smaller `bg-opacity-70` gallery pill with `mt-14` spacing (fat-finger safe). Gallery uses separate `galleryInputRef` (no `capture` attr) → direct to photo library.
+- **GROK_API_KEY:** Restored via `wrangler pages secret put` after consolidation caused CF Pages env loss.
+- **`scan_events` D1 table:** `0004_scan_events.sql` migration live. `grok-scan.ts` records brand/zip/age/fuel per scan for pro dashboard.
+- **`/pro/dashboard`:** New page shows weekly scan counts by zip for active pros.
+- **`/api/pro/stats`:** GET endpoint for pro dashboard data.
 
 ### 2026-03-21 — MAJOR PIVOT: Pure SaaS + New LLC
 - **Strategic shift:** Dropped local service model entirely. No Hamilton Plumbing. No service delivery. Pure SaaS.
