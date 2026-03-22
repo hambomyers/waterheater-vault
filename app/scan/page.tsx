@@ -45,6 +45,7 @@ export default function ScanPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
   const shot1BlobRef = useRef<Blob | null>(null)
   const shot2BlobRef = useRef<Blob | null>(null)
   const filePickerShotRef = useRef<1 | 2>(1)
@@ -353,7 +354,7 @@ export default function ScanPage() {
                   Any angle, upside down — just clear 🙂 We'll tell you what to snap next.
                 </p>
               </div>
-              <div className="space-y-3">
+              <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={() => openCamera(1)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
@@ -361,10 +362,10 @@ export default function ScanPage() {
                   Scan my water heater →
                 </button>
                 <button
-                  onClick={() => { filePickerShotRef.current = 1; fileInputRef.current?.click() }}
-                  className="w-full py-2 text-white text-opacity-30 font-light text-sm touch-manipulation"
+                  onClick={() => { filePickerShotRef.current = 1; galleryInputRef.current?.click() }}
+                  className="w-3/4 min-h-[44px] py-3 px-8 border border-white border-opacity-20 text-white text-opacity-40 rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  or choose from gallery
+                  Photo Gallery
                 </button>
               </div>
             </div>
@@ -431,7 +432,7 @@ export default function ScanPage() {
                 Any angle, upside down — just clear 🙂
               </p>
 
-              <div className="space-y-3">
+              <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={() => openCamera(2)}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
@@ -439,10 +440,10 @@ export default function ScanPage() {
                   Scan the data plate →
                 </button>
                 <button
-                  onClick={() => { filePickerShotRef.current = 2; fileInputRef.current?.click() }}
-                  className="w-full py-2 text-white text-opacity-30 font-light text-sm touch-manipulation"
+                  onClick={() => { filePickerShotRef.current = 2; galleryInputRef.current?.click() }}
+                  className="w-3/4 min-h-[44px] py-3 px-8 border border-white border-opacity-20 text-white text-opacity-40 rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
-                  or choose from gallery
+                  Photo Gallery
                 </button>
               </div>
 
@@ -503,6 +504,17 @@ export default function ScanPage() {
         </div>
 
         <canvas ref={canvasRef} className="hidden" />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) handleFileSelect(f, filePickerShotRef.current)
+            e.target.value = ''
+          }}
+          className="hidden"
+        />
       </div>
 
       {/* ════════════════════ DESKTOP ════════════════════ */}
