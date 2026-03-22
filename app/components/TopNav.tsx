@@ -7,6 +7,8 @@ import Logo from './Logo'
 export default function TopNav() {
   const pathname = usePathname()
 
+  if (pathname === '/') return null
+
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/')
 
