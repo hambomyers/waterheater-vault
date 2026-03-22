@@ -11,56 +11,56 @@ interface InvitePlumberButtonProps {
 export default function InvitePlumberButton({ extractedData, className = '' }: InvitePlumberButtonProps) {
   const [status, setStatus] = useState<'idle' | 'copied' | 'shared'>('idle')
 
-  const buildInviteUrl = () => {
-    const base = 'https://waterheaterplan.com/pro/onboard'
+  const buildSharePayload = () => {
+    const brand = extractedData?.brand && extractedData.brand !== 'Unknown' ? extractedData.brand : 'water heater'
+    const age = extractedData?.ageYears && extractedData.ageYears > 0 ? `, ${extractedData.ageYears} years old` : ''
+    const remaining = extractedData?.remainingLifeYears != null && extractedData.remainingLifeYears > 0
+      ? ` (~${extractedData.remainingLifeYears} yrs left)`
+      : ''
+
     const p = new URLSearchParams()
-    p.set('ref', 'invite')
+    p.set('ref', 'plumber-invite')
     if (extractedData?.brand && extractedData.brand !== 'Unknown') p.set('brand', extractedData.brand)
+    if (extractedData?.model && extractedData.model !== 'Unknown') p.set('model', extractedData.model)
     if (extractedData?.ageYears && extractedData.ageYears > 0) p.set('age', String(extractedData.ageYears))
     if (extractedData?.remainingLifeYears != null) p.set('remaining', String(extractedData.remainingLifeYears))
-    return `${base}?${p.toString()}`
-  }
+    const url = `https://waterheaterplan.com/pro?${p.toString()}`
 
-  const buildShareText = () => {
-    if (!extractedData) return 'I scanned my water heater with WaterHeaterVault — you should get your plumber listed on it. Free leads from homeowners.'
-    const age = extractedData.ageYears > 0 ? `${extractedData.ageYears}-year-old ` : ''
-    const brand = extractedData.brand !== 'Unknown' ? `${extractedData.brand} ` : ''
-    return `I just scanned my ${age}${brand}water heater with WaterHeaterVault — get your name on reports like mine for $29/mo. Free leads from homeowners in your area.`
+    const text = `Hey! I just scanned my ${brand}${age}${remaining} with an AI water heater scanner — thought you'd want the report and stay in the loop on service timing. The manufacturer recommends yearly service. Here's the info:\n\n${url}\n\n(There's also a spot to get your name on scans in your area if you're interested.)`
+
+    return { text, url }
   }
 
   const handleInvite = async () => {
-    const url = buildInviteUrl()
-    const text = buildShareText()
+    const { text, url } = buildSharePayload()
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Join WaterHeaterVault Pro', text, url })
+        await navigator.share({ text })
         setStatus('shared')
         setTimeout(() => setStatus('idle'), 3000)
       } catch {
-        // User cancelled share — fallback to copy
-        await copyToClipboard(url)
+        await copyToClipboard(text)
       }
     } else {
       await copyToClipboard(url)
     }
   }
 
-  const copyToClipboard = async (url: string) => {
+  const copyToClipboard = async (content: string) => {
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(content)
       setStatus('copied')
       setTimeout(() => setStatus('idle'), 3000)
     } catch {
-      // Last resort: open in new tab
-      window.open(url, '_blank')
+      window.open('https://waterheaterplan.com/pro?ref=plumber-invite', '_blank')
     }
   }
 
   const label =
-    status === 'copied' ? '✓ Link copied — send it to your plumber' :
+    status === 'copied' ? '✓ Copied — paste into your text app' :
     status === 'shared' ? '✓ Sent!' :
-    'Invite my plumber → get branded reports'
+    'Text my plumber this report'
 
   return (
     <button

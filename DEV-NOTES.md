@@ -1,7 +1,7 @@
 # WaterHeaterVault — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*
-*Last updated: 2026-03-22 — Label-first scan architecture. Homeowner homepage. /pro marketing page. scan_events D1 live. GROK_API_KEY restored.*
+*Last updated: 2026-03-22 — Label-first scan shipped. Vision + method evolution: free claim flow, TCPA gate, $49/mo pricing, invite-seeds-directory, fair price engine, annual loop as core moat.*
 
 ---
 
@@ -666,6 +666,55 @@ waterheater-vault/
 ---
 
 # ═══ PART 4 — CHANGE LOG ═══
+
+### 2026-03-22 (afternoon) — Vision & Method Evolution
+
+#### What Changed in Our Thinking Today
+
+**SCAN ARCHITECTURE — shipped**
+- Label-first: Shot 1 = data plate (authoritative, REQUIRED). Shot 2 = full unit (OPTIONAL verification).
+- Single-shot fast path: "Skip — show my results now" button on guide card. Processes Shot 1 alone via `brainRouter.processImage`.
+- `shot1Note` field: Grok flags mismatches on Shot 2 (paper cup, wrong object). Surfaces as subtle "AI observed:" card on results. Never fails the scan.
+- Idle phase now says "Snap the data plate →" not "Snap the whole unit →".
+
+**INVITE BUTTON — shipped**
+- Old message: sales pitch to plumber ("get your name on reports for $29/mo").
+- New message: homeowner-to-plumber personal invite ("thought you'd want the report and stay in the loop on service timing").
+- URL embedded in share text — no more double-URL from Web Share API.
+- Button label: "Text my plumber this report" not "Invite my plumber".
+
+**PRODUCT STRATEGY — decided, not yet built**
+
+| Decision | Old Thinking | New Thinking |
+|---|---|---|
+| Pro pricing | $29/mo | $49/mo (credible for trade tool, still 100x cheaper than Angi) |
+| First plumber touch | Straight to Stripe | Free unit claim → taste value → upsell |
+| Invite vs directory | Two separate flows | One product: invite = free entry + viral, directory = paid upsell |
+| Shot 2 | Required two-shot | Optional, skip button, single-shot fast path |
+| SMS/email reminders | Not considered | TCPA explicit consent required (2025 FCC rules, $500–$1,500/violation) |
+| Grok role | Vision + data extraction | Decision layer only — Workers execute (Grok never calls Stripe/Resend directly) |
+| API cost at scale | Not tracked | ~$2–5k/month at 10K scans — mitigate with D1 serial cache |
+| Long-term business | Pro SaaS revenue | Data moat — scan DB (brand/model/age/zip) is the unique asset |
+
+**FAIR PRICE ENGINE — decided, not yet built**
+- Grok returns `unitCostRange / laborRange / emergencyPremium` breakdown.
+- Brave anchors with live Angi cost guide + Home Depot Install price for that brand.
+- Display: national chain prices as high anchor, local pro as obvious winner.
+- Core homeowner value: "You just saved $400–700 by knowing NOW vs. Sunday night."
+
+**ANNUAL LOOP — decided, not yet built**
+- This is the actual moat. Not the scan. Not the directory.
+- Year 0: scan → text plumber → claim
+- Year 1: "Your Navien turns 8 today. [Mike's Plumbing] recommends a check." → $200 service call
+- Year 3: "Replacement window open. Fair price: $1,700–$2,100. Mike has 3 openings." → $2,000 planned job
+- WHP sends the email. Mike pays $49/mo. Nobody gets surprised on a Sunday.
+
+**ARCHITECTURE PRINCIPLE — locked**
+- Grok = reasoning and decision layer (what to do, what to charge, what to write)
+- Cloudflare Workers = execution layer (actually calls Stripe, Resend, SMS)
+- Never conflate the two. Grok outputs instructions. Workers act on them.
+
+---
 
 ### 2026-03-22 — Label-First Architecture + Homepage Strategy
 - **Scan flow redesign (planned):** Reverse shot order — data plate label FIRST (ground truth), unit overview SECOND (optional verification). Label gives Grok everything it needs in one shot. Overview becomes prank detection + condition check. Single-shot fast path if label is clean.
