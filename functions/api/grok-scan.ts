@@ -219,7 +219,7 @@ async function callGrok(
       ]
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 25000)
+  const timeout = setTimeout(() => controller.abort(), 28000)
   try {
     const res = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',

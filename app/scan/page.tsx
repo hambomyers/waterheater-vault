@@ -134,7 +134,7 @@ export default function ScanPage() {
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const MAX_W = 1600
+    const MAX_W = 1024
     const scale = Math.min(1, MAX_W / video.videoWidth)
     canvas.width = Math.round(video.videoWidth * scale)
     canvas.height = Math.round(video.videoHeight * scale)
@@ -164,21 +164,31 @@ export default function ScanPage() {
       setError('Please select an image file (JPEG, PNG, WebP)')
       return
     }
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string
-      if (forShot === 1) setShot1Url(dataUrl)
-      fetch(dataUrl).then((r) => r.blob()).then((blob) => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new window.Image()
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const MAX_W = 1024
+      const scale = Math.min(1, MAX_W / img.width)
+      const cv = document.createElement('canvas')
+      cv.width = Math.round(img.width * scale)
+      cv.height = Math.round(img.height * scale)
+      const ctx = cv.getContext('2d')
+      if (!ctx) return
+      ctx.drawImage(img, 0, 0, cv.width, cv.height)
+      cv.toBlob((blob) => {
+        if (!blob) return
         if (forShot === 1) {
           shot1BlobRef.current = blob
+          setShot1Url(URL.createObjectURL(blob))
           runOnDeviceExtraction(blob)
         } else {
           shot2BlobRef.current = blob
           processTwoShots()
         }
-      })
+      }, 'image/jpeg', 0.72)
     }
-    reader.readAsDataURL(file)
+    img.src = objectUrl
   }
 
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setIsDragging(true) }, [])
