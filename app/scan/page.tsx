@@ -205,14 +205,17 @@ export default function ScanPage() {
   const runOnDeviceExtraction = async (blob: Blob) => {
     setPhase('scanning-1')
     setError(null)
-    // ── Fire Grok immediately in background while user sees guide screen ──
-    grokResultRef.current = brainRouter.processImage(blob, { useCloud: true })
     try {
+      // Run OCR once, then pass result to processImage so Tesseract isn't re-run
       const preview = await brainRouter.extractOnDevicePreview(blob)
       setOnDevicePreview(preview)
       setPhase('guide')
+      // Fire cloud processing with the preview — OCR is reused, not repeated
+      grokResultRef.current = brainRouter.processImage(blob, { useCloud: true, onDevicePreview: preview })
     } catch {
       setPhase('guide')
+      // Preview failed — fire processImage without it (will run its own OCR)
+      grokResultRef.current = brainRouter.processImage(blob, { useCloud: true })
     }
   }
 

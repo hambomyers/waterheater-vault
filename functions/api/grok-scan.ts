@@ -1,3 +1,5 @@
+import { computeDerivedFields, extractOutermostJson, braveSearch, learnFromScan, WH_SYSTEM } from './_utils/wh-compute'
+
 function userFriendlyError(status: number): string {
   switch (status) {
     case 401: return 'Invalid API key. Check GROK_API_KEY in Cloudflare Pages settings.'
@@ -7,37 +9,6 @@ function userFriendlyError(status: number): string {
     default:  return `Grok API error (${status}). Please try again.`
   }
 }
-
-// ── Minimal label-reader prompt ───────────────────────────────────────────────
-// Grok reads 7 fields only. All derived fields are computed server-side below.
-
-const WH_SYSTEM = `You are a water heater data plate reader. Read ONLY what is physically printed on the label in the image.
-
-Return ONLY valid JSON, no markdown, no explanation:
-{
-  "brand": "exact brand name (Rheem|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
-  "model": "model number exactly as printed, or null",
-  "serialNumber": "serial number exactly as printed — look for S/N, Serial No., standalone alphanumeric string 8-20 chars",
-  "manufactureDate": "YYYY-MM decoded from serial — REQUIRED if serial present",
-  "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
-  "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
-  "confidence": 0.0-1.0
-}
-
-If not a water heater data plate: {"error":"not_wh","message":"brief description"}
-
-SERIAL DATE DECODERS:
-• Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
-• AO Smith/American/Reliance/Whirlpool: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
-• Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
-• State ProLine/Select: same as AO Smith (year+week)
-• Navien NPE/NFC/NCB/NHB: YYWW e.g. "2312"=2023wk12≈Mar2023
-• Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
-• Noritz: YYWW in first 4 chars
-• Bosch: first 6 = YYYYWW
-• GE: letter=factory next digit=year (A=2001,B=2002…)
-• Lochinvar/Weil-McLain: first 2=year next 2=week
-• Unknown: best YYYY-MM estimate with "(est)" appended`
 
 // ── Review screening prompt (unchanged) ──────────────────────────────────────
 
@@ -62,140 +33,6 @@ CRITICAL RULES:
 3. redFlags = [] if no issues. Be objective — this gate protects homeowners.
 `
 
-// ── Server-side derived field computation ────────────────────────────────────
-// Computes everything Grok doesn't need to — age, costs, warranty, docs, etc.
-
-function computeDerivedFields(parsed: any): any {
-  const currentYear = new Date().getFullYear()
-  const fuel = (parsed.fuelType || 'unknown').toLowerCase()
-  const brand = (parsed.brand || '').toLowerCase()
-  const gal = parsed.tankSizeGallons || 0
-
-  // Age from manufactureDate
-  let mfgYear = 0
-  if (parsed.manufactureDate) {
-    mfgYear = parseInt(String(parsed.manufactureDate).replace(/\(.*\)/, '').trim().split('-')[0]) || 0
-  }
-  const ageYears = mfgYear > 1980 ? Math.max(0, currentYear - mfgYear) : 0
-
-  // Expected lifespan
-  let expectedLife = 10
-  if (fuel.includes('tankless')) {
-    expectedLife = (brand.includes('navien') || brand.includes('rinnai') || brand.includes('noritz')) ? 20 : 18
-  } else if (fuel === 'electric') {
-    expectedLife = 12
-  } else if (fuel === 'heat-pump' || fuel === 'heat_pump') {
-    expectedLife = 13
-  }
-  const remainingLifeYears = Math.max(0, expectedLife - ageYears)
-
-  // Replacement cost
-  let costMid = 1150, unitLow = 700, unitHigh = 1100, laborLow = 400, laborHigh = 800
-  let emLow = 400, emHigh = 700, ncLow = 2200, ncHigh = 3400
-  if (fuel.includes('tankless')) {
-    if (fuel.includes('electric')) {
-      costMid = 1150; unitLow = 600; unitHigh = 1000; laborLow = 500; laborHigh = 900; emLow = 450; emHigh = 800; ncLow = 2400; ncHigh = 3800
-    } else {
-      costMid = 2000; unitLow = 900; unitHigh = 1800; laborLow = 600; laborHigh = 1000; emLow = 500; emHigh = 900; ncLow = 2800; ncHigh = 4200
-    }
-  } else if (fuel === 'heat-pump' || fuel === 'heat_pump') {
-    costMid = 1600; unitLow = 900; unitHigh = 1400; laborLow = 600; laborHigh = 900; emLow = 500; emHigh = 800; ncLow = 2600; ncHigh = 4000
-  } else if (fuel === 'electric') {
-    costMid = 950; unitLow = 500; unitHigh = 900; laborLow = 350; laborHigh = 700; emLow = 350; emHigh = 600; ncLow = 1800; ncHigh = 2800
-  } else if (gal >= 50) {
-    costMid = 1450; unitLow = 800; unitHigh = 1300; laborLow = 450; laborHigh = 850; emLow = 450; emHigh = 750; ncLow = 2500; ncHigh = 3700
-  }
-
-  // Warranty
-  let warranty = 'See manufacturer documentation'
-  if (brand.includes('navien')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
-  else if (brand.includes('rinnai')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
-  else if (brand.includes('noritz')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
-  else if (brand.includes('bosch')) warranty = '15-year heat exchanger, 6-year parts'
-  else if (brand.includes('lochinvar')) warranty = '10-year heat exchanger, 5-year parts'
-  else if (brand.includes('bradford')) warranty = '6-year tank, 1-year parts'
-  else if (brand.includes('rheem') || brand.includes('ruud')) warranty = '6-year tank, 1-year parts'
-  else if (brand.includes('ao smith') || brand.includes('a.o. smith')) warranty = '6–12-year tank (model dependent)'
-  else if (brand.includes('state') || brand.includes('american') || brand.includes('reliance')) warranty = '6-year tank, 1-year parts'
-  else if (brand.includes('ge') || brand.includes('kenmore') || brand.includes('whirlpool')) warranty = '6-year tank, 1-year parts'
-
-  // Product label
-  const b = parsed.brand || 'Water Heater'
-  const m = parsed.model ? ` ${parsed.model}` : ''
-  let pType = `${gal > 0 ? gal + '-Gal ' : ''}Gas Water Heater`
-  if (fuel.includes('tankless')) pType = `Tankless ${fuel.includes('electric') ? 'Electric' : 'Gas'} Water Heater`
-  else if (fuel === 'heat-pump' || fuel === 'heat_pump') pType = `${gal > 0 ? gal + '-Gal ' : ''}Heat Pump Water Heater`
-  else if (fuel === 'electric') pType = `${gal > 0 ? gal + '-Gal ' : ''}Electric Water Heater`
-
-  // Docs (template — Brave enriches URLs after)
-  const bq = parsed.brand || 'water heater'
-  const mq = parsed.model || ''
-  const fq = fuel.includes('gas') ? 'gas' : 'electric'
-  const docs = [
-    { type: 'serialDecoder', label: 'Serial Date Decoder', searchQuery: `${bq} water heater serial number manufacture date decoder` },
-    { type: 'ownerManual',   label: 'Owner Manual',        searchQuery: `${bq} ${mq} water heater owner manual PDF`.trim() },
-    { type: 'warrantyTerms', label: 'Warranty Terms',      searchQuery: `${bq} water heater warranty terms ${mq}`.trim() },
-    { type: 'recallCheck',   label: 'CPSC Recall Check',   searchQuery: `${bq} ${mq} water heater recall site:cpsc.gov`.trim() },
-    { type: 'utilityRebate', label: 'Utility Rebate',      searchQuery: `${fq} water heater utility rebate DSIRE energystar` },
-  ]
-
-  return {
-    ...parsed,
-    product: `${b}${m} ${pType}`,
-    fuelType: fuel,
-    ageYears,
-    remainingLifeYears,
-    estimatedReplacementCost: costMid,
-    currentWarranty: parsed.currentWarranty || warranty,
-    depreciationRate: expectedLife > 0 ? parseFloat((1 / expectedLife).toFixed(3)) : 0.1,
-    shot1Note: parsed.shot1Note || null,
-    priceBreakdown: { unitLow, unitHigh, laborLow, laborHigh, emergencyPremiumLow: emLow, emergencyPremiumHigh: emHigh, nationalChainLow: ncLow, nationalChainHigh: ncHigh },
-    docs,
-  }
-}
-
-// ── JSON extraction ───────────────────────────────────────────────────────────
-// Finds the outermost {...} block by counting brackets — handles nested objects.
-function extractOutermostJson(text: string): string | null {
-  const start = text.indexOf('{')
-  if (start === -1) return null
-  let depth = 0
-  let inString = false
-  let escape = false
-  for (let i = start; i < text.length; i++) {
-    const ch = text[i]
-    if (escape) { escape = false; continue }
-    if (ch === '\\' && inString) { escape = true; continue }
-    if (ch === '"') { inString = !inString; continue }
-    if (inString) continue
-    if (ch === '{') depth++
-    if (ch === '}') { depth--; if (depth === 0) return text.slice(start, i + 1) }
-  }
-  return null
-}
-
-// ── Brave Search ──────────────────────────────────────────────────────────────
-async function braveSearch(apiKey: string, query: string): Promise<string | null> {
-  try {
-    const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=3&search_lang=en`
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 4000)
-    const res = await fetch(url, {
-      headers: {
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip',
-        'X-Subscription-Token': apiKey,
-      },
-      signal: controller.signal,
-    })
-    clearTimeout(timeout)
-    if (!res.ok) return null
-    const data: any = await res.json()
-    return data?.web?.results?.[0]?.url ?? null
-  } catch {
-    return null
-  }
-}
 
 // ── Grok API call ─────────────────────────────────────────────────────────────
 async function callGrok(
@@ -469,6 +306,9 @@ export const onRequest = async (context: any) => {
         new Date().toISOString()
       ).run().catch(() => { /* non-critical — don't fail the scan */ })
     }
+
+    // ── Learn from this scan ──────────────────────────────────────────────────
+    learnFromScan(context.env.DB, parsed).catch(() => {})
 
     const finalJson = JSON.stringify(parsed)
 

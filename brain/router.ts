@@ -1,5 +1,5 @@
 // Brain router — hybrid: on-device first (offline), Grok cloud for refinement + valuation (online)
-import { extractFromImage, extractFromTwoShots, ExtractedData, GrokScanResult } from './on-device'
+import { extractFromImage, extractFromTwoShots, extractFromText, extractFastLookup, ExtractedData, GrokScanResult } from './on-device'
 import { extractOnDevice, OnDeviceExtractionResult } from '../lib/onDeviceExtractor'
 import { VaultDocs } from '../vault/private'
 
@@ -16,7 +16,7 @@ export interface ProcessingResult {
   extractedData: ExtractedData
   valuation: ValuationData
   docs?: VaultDocs
-  processingMethod: 'on-device' | 'grok-vision'
+  processingMethod: 'on-device' | 'text-parse' | 'fast-lookup' | 'grok-vision'
   confidence: number
   imageBase64?: string
   shot1Note?: string | null
@@ -27,6 +27,10 @@ export interface OnDevicePreview {
   categoryHint: string
   confidence: number
   rawText: string
+  /** Gate fields — carried through to avoid re-running Tesseract in processImage */
+  confidenceScore: number
+  serialCandidate?: string
+  detectedBrand: string
 }
 
 function onDeviceToExtractedData(r: OnDeviceExtractionResult): ExtractedData {
@@ -57,90 +61,129 @@ class BrainRouter {
       categoryHint: result.categoryHint,
       confidence: result.confidence,
       rawText: result.rawText,
+      confidenceScore: result.confidenceScore,
+      serialCandidate: result.serialCandidate,
+      detectedBrand: result.detectedBrand,
     }
   }
 
   /**
-   * Step 2: Full processing — on-device first, then Grok if online and user confirmed.
+   * Step 2: Full processing with 3-tier hybrid confidence gate.
+   *
+   * Tier 1 (fast-lookup)  — zero LLM, <100ms — D1 learned patterns, serial+brand known
+   * Tier 2 (text-parse)   — text LLM,  ~1-2s  — OCR text sent to fast text model
+   * Tier 3 (grok-vision)  — vision LLM, ~15s  — full image sent to Grok (fallback only)
+   * Offline               — on-device result from enhanced OCR
+   *
+   * Every successful cloud parse feeds serial_patterns + model_catalog,
+   * making Tier 1 hits more frequent over time.
    */
   async processImage(
     imageData: Blob,
     options?: { useCloud?: boolean; onDevicePreview?: OnDevicePreview }
   ): Promise<ProcessingResult> {
-    const imageBase64 = await this.blobToDataUrl(imageData)
+    const preview = options?.onDevicePreview
+    const [imageBase64, ocrResult] = await Promise.all([
+      this.blobToDataUrl(imageData),
+      // Reuse preview's OCR data if available — avoids running Tesseract twice
+      preview?.rawText
+        ? Promise.resolve({
+            product: preview.extractedData.product || 'Water Heater',
+            brand: preview.extractedData.brand || 'Unknown',
+            model: preview.extractedData.model || 'Unknown',
+            serialNumber: preview.extractedData.serialNumber,
+            manufactureDate: preview.extractedData.manufactureDate,
+            warranty: preview.extractedData.currentWarranty,
+            rawText: preview.rawText,
+            confidence: preview.confidence,
+            confidenceScore: preview.confidenceScore ?? 0,
+            serialCandidate: preview.serialCandidate,
+            detectedBrand: preview.detectedBrand ?? '',
+            categoryHint: preview.categoryHint,
+          } as OnDeviceExtractionResult)
+        : extractOnDevice(imageData),
+    ])
+
     const isOnline = typeof navigator !== 'undefined' && navigator.onLine
 
-    // If we have on-device preview and user chose not to use cloud (or offline), use it
-    if (options?.onDevicePreview && !options?.useCloud && !isOnline) {
-      const { extractedData, confidence } = options.onDevicePreview
-      return {
-        extractedData,
-        valuation: {
-          currentValue: 0,
-          originalPrice: 0,
-          depreciationRate: 0,
-          marketTrend: 'stable',
-          confidence,
-          lastUpdated: new Date().toISOString(),
-        },
-        processingMethod: 'on-device',
-        confidence,
-        imageBase64,
-      }
+    // Offline — return enhanced on-device result
+    if (!isOnline || options?.useCloud === false) {
+      return this.onDeviceResult(ocrResult, imageBase64)
     }
 
-    // If online and (useCloud requested or no preview), call Grok
-    if (isOnline && (options?.useCloud ?? true)) {
+    const { confidenceScore, serialCandidate, detectedBrand, rawText } = ocrResult
+
+    const highConfidence = confidenceScore >= 70 && !!serialCandidate
+
+    // ── Tier 1: fast-lookup (zero LLM) ─────────────────────────────────────────
+    if (highConfidence) {
       try {
-        const result: GrokScanResult = await extractFromImage(imageData)
-        return {
-          extractedData: result.extractedData,
-          valuation: {
-            ...result.valuation,
-            lastUpdated: new Date().toISOString(),
-          },
-          docs: result.docs,
-          processingMethod: 'grok-vision',
-          confidence: result.valuation.confidence,
-          imageBase64,
-        }
-      } catch (err) {
-        // Fall back to on-device if Grok fails and we have preview
-        if (options?.onDevicePreview) {
-          const { extractedData, confidence } = options.onDevicePreview
+        const fast = await extractFastLookup(
+          serialCandidate!,
+          detectedBrand || 'Unknown',
+        )
+        if (fast) {
           return {
-            extractedData,
-            valuation: {
-              currentValue: 0,
-              originalPrice: 0,
-              depreciationRate: 0,
-              marketTrend: 'stable',
-              confidence,
-              lastUpdated: new Date().toISOString(),
-            },
-            processingMethod: 'on-device',
-            confidence,
+            extractedData: fast.extractedData,
+            valuation: { ...fast.valuation, lastUpdated: new Date().toISOString() },
+            docs: fast.docs,
+            processingMethod: 'fast-lookup',
+            confidence: fast.valuation.confidence,
             imageBase64,
           }
         }
-        throw err
-      }
+      } catch { /* fall through to Tier 2 */ }
     }
 
-    // Offline and no preview — run on-device now
-    const onDeviceResult = await extractOnDevice(imageData)
+    // ── Tier 2: text-parse (fast text LLM) ─────────────────────────────────────
+    if (highConfidence && rawText.length > 20) {
+      try {
+        const textResult = await extractFromText(rawText, detectedBrand || '')
+        return {
+          extractedData: textResult.extractedData,
+          valuation: { ...textResult.valuation, lastUpdated: new Date().toISOString() },
+          docs: textResult.docs,
+          processingMethod: 'text-parse',
+          confidence: textResult.valuation.confidence,
+          imageBase64,
+        }
+      } catch { /* fall through to Tier 3 */ }
+    }
+
+    // ── Tier 3: Grok vision (fallback for low-confidence / difficult labels) ───
+    try {
+      const result: GrokScanResult = await extractFromImage(imageData)
+      return {
+        extractedData: result.extractedData,
+        valuation: { ...result.valuation, lastUpdated: new Date().toISOString() },
+        docs: result.docs,
+        processingMethod: 'grok-vision',
+        confidence: result.valuation.confidence,
+        imageBase64,
+      }
+    } catch (err) {
+      // All cloud paths failed — return on-device result
+      if (options?.onDevicePreview) {
+        return this.onDeviceResult(ocrResult, imageBase64)
+      }
+      throw err
+    }
+  }
+
+  private onDeviceResult(ocrResult: OnDeviceExtractionResult, imageBase64: string): ProcessingResult {
+    const extractedData = onDeviceToExtractedData(ocrResult)
     return {
-      extractedData: onDeviceToExtractedData(onDeviceResult),
+      extractedData,
       valuation: {
         currentValue: 0,
         originalPrice: 0,
         depreciationRate: 0,
         marketTrend: 'stable',
-        confidence: onDeviceResult.confidence,
+        confidence: ocrResult.confidence,
         lastUpdated: new Date().toISOString(),
       },
       processingMethod: 'on-device',
-      confidence: onDeviceResult.confidence,
+      confidence: ocrResult.confidence,
       imageBase64,
     }
   }

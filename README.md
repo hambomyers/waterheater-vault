@@ -173,7 +173,8 @@ wrangler d1 execute waterheater-vault --file=migrations/0006_leads_sms.sql --rem
 | Sprint 2 | InvitePlumberButton, /pro/onboard, /pro/directory, Stripe integration | ✅ Code complete |
 | Sprint 3 | Label-first scan, shot1Note, single-shot fast path, Google doc fallback | ✅ Shipped |
 | Sprint 4 | TCPA gate, $49 pricing, /pro/claim, PriceBreakdownCard, auto-lead trigger, treeshake | ✅ Shipped 2026-03-22 |
-| Sprint 5 | Stripe webhook, D1 serial cache, n8n monthly re-screen, home_id schema | 🔲 Next |
+| Sprint 5 | 3-tier hybrid scan pipeline, self-improving flywheel (serial_patterns + model_catalog), canvas OCR preprocessing | ✅ Shipped 2026-03-22 |
+| Sprint 6 | Stripe webhook, n8n monthly re-screen, home_id schema | 🔲 Next |
 
 ---
 

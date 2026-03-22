@@ -127,6 +127,122 @@ export async function extractFromImage(imageData: Blob): Promise<GrokScanResult>
   }
 }
 
+/** Text-only parse: sends raw OCR text to fast text LLM — primary path, ~1-2s */
+export async function extractFromText(
+  rawText: string,
+  brandHint: string,
+): Promise<GrokScanResult> {
+  const response = await fetch('/api/parse-text', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rawText, brandHint }),
+  })
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    let message = `API error ${response.status}`
+    try { message = JSON.parse(body).message || message } catch { /* use default */ }
+    throw new Error(message)
+  }
+
+  const data = await response.json()
+  if (data.error) throw new Error(data.message || data.error)
+
+  return {
+    extractedData: {
+      product: data.product || 'Water Heater',
+      brand: data.brand || 'Unknown',
+      model: data.model || 'Unknown',
+      serialNumber: data.serialNumber || '',
+      manufactureDate: data.manufactureDate || '',
+      tankSizeGallons: data.tankSizeGallons ? toNum(data.tankSizeGallons) : undefined,
+      fuelType: data.fuelType || 'unknown',
+      ageYears: toNum(data.ageYears),
+      remainingLifeYears: toNum(data.remainingLifeYears),
+      estimatedReplacementCost: toNum(data.estimatedReplacementCost),
+      currentWarranty: data.currentWarranty || data.warranty || '',
+      priceBreakdown: data.priceBreakdown ? {
+        unitLow: toNum(data.priceBreakdown.unitLow),
+        unitHigh: toNum(data.priceBreakdown.unitHigh),
+        laborLow: toNum(data.priceBreakdown.laborLow),
+        laborHigh: toNum(data.priceBreakdown.laborHigh),
+        emergencyPremiumLow: toNum(data.priceBreakdown.emergencyPremiumLow),
+        emergencyPremiumHigh: toNum(data.priceBreakdown.emergencyPremiumHigh),
+        nationalChainLow: toNum(data.priceBreakdown.nationalChainLow),
+        nationalChainHigh: toNum(data.priceBreakdown.nationalChainHigh),
+      } : undefined,
+    },
+    valuation: {
+      currentValue: toNum(data.estimatedReplacementCost),
+      originalPrice: toNum(data.estimatedReplacementCost),
+      depreciationRate: toNum(data.depreciationRate),
+      marketTrend: 'stable' as const,
+      confidence: toNum(data.confidence) || 0.8,
+    },
+    docs: Array.isArray(data.docs) ? data.docs : [],
+  }
+}
+
+/**
+ * Fast lookup: zero-LLM path using D1 learned patterns.
+ * Returns null (not an Error) if patterns aren't confident enough — caller falls through.
+ */
+export async function extractFastLookup(
+  serial: string,
+  brand: string,
+  model?: string,
+): Promise<GrokScanResult | null> {
+  try {
+    const response = await fetch('/api/fast-lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ serial, brand, model: model || null }),
+    })
+
+    if (response.status === 404) return null
+    if (!response.ok) return null
+
+    const data = await response.json()
+    if (data.source === 'miss' || data.error) return null
+
+    return {
+      extractedData: {
+        product: data.product || 'Water Heater',
+        brand: data.brand || 'Unknown',
+        model: data.model || 'Unknown',
+        serialNumber: data.serialNumber || '',
+        manufactureDate: data.manufactureDate || '',
+        tankSizeGallons: data.tankSizeGallons ? toNum(data.tankSizeGallons) : undefined,
+        fuelType: data.fuelType || 'unknown',
+        ageYears: toNum(data.ageYears),
+        remainingLifeYears: toNum(data.remainingLifeYears),
+        estimatedReplacementCost: toNum(data.estimatedReplacementCost),
+        currentWarranty: data.currentWarranty || '',
+        priceBreakdown: data.priceBreakdown ? {
+          unitLow: toNum(data.priceBreakdown.unitLow),
+          unitHigh: toNum(data.priceBreakdown.unitHigh),
+          laborLow: toNum(data.priceBreakdown.laborLow),
+          laborHigh: toNum(data.priceBreakdown.laborHigh),
+          emergencyPremiumLow: toNum(data.priceBreakdown.emergencyPremiumLow),
+          emergencyPremiumHigh: toNum(data.priceBreakdown.emergencyPremiumHigh),
+          nationalChainLow: toNum(data.priceBreakdown.nationalChainLow),
+          nationalChainHigh: toNum(data.priceBreakdown.nationalChainHigh),
+        } : undefined,
+      },
+      valuation: {
+        currentValue: toNum(data.estimatedReplacementCost),
+        originalPrice: toNum(data.estimatedReplacementCost),
+        depreciationRate: toNum(data.depreciationRate),
+        marketTrend: 'stable' as const,
+        confidence: toNum(data.patternConfidence) || toNum(data.confidence) || 0.9,
+      },
+      docs: Array.isArray(data.docs) ? data.docs : [],
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Two-shot call: sends both overview + targeted images in one Grok request */
 export async function extractFromTwoShots(
   shot1: Blob,
