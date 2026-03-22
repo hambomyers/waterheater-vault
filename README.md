@@ -59,8 +59,8 @@ Results page shows:
 |-------|-----------|
 | Framework | Next.js 14 — static export, all `use client` |
 | Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue accent |
-| On-device AI | Tesseract.js OCR (offline fallback, ~4MB) |
-| Cloud AI | Grok Vision (xAI API) — serial decode, age, cost, docs, review screening |
+| On-device AI | Tesseract.js OCR — canvas preprocessing, PSM-6, brand/serial detection |
+| Cloud AI | **3-tier hybrid:** grok-2-1212 text (primary ~1-2s) → grok-4.20-beta vision (fallback) |
 | Docs search | Brave Search API — live verified URLs (never hardcoded) |
 | Storage | IndexedDB (offline-first) + Cloudflare D1 (cloud sync + leads + pros) |
 | Auth | Magic-link via Resend + JWT (no Clerk, no OAuth) |
@@ -145,23 +145,29 @@ Alias: **scan.waterheaterplan.com** → same app
 ### D1 Migrations
 
 ```bash
-# Run in order after cloning:
+# Run in order after cloning (use --command for each if --file fails auth):
 wrangler d1 execute waterheater-vault --file=migrations/0001_auth_sync.sql --remote
 wrangler d1 execute waterheater-vault --file=migrations/0002_leads.sql --remote
 wrangler d1 execute waterheater-vault --file=migrations/0003_pros.sql --remote
 wrangler d1 execute waterheater-vault --file=migrations/0004_scan_events.sql --remote
 wrangler d1 execute waterheater-vault --file=migrations/0005_pro_claims.sql --remote
 wrangler d1 execute waterheater-vault --file=migrations/0006_leads_sms.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0007_serial_cache.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0008_leads_reminder.sql --remote
+wrangler d1 execute waterheater-vault --file=migrations/0009_learn.sql --remote
 ```
 
 | Migration | What | Status |
 |-----------|------|--------|
-| `0001_auth_sync.sql` | users table | ✅ run |
-| `0002_leads.sql` | leads table | ✅ run |
-| `0003_pros.sql` | pros table | ✅ run (2026-03-21) |
-| `0004_scan_events.sql` | anonymous scan events | ✅ run |
-| `0005_pro_claims.sql` | free plumber claims | 🔲 **needs run** |
-| `0006_leads_sms.sql` | adds phone + sms_consent to leads | 🔲 **needs run** |
+| `0001_auth_sync.sql` | users + vault_items | ✅ applied |
+| `0002_leads.sql` | leads table | ✅ applied |
+| `0003_pros.sql` | pros table | ✅ applied |
+| `0004_scan_events.sql` | anonymous scan events | ✅ applied |
+| `0005_pro_claims.sql` | pro_claims table | ✅ applied |
+| `0006_leads_sms.sql` | adds phone + sms_consent to leads | ✅ applied |
+| `0007_serial_cache.sql` | serial_cache (exact-hit cost control) | ✅ applied |
+| `0008_leads_reminder.sql` | adds last_reminded_at to leads | ✅ applied |
+| `0009_learn.sql` | serial_patterns + model_catalog (flywheel) | ✅ applied 2026-03-22 |
 
 ---
 
