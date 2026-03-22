@@ -164,6 +164,48 @@ function SocialShare({ extractedData }: { extractedData: ExtractedData }) {
   )
 }
 
+function PriceBreakdownCard({ pb, brand }: { pb: NonNullable<ExtractedData['priceBreakdown']>; brand: string }) {
+  const plannedLow = pb.unitLow + pb.laborLow
+  const plannedHigh = pb.unitHigh + pb.laborHigh
+  const emergLow = plannedLow + pb.emergencyPremiumLow
+  const emergHigh = plannedHigh + pb.emergencyPremiumHigh
+  const fmt = (n: number) => `$${n.toLocaleString()}`
+  return (
+    <div className="rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 overflow-hidden">
+      <div className="px-5 py-3 border-b border-white border-opacity-5">
+        <span className="text-white text-opacity-40 text-xs font-light uppercase tracking-wider">Fair Price — {brand} replacement</span>
+      </div>
+      <div className="divide-y divide-white divide-opacity-5">
+        <div className="flex justify-between items-center px-5 py-3.5">
+          <span className="text-white text-opacity-50 text-sm font-light">Unit cost</span>
+          <span className="text-white text-sm font-light">{fmt(pb.unitLow)}–{fmt(pb.unitHigh)}</span>
+        </div>
+        <div className="flex justify-between items-center px-5 py-3.5">
+          <span className="text-white text-opacity-50 text-sm font-light">Labor &amp; permits</span>
+          <span className="text-white text-sm font-light">{fmt(pb.laborLow)}–{fmt(pb.laborHigh)}</span>
+        </div>
+        <div className="flex justify-between items-center px-5 py-3.5 bg-green-500 bg-opacity-5">
+          <span className="text-white text-sm font-medium">Planned total</span>
+          <span className="text-green-400 text-sm font-medium">{fmt(plannedLow)}–{fmt(plannedHigh)}</span>
+        </div>
+        <div className="flex justify-between items-center px-5 py-3.5 bg-red-500 bg-opacity-5">
+          <span className="text-white text-opacity-50 text-sm font-light">Emergency call total</span>
+          <span className="text-red-400 text-sm font-light">{fmt(emergLow)}–{fmt(emergHigh)}</span>
+        </div>
+        <div className="flex justify-between items-center px-5 py-3.5">
+          <span className="text-white text-opacity-35 text-sm font-light">National chain (Home Depot / Roto-Rooter)</span>
+          <span className="text-white text-opacity-35 text-sm font-light">{fmt(pb.nationalChainLow)}–{fmt(pb.nationalChainHigh)}</span>
+        </div>
+      </div>
+      <div className="px-5 py-3 border-t border-white border-opacity-5">
+        <p className="text-white text-opacity-30 text-xs font-light leading-relaxed">
+          Plan it now → save <span className="text-green-400 text-opacity-80">${(emergLow - plannedLow).toLocaleString()}–${(emergHigh - plannedHigh).toLocaleString()}</span> vs an emergency call.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function ResultsPage() {
   const [scanResult, setScanResult] = useState<ProcessingResult | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -292,6 +334,11 @@ export default function ResultsPage() {
             </p>
           </div>
 
+          {/* Price Breakdown */}
+          {extractedData.priceBreakdown && (
+            <PriceBreakdownCard pb={extractedData.priceBreakdown} brand={extractedData.brand} />
+          )}
+
           {/* Rebate Maximizer */}
           <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
 
@@ -417,6 +464,13 @@ export default function ResultsPage() {
               {' '}Most homeowners have never done it once. You just checked — good move.
             </p>
           </div>
+
+          {/* Price Breakdown */}
+          {extractedData.priceBreakdown && (
+            <div className="mb-5">
+              <PriceBreakdownCard pb={extractedData.priceBreakdown} brand={extractedData.brand} />
+            </div>
+          )}
 
           {/* Rebate Maximizer */}
           <div className="mb-5">

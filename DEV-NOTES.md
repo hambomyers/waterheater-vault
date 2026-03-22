@@ -1,7 +1,7 @@
 # WaterHeaterVault — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*
-*Last updated: 2026-03-22 — Label-first scan shipped. Vision + method evolution: free claim flow, TCPA gate, $49/mo pricing, invite-seeds-directory, fair price engine, annual loop as core moat.*
+*Last updated: 2026-03-22 — Full session: label-first scan, TCPA consent, $49/mo, /pro/claim page, PriceBreakdownCard, auto-lead trigger, pro_claims migration, GROK-PROMPT.md + OnboardingPrompt deleted.*
 
 ---
 
@@ -733,6 +733,28 @@ waterheater-vault/
 ---
 
 # ═══ PART 4 — CHANGE LOG ═══
+
+### 2026-03-22 (evening) — Full Build Sprint
+
+**SHIPPED**
+- **`/pro/claim` page** (`app/pro/claim/page.tsx`) — free unit claim for invited plumbers. Shows heater summary from URL params, form (businessName/phone/zip/gbpUrl optional), TCPA consent checkbox, success state + $49/mo upsell card. No Stripe on first touch.
+- **`/api/pro/claim` endpoint** (`functions/api/pro/claim.ts`) — saves to `pro_claims` D1 table.
+- **`migrations/0005_pro_claims.sql`** — new `pro_claims` table (id, business_name, phone, zip, gbp_url, brand, model, age_years, remaining_life_years, sms_consent, ref, status, created_at).
+- **`migrations/0006_leads_sms.sql`** — adds `phone` + `sms_consent` columns to `leads` table.
+- **`PriceBreakdownCard`** (inline `app/results/page.tsx`) — shows fair price breakdown when Grok returns `priceBreakdown`: unit cost, labor, planned total (green), emergency total (red), national chain reference (dimmed). Shows in both mobile + desktop layouts.
+- **Grok schema** (`functions/api/grok-scan.ts`) — added `priceBreakdown` object with unitLow/unitHigh/laborLow/laborHigh/emergencyPremiumLow/emergencyPremiumHigh/nationalChainLow/nationalChainHigh.
+- **`PriceBreakdown` interface** (`brain/on-device.ts`) — new exported interface. Added optional `priceBreakdown` to `ExtractedData`. Passes through in `extractFromTwoShots`. Flows to `ProcessingResult` automatically via `extractedData`.
+- **Auto-lead trigger** (`functions/api/capture-lead.ts`) — when homeowner submits email + age>8 OR remaining<3, queries active pros in same zip, sends them a lead notification email via Resend. Non-critical (never fails the scan).
+- **TCPA consent gate** (`app/results/page.tsx` `EmailCapture`) — SMS opt-in checkbox + phone field + explicit written consent language. `smsConsent` + `phone` sent to capture-lead API.
+- **Pricing** — $29/mo → $49/mo, $299/yr → $499/yr across all 5 files.
+- **Deleted** — `GROK-PROMPT.md` (stale, superseded by DEV-NOTES) + `app/components/OnboardingPrompt.tsx` (dead code, never imported).
+
+**PENDING — user action required**
+- Run `wrangler d1 execute waterheater-vault --file=migrations/0005_pro_claims.sql` to create pro_claims table
+- Run `wrangler d1 execute waterheater-vault --file=migrations/0006_leads_sms.sql` to add phone/sms_consent to leads
+- Update Stripe prices to $49/mo + $499/yr in dashboard, update CF Pages env vars
+
+---
 
 ### 2026-03-22 (afternoon) — Vision & Method Evolution
 

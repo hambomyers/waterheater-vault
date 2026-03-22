@@ -111,6 +111,16 @@ Return ONLY a single valid JSON object. No markdown, no text before or after:
   "currentWarranty": "warranty as printed on label or inferred from brand guide",
   "confidence": overall extraction confidence 0.0-1.0,
   "shot1Note": "optional — only populate if Shot 2 (overview) does not match label data or is not a water heater. E.g. 'Shot 2 appears to be a paper cup, not a water heater.' or 'Unit appears heavily corroded — may affect remaining life estimate.' Leave null if no issues.",
+  "priceBreakdown": {
+    "unitLow": low end unit-only cost in USD (e.g. 700),
+    "unitHigh": high end unit-only cost in USD (e.g. 1400),
+    "laborLow": low end labor+permits in USD (e.g. 400),
+    "laborHigh": high end labor+permits in USD (e.g. 800),
+    "emergencyPremiumLow": low end emergency surcharge in USD (e.g. 400),
+    "emergencyPremiumHigh": high end emergency surcharge in USD (e.g. 700),
+    "nationalChainLow": low end national chain (Home Depot Install / Roto-Rooter) total in USD (e.g. 2200),
+    "nationalChainHigh": high end national chain total in USD (e.g. 3400)
+  },
   "docs": [ ... always 4 entries per docs instructions above ... ]
 }
 

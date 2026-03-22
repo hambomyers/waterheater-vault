@@ -8,6 +8,17 @@ function toNum(val: unknown): number {
   return isNaN(n) ? 0 : n
 }
 
+export interface PriceBreakdown {
+  unitLow: number
+  unitHigh: number
+  laborLow: number
+  laborHigh: number
+  emergencyPremiumLow: number
+  emergencyPremiumHigh: number
+  nationalChainLow: number
+  nationalChainHigh: number
+}
+
 export interface ExtractedData {
   product: string
   brand: string
@@ -20,6 +31,7 @@ export interface ExtractedData {
   remainingLifeYears: number
   estimatedReplacementCost: number
   currentWarranty: string
+  priceBreakdown?: PriceBreakdown
 }
 
 interface GrokDocItem {
@@ -169,6 +181,16 @@ export async function extractFromTwoShots(
       remainingLifeYears: toNum(data.remainingLifeYears),
       estimatedReplacementCost: toNum(data.estimatedReplacementCost),
       currentWarranty: data.currentWarranty || data.warranty || '',
+      priceBreakdown: data.priceBreakdown ? {
+        unitLow: toNum(data.priceBreakdown.unitLow),
+        unitHigh: toNum(data.priceBreakdown.unitHigh),
+        laborLow: toNum(data.priceBreakdown.laborLow),
+        laborHigh: toNum(data.priceBreakdown.laborHigh),
+        emergencyPremiumLow: toNum(data.priceBreakdown.emergencyPremiumLow),
+        emergencyPremiumHigh: toNum(data.priceBreakdown.emergencyPremiumHigh),
+        nationalChainLow: toNum(data.priceBreakdown.nationalChainLow),
+        nationalChainHigh: toNum(data.priceBreakdown.nationalChainHigh),
+      } : undefined,
     },
     valuation: {
       currentValue: toNum(data.estimatedReplacementCost),

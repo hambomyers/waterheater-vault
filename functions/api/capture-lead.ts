@@ -1,5 +1,7 @@
 interface LeadPayload {
   email: string
+  phone?: string | null
+  smsConsent?: boolean
   brand?: string
   model?: string
   serialNumber?: string
@@ -159,14 +161,19 @@ export const onRequest = async (context: any) => {
 
     const email = lead.email.toLowerCase().trim()
 
+    const cf = (context?.request as any)?.cf ?? {}
+    const zip = cf.postalCode ?? null
+
     if (env.DB) {
       await env.DB.prepare(`
         INSERT OR IGNORE INTO leads
-          (id, email, brand, model, serial_number, manufacture_date, age_years, fuel_type, replacement_cost, remaining_life_years, source, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scan', ?)
+          (id, email, phone, sms_consent, brand, model, serial_number, manufacture_date, age_years, fuel_type, replacement_cost, remaining_life_years, source, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scan', ?)
       `).bind(
         crypto.randomUUID(),
         email,
+        lead.phone || null,
+        lead.smsConsent ? 1 : 0,
         lead.brand || null,
         lead.model || null,
         lead.serialNumber || null,
@@ -177,6 +184,35 @@ export const onRequest = async (context: any) => {
         lead.remainingLifeYears ?? null,
         new Date().toISOString()
       ).run()
+
+      // ── Auto-lead: notify active pros in zip when heater is in danger zone ──
+      const age = lead.ageYears ?? 0
+      const remaining = lead.remainingLifeYears ?? 99
+      if (zip && (age > 8 || remaining < 3)) {
+        const pros = await env.DB.prepare(
+          `SELECT id, businessName, phone FROM pros WHERE active = 1 AND zip = ? LIMIT 5`
+        ).bind(zip).all().catch(() => ({ results: [] }))
+
+        if (pros.results?.length && env.RESEND_API_KEY) {
+          const brand = lead.brand && lead.brand !== 'Unknown' ? lead.brand : 'water heater'
+          const model = lead.model && lead.model !== 'Unknown' ? ` ${lead.model}` : ''
+          const cost = lead.estimatedReplacementCost ? `$${lead.estimatedReplacementCost.toLocaleString()}` : '~$1,500–$2,200'
+          const urgency = remaining < 3 ? `⚠️ ${remaining} year${remaining === 1 ? '' : 's'} remaining` : `${age} years old`
+
+          for (const pro of pros.results as any[]) {
+            await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                from: 'Water Heater Plan <leads@waterheaterplan.com>',
+                to: pro.phone?.includes('@') ? pro.phone : `${pro.phone}@sms-placeholder.com`,
+                subject: `New lead in your zip — ${brand}${model}, ${urgency}`,
+                html: `<p>A homeowner in zip <strong>${zip}</strong> just scanned their <strong>${brand}${model}</strong> (${urgency}, replacement est. ${cost}) and opted in to be contacted.</p><p>Email: ${email}${lead.phone ? `<br>Phone: ${lead.phone}` : ''}</p><p><a href="https://waterheaterplan.com/pro">Manage your leads →</a></p>`,
+              }),
+            }).catch(() => { /* non-critical */ })
+          }
+        }
+      }
     }
 
     if (env.RESEND_API_KEY) {
