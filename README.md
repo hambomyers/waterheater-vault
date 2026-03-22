@@ -1,30 +1,37 @@
 # WaterHeaterVault
 
-**Free AI water heater scanner for homeowners. SaaS platform for local pros.**
+**The seed of the Residential Mechanical Longevity OS.**  
+*One photo of any data plate today becomes the first node in every American home's mechanical digital twin.*
 
-*Consumer product:* `scan.waterheaterplan.com` — free 60-second AI scan (age, life, cost, recalls, rebates, PDF)  
-*Pro product:* `waterheaterplan.com/pro` — $49/mo white-label leads platform for screened local contractors
+America's 140 million homes are entering a 15–25 year mechanical renewal supercycle. The system for managing it — Google searches, plumber roulette, Sunday floods — is medieval. We are building the digital-twin layer that maps the failure curves of every mechanical system in every home, starting with the easiest serial number on Earth: the water heater data plate.
 
-> **Entity note:** Operated by VaultPro LLC (new standalone entity, filed separately for legal/tax separation). All domains, branding, and code are unchanged.
+Every scan is a new node. Every node is permanent. The homeowner owns it forever.
+
+*Early revenue:* `waterheaterplan.com/pro` — $49/mo white-label leads for screened local contractors  
+*The company:* longitudinal serial-level data on every major home system, queryable by insurers, utilities, manufacturers, and home robots
 
 ---
 
-## How It Works
+## How It Works (Year 1 — Water Heater Wedge)
 
 ```
-Consumer scans heater (free)
+Homeowner points phone at data plate (free, always)
        ↓
-Results: age · life · cost · recalls · rebates · PDF
+Grok reads serial → age · life · fair price breakdown · recalls · rebates
        ↓
-"Invite my plumber → get branded reports" button  ← PRIMARY VIRAL LOOP
+First node in home's mechanical digital twin saved to D1
        ↓
-Pro sees branded scan PDFs with their name/number
+"Text my plumber this report" → plumber gets personal invite link
        ↓
-Pro pays $49/mo at waterheaterplan.com/pro
+Plumber visits /pro/claim → free unit claim → taste value
        ↓
-Auto-leads delivered when heater age > 8yr or life < 3yr
+Upsell: $49/mo → leads from every scan in their zip
+       ↓
+Year 1 reminder: "Your Navien turns 8. Mike's Plumbing recommends a check."
+Year 3 alert:    "Replacement window open. Fair price: $1,700–$2,100."
 ```
 
+**The moat is not the scanner. It is the annual loop and the longitudinal data it produces.**  
 **Pro gate:** Grok AI screens Google Business Profile reviews (4.5+ stars required). Auto-pause if re-screen fails.
 
 ---
@@ -172,28 +179,31 @@ wrangler d1 execute waterheater-vault --file=migrations/0006_leads_sms.sql --rem
 
 ## Business Model
 
-| Layer | What | Revenue |
-|-------|------|---------|
-| Consumer | Free scanner — viral acquisition | $0 (growth engine) |
-| Pro SaaS | $49/mo or $499/yr per contractor | MRR |
-| Data moat | Anonymized heater registry | Strategic asset |
+| Layer | Time horizon | What | Revenue |
+|-------|-------------|------|--------|
+| Scanner + annual loop | Now | Free homeowner tool — maximum trust, lifelong relationship | $0 — growth engine |
+| Pro SaaS | Years 1–3 | $49/mo white-label leads for screened contractors | MRR — oxygen |
+| B2B data | Years 2–5 | Anonymized scan DB (brand · model · age · zip · serial) | License fees |
+| OS layer | Years 3–10 | Plug-in API for insurers, utilities, manufacturers, home robots | The company |
 
-**Pro value prop:** Screened pros get white-label branding on every scan/PDF from homeowners in their area, plus auto-leads when heaters hit critical age. Multiple pros allowed per zip — competition is fine.
+**The only two north stars** (resolve every design decision):
+1. Maximum homeowner trust + lifelong relationship — free always, no manipulation, real data only
+2. Maximum purity + quantity of longitudinal serial-level data per home
 
-**The invite flow:**
+**Early revenue scaffolding (correct first step, not the destination):**
+- Screened pros pay $49/mo for white-label branding + auto-leads in their zip
+- Plumber invite → `/pro/claim` (free) → upsell to $49/mo — invite seeds the directory organically
+- Auto-lead fires when homeowner opts in + age>8yr or remaining<3yr — Resend notifies matched pros
+
+**The expansion path:**
 ```
-Homeowner scans → "Text my plumber this report" → plumber gets personal message with report link
-       ↓
-Plumber visits /pro/claim → free unit claim → TCPA SMS consent → success
-       ↓
-Upsell: "Get leads from every scan in your zip — $49/mo"
-       ↓
-/pro/onboard → GBP URL → Grok screens reviews → Stripe $49/mo → active
+Year 1   Water heaters   — nail it completely
+Year 2   HVAC + tankless — same scan flow, same annual loop
+Year 3   Water softeners — predictable salt/service cycle
+Year 5   Panels + roofs  — harder, but same data moat logic
+
+One OS. Different trade verticals. Same homeowner relationship.
 ```
-
-**Auto-lead:** When homeowner submits email + heater is age >8yr or <3yr remaining, system queries active pros in that zip and sends them a lead notification via Resend. No homeowner contact shared without TCPA consent.
-
-**Growth engine:** Every PDF report has the pro's name/number. Every scan has "Text my plumber" → viral loop that seeds the pro directory organically.
 
 ---
 
