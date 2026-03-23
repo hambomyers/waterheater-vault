@@ -274,6 +274,40 @@ export const onRequest = async (context: any) => {
       return new Response(JSON.stringify(parsed), { headers: { 'Content-Type': 'application/json', ...corsHeaders } })
     }
 
+    // ── Level 1: clearly not a water heater ──────────────────────────────────
+    const hasAnyData = (parsed.brand && parsed.brand !== 'Unknown' && parsed.brand !== 'other')
+      || parsed.serialNumber
+      || parsed.model
+    if (!hasAnyData && (parsed.confidence ?? 1) < 0.25) {
+      const jokes = [
+        "That looks like it could be a lot of things — but not a water heater label 😄 Point at the silver data plate sticker on the side of your unit!",
+        "We think you got distracted 🙂 Your water heater is waiting patiently — find that silver label on the tank and snap it!",
+        "Nice photo, wrong appliance 😄 The silver data plate is on the side or front of your water heater — give it another shot!",
+        "Your water heater called and it feels left out 😅 Photograph the silver sticker on the side of the unit!",
+        "That's not a water heater — but we like the confidence 😄 Find the metal label on your tank and try again!",
+      ]
+      const msg = jokes[Math.floor(Math.random() * jokes.length)]
+      return new Response(
+        JSON.stringify({ error: 'not_a_water_heater', message: msg }),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      )
+    }
+
+    // ── Level 2: looks like WH but serial + model both missing ───────────────
+    const hasBrand = parsed.brand && parsed.brand !== 'Unknown' && parsed.brand !== 'other'
+    if (hasBrand && !parsed.serialNumber && !parsed.model) {
+      const nudges = [
+        `Looks like a ${parsed.brand} — but we need to see the serial number and model. Move a little closer to the data plate and try again 📸`,
+        `We see ${parsed.brand} but can't read the label clearly. Get a bit closer to the silver sticker — model and serial should be visible 🙂`,
+        `Almost! We spotted ${parsed.brand} but the serial and model aren't readable. Inch closer to the data plate for a sharper shot!`,
+      ]
+      const msg = nudges[Math.floor(Math.random() * nudges.length)]
+      return new Response(
+        JSON.stringify({ error: 'not_a_water_heater', message: msg }),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      )
+    }
+
     // ── Step 2: Compute all derived fields server-side ──
     parsed = computeDerivedFields(parsed)
 
