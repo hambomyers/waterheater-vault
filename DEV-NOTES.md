@@ -591,6 +591,14 @@ waterheater-vault/
 ├── lib/
 │   ├── onDeviceExtractor.ts        Enhanced Tesseract.js: canvas preprocessing + PSM-6 worker API
 │   │                                Outputs: rawText · confidenceScore(0-100) · serialCandidate · detectedBrand
+│   ├── wh-lookup.ts                Hardcoded lookup table — ships in bundle, zero network
+│   │                                BrandSpec[] (serial decode rules per brand)
+│   │                                ModelSpec[] (~500 models: prefix → tank/fuel/life/cost)
+│   │                                lookupBySerial(serial, brand) → ModelSpec | null
+│   ├── exportJobTicket.ts          Pure client-side export — zero APIs, works offline
+│   │                                exportICS(data) → downloads WaterHeater-Job-{serial}.ics
+│   │                                exportCSV(data) → downloads WaterHeater-Job-{serial}.csv
+│   │                                Compatible: Google Cal · Apple Cal · Outlook · Housecall Pro · Jobber
 │   ├── whSerialDecoder.ts          JS serial date decoder (client runtime)
 │   │                                detectWHBrand() · extractWHSerial() · decodeWHSerial()
 │   │                                Brands: Rheem(WWYY) · AO Smith(YYWW) · Bradford White(BWL)
@@ -658,6 +666,121 @@ waterheater-vault/
 ├── wrangler.workers.toml           CF Cron Worker config for reminder-cron.ts
 └── package.json                    Next 14 · React 18 · TS · Tailwind · Tesseract.js
 ```
+
+---
+
+## Lookup Table Spec (`lib/wh-lookup.ts`)
+
+Ships in the app bundle — no network, no D1, works fully offline. Primary decode path for 90%+ of US installs.
+
+### Interfaces
+
+```typescript
+export interface BrandSpec {
+  brand: string
+  aliases: string[]         // all names this brand appears as on labels
+  serialPattern: 'WWYY' | 'YYWW' | 'BWL' | 'YYMM' | 'YYYYWW' | 'YYYYMM' | 'LETTER_YY'
+  serialOffset: number      // char position to start reading the date code
+}
+
+export interface ModelSpec {
+  brand: string
+  modelPrefix: string       // match first N chars of scanned model number (case-insensitive)
+  description: string
+  tankGallons: number | null  // null for tankless
+  fuelType: 'natural_gas' | 'propane' | 'electric' | 'heat_pump'
+  inputBtuOrWatts: number
+  firstHourRating: number   // gallons/hr
+  expectedLifeYears: number
+  unitCostMin: number       // total installed USD (national avg)
+  unitCostMax: number
+  laborHours: number
+}
+```
+
+### Brand Serial Rules
+
+| Brand | Aliases | Pattern | Offset | Notes |
+|-------|---------|---------|--------|-------|
+| Rheem | Ruud | `WWYY` | 2 | Chars 3-4=week, 5-6=year |
+| A.O. Smith | State, American, Whirlpool (OEM) | `YYWW` | 0 | Chars 1-2=year, 3-4=week |
+| Bradford White | — | `BWL` | 1 | Char 2=year letter (A-Z cycles 20yr), 3-4=week |
+| Navien | — | `YYYYMM` | 0 | Chars 1-4=year, 5-6=month |
+| Rinnai | — | `YYMM` | 2 | Chars 3-4=year, 5-6=month |
+| Noritz | — | `YYWW` | 0 | Chars 1-2=year, 3-4=week |
+| Bosch | — | `YYYYWW` | 0 | Chars 1-4=year, 5-6=week |
+| GE / GEO | Hotpoint | `LETTER_YY` | 0 | Char 1=month letter, 2-3=year |
+
+Bradford White year letters (20-yr cycle, second cycle starts 2004):
+```
+A=1984/2004  B=1985/2005  C=1986/2006  D=1987/2007  E=1988/2008
+F=1989/2009  G=1990/2010  H=1991/2011  J=1992/2012  K=1993/2013
+L=1994/2014  M=1995/2015  N=1996/2016  P=1997/2017  R=1998/2018
+S=1999/2019  T=2000/2020  V=2001/2021  W=2002/2022  X=2003/2023
+Y=2004/2024  Z=2005/2025
+```
+
+GE month letters: `A=Jan B=Feb C=Mar D=Apr E=May F=Jun G=Jul H=Aug J=Sep K=Oct L=Nov M=Dec`
+
+### `lookupBySerial(serial, brand)` Logic
+
+```
+1. Normalize brand → canonical name via aliases
+2. Find BrandSpec → read date code from serialOffset using pattern
+3. Convert week/month + year → manufactureDate string (YYYY-MM)
+4. Find ModelSpec by longest matching modelPrefix (case-insensitive)
+5. If no model match → return brand + date only (partial hit)
+6. Compute ageYears, remainingLifeYears, cost range
+7. Return full ModelSpec + computed fields
+```
+
+---
+
+## Export Job Ticket Spec (`lib/exportJobTicket.ts`)
+
+Pure string builders. Zero dependencies. Works offline after scan completes.
+
+### `exportICS(data: ExportData): void`
+
+```typescript
+interface ExportData {
+  brand: string
+  model: string
+  serial: string
+  ageYears: number
+  remainingLifeYears: number
+  fuelType: string
+  tankGallons: number | null
+  costMin: number
+  costMax: number
+  manualUrl: string
+  recallStatus: string
+  zip?: string
+}
+```
+
+Generates RFC 5545 compliant `.ics`:
+- `SUMMARY`: `💧 Water Heater Service — {Brand} {Model} (Age {N}yr)`
+- `DTSTART`: today + 7 days, 9:00 AM local
+- `DTEND`: today + 7 days, 11:00 AM local
+- `DESCRIPTION`: full report text (serial, age, cost, manual, recall)
+- `LOCATION`: zip if available
+- `UID`: `WH-{serial}-{timestamp}@waterheaterplan.com`
+
+Trigger: creates `<a href="data:text/calendar;...">` and clicks it programmatically.  
+File: `WaterHeater-Job-{serial}.ics`
+
+### `exportCSV(data: ExportData): void`
+
+Single-row CSV with header, ready for paste into Housecall Pro / Jobber / ServiceTitan:
+
+```
+Type,Zip,Brand,Model,Serial,Est.Install Year,Age (yr),Remaining (yr),Fuel,Gallons,Cost Min,Cost Max,Manual URL,Recall,Source
+Water Heater,{zip},{brand},{model},{serial},{year},{age},{remaining},{fuel},{gal},{min},{max},{url},{recall},WaterHeaterVault
+```
+
+Trigger: same `<a download>` pattern.  
+File: `WaterHeater-Job-{serial}.csv`
 
 ---
 
@@ -808,6 +931,25 @@ waterheater-vault/
 | 26 | **Home warranty API** | 🔲 | AHS / Cinch — pre-policy risk score per heater |
 | 27 | **Real estate embed** | 🔲 | Listing disclosure widget for Zillow/Redfin |
 
+### Sprint 6 — Offline Core + Export Job Ticket (NEXT — Days 1–10)
+
+**Goal: 90% of scans complete in <3s with zero cloud dependency. Plumber gets a job ticket in one tap.**
+
+| # | Feature | Status | Notes |
+|---|---------|--------|-------|
+| 28 | **`lib/wh-lookup.ts`** | 🔲 NEXT | Hardcoded lookup: 10 brands + ~500 models. `ModelSpec` + `BrandSpec` interfaces. Brand serial decode rules (WWYY/YYWW/BWL/YYMM/YYYYWW/YYYYMM/LETTER_YY). Ships in app bundle — zero network. |
+| 29 | **`lib/exportJobTicket.ts`** | 🔲 NEXT | `exportICS(data)` + `exportCSV(data)` — pure string builders, `<a download>` trigger. Zero deps. Works offline. |
+| 30 | **Wire lookup to router** | 🔲 | `brain/router.ts`: Tier 0 — lookup table check before fast-lookup D1. If match + confidence, skip all LLM. |
+| 31 | **Export Job Ticket on results page** | 🔲 | Hero button on `/results`. Two download links: `.ics` + `.csv`. Above the PDF button. |
+| 32 | **Lookup table fallback** | 🔲 | If lookup miss: fall through to existing 3-tier hybrid (fast-lookup D1 → text-parse LLM → vision). |
+| 33 | **`/debug` NODE_ENV guard** | 🔲 | Add `if (process.env.NODE_ENV !== 'development') notFound()` |
+
+**What is FORBIDDEN in Sprint 6:**
+- Expansion beyond water heaters
+- File storage / uploads
+- National pro directory until local business is profitable
+- Any feature that adds friction to: scan → instant result → export → text plumber
+
 ---
 
 ## Milestones
@@ -823,6 +965,28 @@ waterheater-vault/
 ---
 
 # ═══ PART 4 — CHANGE LOG ═══
+
+### Sprint 6 Plan — Offline Core + Export Job Ticket (NEXT)
+
+**Objective:** 90% of scans complete in <3s with zero cloud dependency. Plumber gets a job ticket in one tap.
+
+**New files to create:**
+- `lib/wh-lookup.ts` — hardcoded lookup table: 10 brands × ~500 models. `BrandSpec[]` (serial decode rules) + `ModelSpec[]` (tank/fuel/life/cost). `lookupBySerial(serial, brand)` returns full spec or partial hit (brand+date only). Ships in app bundle.
+- `lib/exportJobTicket.ts` — `exportICS(data)` + `exportCSV(data)`. Pure string builders. `<a download>` trigger. Zero deps. RFC 5545 compliant. Works fully offline.
+
+**Files to modify:**
+- `brain/router.ts` — add Tier 0 before fast-lookup: `lookupBySerial()` check. If hit → skip all LLM + D1 entirely.
+- `app/results/page.tsx` — add "Export Job Ticket" hero button above PDF button. Two links: `.ics` + `.csv`.
+
+**60-Day Plan:**
+- Days 1–10: lookup table + export wired + verified <3s offline
+- Days 11–20: scan-to-result UX polished, PDF embeds job ticket data
+- Days 21–40: local market (yard signs, Nextdoor, 1 zip code)
+- Days 41–60: second zip, first $49/mo paying plumber confirmed
+
+**FORBIDDEN:** expansion beyond water heaters · file uploads · national pro directory until profitable · any friction in scan→result→export→text flow
+
+---
 
 ### 2026-03-22 (night) — Sprint 5: Hybrid Pipeline + Self-Improving Flywheel
 
