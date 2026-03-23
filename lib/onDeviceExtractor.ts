@@ -37,8 +37,24 @@ const DATE_PATTERNS = [
   /\b\d{1,2}\s+(Jan(uary)?|Feb(ruary)?|Mar(ch)?|Apr(il)?|May|Jun(e)?|Jul(y)?|Aug(ust)?|Sep(tember)?|Oct(ober)?|Nov(ember)?|Dec(ember)?)\s+20\d{2}\b/gi,
 ]
 
-// Serial: alphanumeric, often with dashes, 8+ chars
+// Model: MUST be preceded by the word Model / MDL / Mod. on the label
+const MODEL_LABEL_PATTERN = /(?:model|mdl|mod\.?|model\s*no\.?|model\s*#)\s*[:\-#]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,30})/i
+
+// Serial: MUST be preceded by Serial / S\/N / Ser. on the label
+const SERIAL_LABEL_PATTERN = /(?:s(?:erial)?\s*(?:no\.?|number|#)?|s[.\/]n\.?)\s*[:\-#]?\s*([A-Z0-9][A-Z0-9\-\/]{5,20})/i
+
+// Loose serial fallback (only used if no label anchor found)
 const SERIAL_PATTERN = /\b([A-Z0-9]{4,}[-]?[A-Z0-9]{4,}(?:[-][A-Z0-9]{4,})*)\b/gi
+
+// Words that appear on water heater labels but are NOT model or serial numbers
+const LABEL_NOISE_WORDS = new Set([
+  'URETHANE', 'POLYURETHANE', 'INSULATION', 'INSULATED', 'NATURAL', 'ELECTRIC',
+  'GALLONS', 'THERMAL', 'RECOVERY', 'CAPACITY', 'PRESSURE', 'HEATER', 'PRODUCT',
+  'MAXIMUM', 'MINIMUM', 'ANODE', 'ENERGY', 'STANDARD', 'PREMIUM', 'RESIDENTIAL',
+  'COMMERCIAL', 'WARNING', 'CAUTION', 'VOLTAGE', 'AMPERE', 'WATTAGE', 'CIRCUIT',
+  'INSTALL', 'INSTRUC', 'PROPANE', 'NATURAL', 'EFFICIENCY', 'COMBUSTION',
+  'FLAMMABLE', 'CERTIFIED', 'APPROVALS', 'COMPLIES', 'UNIFORM', 'PLUMBING',
+])
 
 // Price: $XX.XX or XX.XX
 const PRICE_PATTERN = /\$?\s*(\d{1,6}(?:\.\d{2})?)\s*(?:USD|usd)?/g
@@ -87,14 +103,33 @@ function parseDate(text: string): string {
   return ''
 }
 
+function parseModel(text: string): string | undefined {
+  const match = text.match(MODEL_LABEL_PATTERN)
+  if (!match?.[1]) return undefined
+  const val = match[1].trim().toUpperCase()
+  // Reject if it's a noise word or looks like prose (contains space, all alpha)
+  if (LABEL_NOISE_WORDS.has(val)) return undefined
+  if (LABEL_NOISE_WORDS.has(val.split(/[^A-Z]/)[0])) return undefined
+  if (/^[A-Z]+$/.test(val) && val.length > 8) return undefined
+  return val
+}
+
 function parseSerial(text: string): string | undefined {
+  // Label-anchored first
+  const labeled = text.match(SERIAL_LABEL_PATTERN)
+  if (labeled?.[1]) {
+    const val = labeled[1].trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+    if (val.length >= 6 && !LABEL_NOISE_WORDS.has(val)) return val
+  }
+  // Loose fallback — filtered
   const matches = text.match(SERIAL_PATTERN)
   if (matches) {
-    // Prefer longer, alphanumeric-heavy strings (likely serials)
     const sorted = matches
-      .map((m) => m.replace(/[-]/g, ''))
+      .map((m) => m.replace(/[-]/g, '').toUpperCase())
       .filter((m) => m.length >= 8)
-    return sorted[0] || matches[0]
+      .filter((m) => /[A-Z]/.test(m) && /[0-9]/.test(m))
+      .filter((m) => !LABEL_NOISE_WORDS.has(m) && !Array.from(LABEL_NOISE_WORDS).some(w => m.startsWith(w.slice(0, 6))))
+    return sorted[0]
   }
   return undefined
 }
@@ -251,6 +286,7 @@ export async function extractOnDevice(imageData: Blob): Promise<OnDeviceExtracti
   // WH-specific detection (higher priority than generic brand parsing)
   const detectedBrand = detectWHBrand(rawText) || parseBrand(rawText)
   const serialCandidate = extractWHSerial(rawText) || parseSerial(rawText)
+  const modelCandidate = parseModel(rawText)
 
   const product = parseProduct(rawText, detectedBrand)
   const purchaseDate = parseDate(rawText)
@@ -270,7 +306,7 @@ export async function extractOnDevice(imageData: Blob): Promise<OnDeviceExtracti
   return {
     product,
     brand: detectedBrand,
-    model: 'Unknown',
+    model: modelCandidate || 'Unknown',
     purchaseDate,
     manufactureDate,
     warranty,

@@ -51,10 +51,15 @@ export function extractWHSerial(text: string): string | undefined {
     .filter(c => /[A-Z]/.test(c) && /[0-9]/.test(c))
     .filter(c => c.length >= 8 && c.length <= 20)
     // Filter out common label words that match the pattern
-    .filter(c => !['NATURAL', 'ELECTRIC', 'GALLONS', 'THERMAL', 'RECOVERY', 'CAPACITY',
-                   'PRESSURE', 'HEATER', 'PRODUCT', 'MAXIMUM', 'MINIMUM'].some(
-      w => c === w || c.startsWith(w.slice(0, 7))
-    ))
+    .filter(c => ![
+      'NATURAL', 'ELECTRIC', 'GALLONS', 'THERMAL', 'RECOVERY', 'CAPACITY',
+      'PRESSURE', 'HEATER', 'PRODUCT', 'MAXIMUM', 'MINIMUM',
+      'URETHANE', 'POLYURET', 'INSULATI', 'INSULATD', 'ANODE', 'ENERGY',
+      'STANDARD', 'PREMIUM', 'RESIDENT', 'COMMERCI', 'WARNING', 'CAUTION',
+      'VOLTAGE', 'AMPERE', 'WATTAGE', 'CIRCUIT', 'INSTALL', 'INSTRUC',
+      'PROPANE', 'EFFICIEN', 'COMBUSTI', 'FLAMMBLE', 'CERTIFIE', 'APPROVALS',
+      'COMPLIES', 'UNIFORM', 'PLUMBING', 'WARRANTY', 'INSULATE', 'FOAMEDUR',
+    ].some(w => c === w || c.startsWith(w.slice(0, 7))))
 
   return candidates[0]
 }

@@ -6,14 +6,16 @@ export const WH_SYSTEM = `You are a water heater data plate reader. Read ONLY wh
 
 Return ONLY valid JSON, no markdown, no explanation:
 {
-  "brand": "exact brand name (Rheem|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
-  "model": "model number exactly as printed, or null",
-  "serialNumber": "serial number exactly as printed — look for S/N, Serial No., standalone alphanumeric string 8-20 chars",
+  "brand": "exact brand name (Rheem|Ruud|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Takagi|Bosch|Weil-McLain|other)",
+  "model": "model number — ONLY extract what immediately follows the word 'Model', 'Model No.', 'MDL', or 'Mod.' on the label. Return null if no Model keyword exists.",
+  "serialNumber": "serial number — ONLY extract what immediately follows 'Serial', 'Serial No.', 'Ser.', 'S/N', or 'S.N.' on the label. Must be 6-20 alphanumeric chars.",
   "manufactureDate": "YYYY-MM decoded from serial — REQUIRED if serial present",
   "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
   "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
   "confidence": 0.0-1.0
 }
+
+CRITICAL — NEVER return these as model or serial: URETHANE, FOAM, INSULATION, INSULATED, POLYURETHANE, ANODE, NATURAL GAS, PROPANE, ELECTRIC, GALLON, THERMAL, BTU, RECOVERY, WARNING, CAUTION, VOLTAGE, WATTAGE, CERTIFIED, COMPLIES, EFFICIENCY, RESIDENTIAL, COMMERCIAL, or any other descriptive label text.
 
 If not a water heater data plate: {"error":"not_wh","message":"brief description"}
 
@@ -33,9 +35,9 @@ export const WH_TEXT_SYSTEM = `You are a water heater data plate OCR parser. The
 
 Return ONLY valid JSON, no markdown, no explanation:
 {
-  "brand": "exact brand name (Rheem|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
-  "model": "model number from OCR, or null",
-  "serialNumber": "serial number — look for S/N, Serial No., or standalone 8-20 char alphanumeric",
+  "brand": "exact brand name (Rheem|Ruud|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Takagi|Bosch|Weil-McLain|other)",
+  "model": "model number — scan the OCR text for the word 'Model', 'Model No.', 'MDL', or 'Mod.' then extract the alphanumeric code immediately after it. Return null if no such keyword is found.",
+  "serialNumber": "serial number — scan for 'Serial', 'Serial No.', 'Ser.', 'S/N', or 'S.N.' then extract the alphanumeric code immediately after it (6-20 chars). Return null if not found.",
   "manufactureDate": "YYYY-MM decoded from serial using brand rules below — REQUIRED if serial present",
   "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
   "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
@@ -44,7 +46,9 @@ Return ONLY valid JSON, no markdown, no explanation:
 
 If text clearly has no water heater data: {"error":"not_wh","message":"brief description"}
 
-OCR NOISE RULES: Common errors on metal labels: 0↔O, 1↔I↔L, 8↔B, 5↔S. Ignore stray punctuation. Serial numbers are 8-20 alphanumeric chars.
+CRITICAL — NEVER return these as model or serial values: URETHANE, FOAM, INSULATION, INSULATED, POLYURETHANE, ANODE, NATURAL GAS, PROPANE, ELECTRIC, GALLON, THERMAL, BTU, RECOVERY, WARNING, CAUTION, VOLTAGE, WATTAGE, CERTIFIED, COMPLIES, EFFICIENCY, RESIDENTIAL, COMMERCIAL, or any other descriptive words from the label. If a string after 'Model' looks like a description word rather than a part number, return null.
+
+OCR NOISE RULES: Common errors on metal labels: 0↔O, 1↔I↔L, 8↔B, 5↔S. Ignore stray punctuation. Model numbers are typically 6-20 chars mixing letters and digits (e.g. PROE50T2, NPE-240A2, MI50L). Serial numbers are 8-20 alphanumeric chars.
 
 SERIAL DATE DECODERS:
 • Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
