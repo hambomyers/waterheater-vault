@@ -34,6 +34,21 @@ export interface OnDevicePreview {
   detectedBrand: string
 }
 
+/** Infer brand from model number prefix — catches cut-off labels where brand text is unreadable */
+function inferBrandFromModel(model?: string): string {
+  if (!model) return ''
+  const m = model.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (m.startsWith('NPE') || m.startsWith('NFC') || m.startsWith('NCB') || m.startsWith('NHB')) return 'Navien'
+  if (m.startsWith('RU') || m.startsWith('RLX') || /^V[5-9]/.test(m)) return 'Rinnai'
+  if (m.startsWith('NRC') || m.startsWith('EZ') || /^CB[0-9]/.test(m)) return 'Noritz'
+  if (m.startsWith('TH') || m.startsWith('TK')) return 'Takagi'
+  if (m.startsWith('PROE') || m.startsWith('PROG') || m.startsWith('PROT') || m.startsWith('XCR')) return 'Rheem'
+  if (m.startsWith('PROU') || m.startsWith('PROH')) return 'Ruud'
+  if (m.startsWith('GPVH') || m.startsWith('GPDH') || m.startsWith('HPTU') || m.startsWith('ENS')) return 'AO Smith'
+  if (m.startsWith('MI') || m.startsWith('RE2') || m.startsWith('AW') || m.startsWith('ES')) return 'Bradford White'
+  return ''
+}
+
 function onDeviceToExtractedData(r: OnDeviceExtractionResult): ExtractedData {
   return {
     product: r.product || 'Water Heater',
@@ -115,18 +130,23 @@ class BrainRouter {
     const { confidenceScore, serialCandidate, detectedBrand, rawText } = ocrResult
     const modelCandidate = ocrResult.model || preview?.extractedData.model
 
-    const highConfidence = confidenceScore >= 70 && !!serialCandidate
+    const highConfidence = confidenceScore >= 55 && !!serialCandidate
 
-    // ── Tier 0: hardcoded lookup table (zero network, <5ms) ────────────────────
-    if (detectedBrand && detectedBrand !== 'Unknown') {
+    // ── Tier 0: hardcoded lookup table (zero network, <5ms) ──────────────────────
+    // Use detected brand OR infer brand from model prefix (catches cut-off labels)
+    const effectiveBrand = (detectedBrand && detectedBrand !== 'Unknown')
+      ? detectedBrand
+      : inferBrandFromModel(modelCandidate || undefined)
+
+    if (effectiveBrand) {
       const tier0 = modelCandidate
-        ? lookupByModel(modelCandidate, detectedBrand, undefined, DEFAULT_PRICING)
+        ? lookupByModel(modelCandidate, effectiveBrand, undefined, DEFAULT_PRICING)
         : serialCandidate
-          ? lookupBySerial(serialCandidate, detectedBrand, DEFAULT_PRICING)
+          ? lookupBySerial(serialCandidate, effectiveBrand, DEFAULT_PRICING)
           : null
 
       if (tier0 && !tier0.partial) {
-        return this.lookupResultToProcessingResult(tier0, imageBase64)
+        return this.lookupResultToProcessingResult(tier0, imageBase64, serialCandidate)
       }
     }
 
@@ -185,7 +205,7 @@ class BrainRouter {
     }
   }
 
-  private lookupResultToProcessingResult(r: LookupResult, imageBase64: string): ProcessingResult {
+  private lookupResultToProcessingResult(r: LookupResult, imageBase64: string, serialCandidate?: string): ProcessingResult {
     const m = r.model!
     const fuelMap: Record<string, ExtractedData['fuelType']> = {
       natural_gas: 'gas', propane: 'gas', electric: 'electric', heat_pump: 'electric',
@@ -194,7 +214,7 @@ class BrainRouter {
       product: 'Water Heater',
       brand: r.brand,
       model: m.modelPrefix,
-      serialNumber: '',
+      serialNumber: serialCandidate || '',
       manufactureDate: r.manufactureDate,
       tankSizeGallons: m.tankGallons ?? undefined,
       fuelType: fuelMap[m.fuelType] ?? 'unknown',

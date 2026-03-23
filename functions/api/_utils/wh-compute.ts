@@ -23,7 +23,7 @@ SERIAL DATE DECODERS:
 • Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
 • AO Smith/American/Reliance/Whirlpool/State/Richmond: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
 • Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
-• Navien NPE/NFC/NCB/NHB: YYWW e.g. "2312"=2023wk12≈Mar2023
+• Navien NPE/NFC/NCB/NHB: YYYYMM e.g. "202103"=March2021 (4-digit year + 2-digit month)
 • Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
 • Noritz: YYWW in first 4 chars
 • Bosch: first 6 = YYYYWW
@@ -36,8 +36,8 @@ export const WH_TEXT_SYSTEM = `You are a water heater data plate OCR parser. The
 Return ONLY valid JSON, no markdown, no explanation:
 {
   "brand": "exact brand name (Rheem|Ruud|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Takagi|Bosch|Weil-McLain|other)",
-  "model": "model number — scan the OCR text for the word 'Model', 'Model No.', 'MDL', or 'Mod.' then extract the alphanumeric code immediately after it. Return null if no such keyword is found.",
-  "serialNumber": "serial number — scan for 'Serial', 'Serial No.', 'Ser.', 'S/N', or 'S.N.' then extract the alphanumeric code immediately after it (6-20 chars). Return null if not found.",
+  "model": "Extract the model number. FIRST look for anything after 'Model', 'Model No.', 'MDL', or 'Mod.' on the label. If that keyword is missing or garbled, look for any alphanumeric string that starts with a known water heater model prefix: NPE, NFC, NCB, RU, RLX, V53/V65/V75/V94, NRC, EZ, CB, TH3, TK, PROE, PROG, PROT, PROH, PROU, GPVH, GPDH, HPTU, MI, RE, XCR, ENS, G6, G8. Return the full model string including suffix (e.g. NPE-240A2, RU199iN, PROE50T2). Return null only if nothing plausible exists.",
+  "serialNumber": "Extract the serial number. Look for anything after SN, S/N, S.N., SERIAL, SERIAL NO., or SER. — including 'SN 2021031234' with a space. Also accept any 8-20 char alphanumeric string that looks like a serial (mix of letters and digits). Return null only if truly nothing found.",
   "manufactureDate": "YYYY-MM decoded from serial using brand rules below — REQUIRED if serial present",
   "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
   "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
@@ -54,7 +54,7 @@ SERIAL DATE DECODERS:
 • Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
 • AO Smith/American/Reliance/Whirlpool/State/Richmond: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
 • Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
-• Navien NPE/NFC/NCB/NHB: YYWW e.g. "2312"=2023wk12≈Mar2023
+• Navien NPE/NFC/NCB/NHB: YYYYMM e.g. "202103"=March2021 (4-digit year + 2-digit month)
 • Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
 • Noritz: YYWW in first 4 chars
 • Bosch: first 6 = YYYYWW

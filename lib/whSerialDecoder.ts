@@ -5,16 +5,17 @@
 // ── Brand detection ───────────────────────────────────────────────────────────
 
 const BRAND_MAP: [string, string[]][] = [
-  ['Rheem',          ['rheem']],
-  ['Ruud',           ['ruud']],
-  ['AO Smith',       ['ao smith', 'a.o. smith', 'aosmith', 'a. o. smith']],
-  ['Bradford White', ['bradford white', 'bradford-white', 'bradfordwhite']],
-  ['Navien',         ['navien']],
-  ['Rinnai',         ['rinnai']],
+  // Partial/OCR-error keywords come after the canonical name — catches cut-off labels
+  ['Navien',         ['navien', 'navien inc', 'navien america', 'npe-', ' npe ', 'navie', 'avien', 'n vien']],
+  ['Rheem',          ['rheem', 'rhe em', 'rhem']],
+  ['Ruud',           ['ruud', 'ruu d']],
+  ['AO Smith',       ['ao smith', 'a.o. smith', 'aosmith', 'a. o. smith', 'ao smi']],
+  ['Bradford White', ['bradford white', 'bradford-white', 'bradfordwhite', 'bradford w', 'bradfor']],
+  ['Rinnai',         ['rinnai', 'rinnai america', 'rinnai corp', 'rinai', 'rinn ai', 'rinnal']],
   ['State',          ['state select', 'state proline', 'state water heater', 'state water']],
   ['Reliance',       ['reliance water', 'reliance']],
   ['American',       ['american water heater', 'american standard water']],
-  ['Noritz',         ['noritz']],
+  ['Noritz',         ['noritz', 'norit z']],
   ['Bosch',          ['bosch']],
   ['Lochinvar',      ['lochinvar']],
   ['Weil-McLain',    ['weil-mclain', 'weil mclain', 'weilmclain']],
@@ -39,11 +40,20 @@ export function detectWHBrand(text: string): string {
 
 /** Extracts the most likely serial number candidate from raw OCR text. */
 export function extractWHSerial(text: string): string | undefined {
-  const upper = text.toUpperCase()
+  const upper = text.toUpperCase().replace(/\s+/g, ' ')
 
-  // Explicit S/N or Serial label — highest priority
-  const explicit = upper.match(/(?:S[/.]?N|SERIAL\s*(?:NO\.?|NUMBER)?|SER\.?\s*NO\.?)[:\s#]*([A-Z0-9]{6,20})/)
-  if (explicit?.[1]) return explicit[1]
+  // Explicit label anchor — try all real-world variations of S/N prefix
+  const labelPatterns = [
+    /(?:SERIAL\s*(?:NO\.?|NUMBER|#)?|SER\.?\s*NO\.?)[:\s#]*([A-Z0-9]{6,20})/,
+    /S\/N[:\s#]*([A-Z0-9]{6,20})/,
+    /S\.N\.[:\s#]*([A-Z0-9]{6,20})/,
+    /\bSN[:\s]+([A-Z0-9]{6,20})/,     // "SN 2021031234" or "SN: 2021031234"
+    /\bS N[:\s]+([A-Z0-9]{6,20})/,    // "S N 2021031234" (space OCR artifact)
+  ]
+  for (const re of labelPatterns) {
+    const m = upper.match(re)
+    if (m?.[1]) return m[1].trim()
+  }
 
   // Alphanumeric candidates: mixed letters+digits, 8-20 chars
   const candidates = Array.from(upper.matchAll(/\b([A-Z][A-Z0-9]{7,19})\b/g))
@@ -125,8 +135,17 @@ export function decodeWHSerial(brand: string, serial: string): SerialDecodeResul
     }
   }
 
-  // ── Navien / Noritz / Lochinvar / Weil-McLain (YYWW) ─────────────────────
-  if (b.includes('navien') || b.includes('noritz') || b.includes('lochinvar') || b.includes('weil')) {
+  // ── Navien (YYYYMM — 4-digit year, 2-digit month) ─────────────────────────
+  if (b.includes('navien')) {
+    const year  = parseInt(s.slice(0, 4))
+    const month = parseInt(s.slice(4, 6))
+    if (year >= 2000 && year <= 2040 && month >= 1 && month <= 12) {
+      return { year, month, manufactureDate: fmt(year, month), patternType: 'YYYYMM' }
+    }
+  }
+
+  // ── Noritz / Lochinvar / Weil-McLain (YYWW) ────────────────────────────────
+  if (b.includes('noritz') || b.includes('lochinvar') || b.includes('weil')) {
     const year = 2000 + parseInt(s.slice(0, 2))
     const week = parseInt(s.slice(2, 4))
     if (year >= 2000 && year <= 2040 && week >= 1 && week <= 52) {

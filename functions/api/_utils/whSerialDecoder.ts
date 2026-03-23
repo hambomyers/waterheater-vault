@@ -4,16 +4,16 @@
 export function detectWHBrand(text: string): string {
   const lower = text.toLowerCase()
   const BRAND_MAP: [string, string[]][] = [
-    ['Rheem',          ['rheem']],
-    ['Ruud',           ['ruud']],
-    ['AO Smith',       ['ao smith', 'a.o. smith', 'aosmith', 'a. o. smith']],
-    ['Bradford White', ['bradford white', 'bradford-white', 'bradfordwhite']],
-    ['Navien',         ['navien']],
-    ['Rinnai',         ['rinnai']],
+    ['Navien',         ['navien', 'navien inc', 'navien america', 'npe-', ' npe ', 'navie', 'avien', 'n vien']],
+    ['Rheem',          ['rheem', 'rhe em', 'rhem']],
+    ['Ruud',           ['ruud', 'ruu d']],
+    ['AO Smith',       ['ao smith', 'a.o. smith', 'aosmith', 'a. o. smith', 'ao smi']],
+    ['Bradford White', ['bradford white', 'bradford-white', 'bradfordwhite', 'bradford w', 'bradfor']],
+    ['Rinnai',         ['rinnai', 'rinnai america', 'rinnai corp', 'rinai', 'rinn ai', 'rinnal']],
     ['State',          ['state select', 'state proline', 'state water heater', 'state water']],
     ['Reliance',       ['reliance water', 'reliance']],
     ['American',       ['american water heater', 'american standard water']],
-    ['Noritz',         ['noritz']],
+    ['Noritz',         ['noritz', 'norit z']],
     ['Bosch',          ['bosch']],
     ['Lochinvar',      ['lochinvar']],
     ['Weil-McLain',    ['weil-mclain', 'weil mclain', 'weilmclain']],
@@ -30,9 +30,18 @@ export function detectWHBrand(text: string): string {
 }
 
 export function extractWHSerial(text: string): string | undefined {
-  const upper = text.toUpperCase()
-  const explicit = upper.match(/(?:S[/.]?N|SERIAL\s*(?:NO\.?|NUMBER)?|SER\.?\s*NO\.?)[:\s#]*([A-Z0-9]{6,20})/)
-  if (explicit?.[1]) return explicit[1]
+  const upper = text.toUpperCase().replace(/\s+/g, ' ')
+  const labelPatterns = [
+    /(?:SERIAL\s*(?:NO\.?|NUMBER|#)?|SER\.?\s*NO\.?)[:\s#]*([A-Z0-9]{6,20})/,
+    /S\/N[:\s#]*([A-Z0-9]{6,20})/,
+    /S\.N\.[:\s#]*([A-Z0-9]{6,20})/,
+    /\bSN[:\s]+([A-Z0-9]{6,20})/,
+    /\bS N[:\s]+([A-Z0-9]{6,20})/,
+  ]
+  for (const re of labelPatterns) {
+    const m = upper.match(re)
+    if (m?.[1]) return m[1].trim()
+  }
   const candidates = Array.from(upper.matchAll(/\b([A-Z][A-Z0-9]{7,19})\b/g))
     .map(m => m[1])
     .filter(c => /[A-Z]/.test(c) && /[0-9]/.test(c))

@@ -103,15 +103,23 @@ function parseDate(text: string): string {
   return ''
 }
 
+// Stage 2 fallback: known model prefixes that are unique enough to use even without "Model" keyword
+// These appear on the label whether or not the "Model" label itself is visible/OCR'd correctly
+const WH_MODEL_PREFIX_RE = /\b(NPE-?[0-9]|NFC-?[0-9]|NCB-?[0-9]|NHB-?[0-9]|RU[0-9]{2}|RLX[0-9]|V[5-9][0-9]|V[5-9][A-Z]|NRC[0-9]|EZ[0-9]|CB[0-9]{2}|TH[23][A-Z]|TK[0-9]|PROE[0-9]|PROG[0-9]|PROT[0-9]|PROH[0-9]|PROU[0-9]|GPVH|GPDH|HPTU|XCR|PRTH|MI[0-9]|RE[0-9]|AW[0-9]|BW[0-9]|ENS|ESCS|G[68][0-9])([A-Z0-9\-]{0,18})/i
+
 function parseModel(text: string): string | undefined {
-  const match = text.match(MODEL_LABEL_PATTERN)
-  if (!match?.[1]) return undefined
-  const val = match[1].trim().toUpperCase()
-  // Reject if it's a noise word or looks like prose (contains space, all alpha)
-  if (LABEL_NOISE_WORDS.has(val)) return undefined
-  if (LABEL_NOISE_WORDS.has(val.split(/[^A-Z]/)[0])) return undefined
-  if (/^[A-Z]+$/.test(val) && val.length > 8) return undefined
-  return val
+  // Stage 1: label-anchored (most accurate — requires "Model" keyword on label)
+  const anchored = text.match(MODEL_LABEL_PATTERN)
+  if (anchored?.[1]) {
+    const val = anchored[1].trim().toUpperCase()
+    if (!LABEL_NOISE_WORDS.has(val) && !LABEL_NOISE_WORDS.has(val.split(/[^A-Z]/)[0])) {
+      if (!(/^[A-Z]+$/.test(val) && val.length > 8)) return val
+    }
+  }
+  // Stage 2: known model prefix fallback — works even when "Model" is cut off or garbled
+  const prefixed = text.match(WH_MODEL_PREFIX_RE)
+  if (prefixed) return (prefixed[1] + (prefixed[2] || '')).trim().toUpperCase()
+  return undefined
 }
 
 function parseSerial(text: string): string | undefined {
