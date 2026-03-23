@@ -1,6 +1,7 @@
 // Brain router — hybrid: on-device first (offline), Grok cloud for refinement + valuation (online)
 import { extractFromImage, extractFromTwoShots, extractFromText, extractFastLookup, ExtractedData, GrokScanResult } from './on-device'
 import { extractOnDevice, OnDeviceExtractionResult } from '../lib/onDeviceExtractor'
+import { lookupByModel, lookupBySerial, LookupResult, DEFAULT_PRICING } from '../lib/wh-lookup'
 import { VaultDocs } from '../vault/private'
 
 export interface ValuationData {
@@ -112,8 +113,22 @@ class BrainRouter {
     }
 
     const { confidenceScore, serialCandidate, detectedBrand, rawText } = ocrResult
+    const modelCandidate = ocrResult.model || preview?.extractedData.model
 
     const highConfidence = confidenceScore >= 70 && !!serialCandidate
+
+    // ── Tier 0: hardcoded lookup table (zero network, <5ms) ────────────────────
+    if (detectedBrand && detectedBrand !== 'Unknown') {
+      const tier0 = modelCandidate
+        ? lookupByModel(modelCandidate, detectedBrand, undefined, DEFAULT_PRICING)
+        : serialCandidate
+          ? lookupBySerial(serialCandidate, detectedBrand, DEFAULT_PRICING)
+          : null
+
+      if (tier0 && !tier0.partial) {
+        return this.lookupResultToProcessingResult(tier0, imageBase64)
+      }
+    }
 
     // ── Tier 1: fast-lookup (zero LLM) ─────────────────────────────────────────
     if (highConfidence) {
@@ -167,6 +182,40 @@ class BrainRouter {
         return this.onDeviceResult(ocrResult, imageBase64)
       }
       throw err
+    }
+  }
+
+  private lookupResultToProcessingResult(r: LookupResult, imageBase64: string): ProcessingResult {
+    const m = r.model!
+    const fuelMap: Record<string, ExtractedData['fuelType']> = {
+      natural_gas: 'gas', propane: 'gas', electric: 'electric', heat_pump: 'electric',
+    }
+    const extractedData: ExtractedData = {
+      product: 'Water Heater',
+      brand: r.brand,
+      model: m.modelPrefix,
+      serialNumber: '',
+      manufactureDate: r.manufactureDate,
+      tankSizeGallons: m.tankGallons ?? undefined,
+      fuelType: fuelMap[m.fuelType] ?? 'unknown',
+      ageYears: r.ageYears,
+      remainingLifeYears: r.remainingLifeYears,
+      estimatedReplacementCost: r.jobCost?.totalMin ?? 0,
+      currentWarranty: '',
+    }
+    return {
+      extractedData,
+      valuation: {
+        currentValue: r.jobCost ? Math.round((r.jobCost.totalMin + r.jobCost.totalMax) / 2) : 0,
+        originalPrice: r.jobCost?.totalMin ?? 0,
+        depreciationRate: m.expectedLifeYears > 0 ? Math.round(100 / m.expectedLifeYears) : 10,
+        marketTrend: 'stable',
+        confidence: 90,
+        lastUpdated: new Date().toISOString(),
+      },
+      processingMethod: 'fast-lookup',
+      confidence: 90,
+      imageBase64,
     }
   }
 

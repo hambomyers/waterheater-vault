@@ -8,6 +8,46 @@ import { ExtractedData } from '../../brain/on-device'
 import InvitePlumberButton from '../components/InvitePlumberButton'
 import PDFReportGenerator from '../components/PDFReportGenerator'
 import RebateMaximizerCard from '../components/RebateMaximizerCard'
+import { exportICS, exportCSV, ExportData } from '../../lib/exportJobTicket'
+
+function ExportJobTicketButtons({ extractedData }: { extractedData: ExtractedData }) {
+  const data: ExportData = {
+    brand:               extractedData.brand || 'Unknown',
+    model:               extractedData.model || 'Unknown',
+    serial:              extractedData.serialNumber || 'UNKNOWN',
+    ageYears:            extractedData.ageYears || 0,
+    remainingLifeYears:  extractedData.remainingLifeYears || 0,
+    fuelType:            extractedData.fuelType || 'unknown',
+    tankGallons:         extractedData.tankSizeGallons ?? null,
+    costMin:             extractedData.estimatedReplacementCost || 0,
+    costMax:             extractedData.estimatedReplacementCost
+                           ? Math.round(extractedData.estimatedReplacementCost * 1.15)
+                           : 0,
+    installYear:         new Date().getFullYear() - (extractedData.ageYears || 0),
+    recallStatus:        'Not checked',
+  }
+
+  return (
+    <div className="rounded-2xl border border-blue-accent border-opacity-30 bg-blue-accent bg-opacity-8 p-4">
+      <div className="text-white text-sm font-medium mb-1">📋 Export Job Ticket</div>
+      <div className="text-white text-opacity-45 text-xs font-light mb-3">
+        One tap — calendar event + service sheet. Works offline.
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => exportICS(data)}
+          className="flex-1 py-2.5 px-4 rounded-full bg-blue-accent text-white text-sm font-medium active:scale-[0.97] transition-all touch-manipulation">
+          Add to Calendar (.ics)
+        </button>
+        <button
+          onClick={() => exportCSV(data)}
+          className="flex-1 py-2.5 px-4 rounded-full border border-white border-opacity-20 text-white text-sm font-light active:scale-[0.97] transition-all touch-manipulation">
+          Export to CSV
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function RemainingLifeGauge({ remainingLifeYears, ageYears }: { remainingLifeYears: number; ageYears: number }) {
   const totalLife = ageYears + remainingLifeYears
@@ -354,6 +394,7 @@ export default function ResultsPage() {
 
           {/* Secondary CTAs */}
           <div className="space-y-3">
+            <ExportJobTicketButtons extractedData={extractedData} />
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
             <InvitePlumberButton extractedData={extractedData} />
           </div>
@@ -493,6 +534,9 @@ export default function ResultsPage() {
           </div>
 
           {/* Secondary CTAs */}
+          <div className="mb-4">
+            <ExportJobTicketButtons extractedData={extractedData} />
+          </div>
           <div className="flex gap-4 mb-6">
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
             <InvitePlumberButton extractedData={extractedData} />
