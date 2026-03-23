@@ -107,17 +107,17 @@ export const BRAND_SPECS: BrandSpec[] = [
   },
   {
     brand: 'Navien',
-    aliases: ['navien', 'navien inc'],
+    aliases: ['navien', 'navien inc', 'navien america'],
     serialPattern: 'YYYYMM',
     serialOffset: 0,
-    similarUnitsBase: 280000,
+    similarUnitsBase: 520000,
   },
   {
     brand: 'Rinnai',
     aliases: ['rinnai', 'rinnai america', 'rinnai corp'],
     serialPattern: 'YYMM',
     serialOffset: 2,
-    similarUnitsBase: 210000,
+    similarUnitsBase: 480000,
   },
   {
     brand: 'Noritz',
@@ -125,6 +125,13 @@ export const BRAND_SPECS: BrandSpec[] = [
     serialPattern: 'YYWW',
     serialOffset: 0,
     similarUnitsBase: 140000,
+  },
+  {
+    brand: 'Takagi',
+    aliases: ['takagi', 'takagi industrial'],
+    serialPattern: 'YYWW',
+    serialOffset: 0,
+    similarUnitsBase: 95000,
   },
   {
     brand: 'Bosch',
@@ -279,9 +286,70 @@ export const MODEL_SPECS: ModelSpec[] = [
   { brand: 'Bradford White', modelPrefix: 'RE250',  description: 'Standard 50gal Electric', tankGallons: 50, fuelType: 'electric',      inputBtuOrWatts: 4500,  firstHourRating: 68,  expectedLifeYears: 11, baseMsrp: 450,  laborHours: 2.5 },
   { brand: 'Bradford White', modelPrefix: 'RE240',  description: 'Standard 40gal Electric', tankGallons: 40, fuelType: 'electric',      inputBtuOrWatts: 4500,  firstHourRating: 64,  expectedLifeYears: 11, baseMsrp: 420,  laborHours: 2.5 },
   { brand: 'Bradford White', modelPrefix: 'RE230',  description: 'Standard 30gal Electric', tankGallons: 30, fuelType: 'electric',      inputBtuOrWatts: 4500,  firstHourRating: 57,  expectedLifeYears: 11, baseMsrp: 380,  laborHours: 2.5 },
+
+  // ── Navien (Condensing Tankless) ─────────────────────────────────────────────
+  // NPE-A2 Series (2nd gen Advanced condensing) — most common current install
+  { brand: 'Navien', modelPrefix: 'NPE240A', description: 'NPE-240A2 Condensing Tankless NG',  tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199900, firstHourRating: 672, expectedLifeYears: 20, baseMsrp: 1100, laborHours: 5   },
+  { brand: 'Navien', modelPrefix: 'NPE210A', description: 'NPE-210A2 Condensing Tankless NG',  tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 606, expectedLifeYears: 20, baseMsrp: 1000, laborHours: 5   },
+  { brand: 'Navien', modelPrefix: 'NPE180A', description: 'NPE-180A2 Condensing Tankless NG',  tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 180000, firstHourRating: 504, expectedLifeYears: 20, baseMsrp: 940,  laborHours: 5   },
+  // NPE-S Series (Standard condensing)
+  { brand: 'Navien', modelPrefix: 'NPE240S', description: 'NPE-240S Condensing Tankless NG',   tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199900, firstHourRating: 672, expectedLifeYears: 20, baseMsrp: 1000, laborHours: 5   },
+  { brand: 'Navien', modelPrefix: 'NPE210S', description: 'NPE-210S Condensing Tankless NG',   tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 606, expectedLifeYears: 20, baseMsrp: 900,  laborHours: 5   },
+  { brand: 'Navien', modelPrefix: 'NPE180S', description: 'NPE-180S Condensing Tankless NG',   tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 180000, firstHourRating: 504, expectedLifeYears: 20, baseMsrp: 840,  laborHours: 5   },
+  // Older NPE (no A/S suffix) catch-all
+  { brand: 'Navien', modelPrefix: 'NPE240',  description: 'NPE-240 Condensing Tankless NG',    tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199900, firstHourRating: 672, expectedLifeYears: 18, baseMsrp: 950,  laborHours: 5   },
+  { brand: 'Navien', modelPrefix: 'NPE210',  description: 'NPE-210 Condensing Tankless NG',    tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 606, expectedLifeYears: 18, baseMsrp: 880,  laborHours: 5   },
+  { brand: 'Navien', modelPrefix: 'NPE180',  description: 'NPE-180 Condensing Tankless NG',    tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 180000, firstHourRating: 504, expectedLifeYears: 18, baseMsrp: 820,  laborHours: 5   },
+  // NFC Combi-Boiler
+  { brand: 'Navien', modelPrefix: 'NFC199',  description: 'NFC-199 Combi-Boiler NG',           tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 540, expectedLifeYears: 20, baseMsrp: 1600, laborHours: 6   },
+  { brand: 'Navien', modelPrefix: 'NFC175',  description: 'NFC-175 Combi-Boiler NG',           tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 175000, firstHourRating: 480, expectedLifeYears: 20, baseMsrp: 1500, laborHours: 6   },
+  // NCB Combi-Boiler (older)
+  { brand: 'Navien', modelPrefix: 'NCB240',  description: 'NCB-240E Combi-Boiler NG',          tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199900, firstHourRating: 540, expectedLifeYears: 18, baseMsrp: 1400, laborHours: 6   },
+  { brand: 'Navien', modelPrefix: 'NCB180',  description: 'NCB-180E Combi-Boiler NG',          tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 180000, firstHourRating: 480, expectedLifeYears: 18, baseMsrp: 1300, laborHours: 6   },
+
+  // ── Rinnai ────────────────────────────────────────────────────────────────────
+  // RU Sensei Series (condensing, most popular install 2018+)
+  { brand: 'Rinnai', modelPrefix: 'RU199',   description: 'RU199 Sensei Condensing Tankless',  tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 588, expectedLifeYears: 20, baseMsrp: 1050, laborHours: 5   },
+  { brand: 'Rinnai', modelPrefix: 'RU160',   description: 'RU160 Sensei Condensing Tankless',  tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 160000, firstHourRating: 480, expectedLifeYears: 20, baseMsrp: 900,  laborHours: 5   },
+  { brand: 'Rinnai', modelPrefix: 'RU130',   description: 'RU130 Sensei Condensing Tankless',  tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 130000, firstHourRating: 390, expectedLifeYears: 20, baseMsrp: 800,  laborHours: 5   },
+  // RLX Series
+  { brand: 'Rinnai', modelPrefix: 'RLX94',   description: 'RLX94 Condensing Tankless',         tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 157000, firstHourRating: 480, expectedLifeYears: 20, baseMsrp: 950,  laborHours: 5   },
+  { brand: 'Rinnai', modelPrefix: 'RLX16',   description: 'RLX160 Condensing Tankless',        tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 160000, firstHourRating: 480, expectedLifeYears: 20, baseMsrp: 920,  laborHours: 5   },
+  // i Series (indoor condensing)
+  { brand: 'Rinnai', modelPrefix: 'I199',    description: 'i199 Condensing Tankless Indoor',   tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 588, expectedLifeYears: 20, baseMsrp: 1000, laborHours: 5   },
+  { brand: 'Rinnai', modelPrefix: 'I160',    description: 'i160 Condensing Tankless Indoor',   tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 160000, firstHourRating: 480, expectedLifeYears: 20, baseMsrp: 880,  laborHours: 5   },
+  // V Series (non-condensing, economy — very common in older installs)
+  { brand: 'Rinnai', modelPrefix: 'V94',     description: 'V94 Non-Condensing Tankless',       tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 94000,  firstHourRating: 270, expectedLifeYears: 15, baseMsrp: 720,  laborHours: 4   },
+  { brand: 'Rinnai', modelPrefix: 'V75',     description: 'V75 Non-Condensing Tankless',       tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 75000,  firstHourRating: 228, expectedLifeYears: 15, baseMsrp: 660,  laborHours: 4   },
+  { brand: 'Rinnai', modelPrefix: 'V65',     description: 'V65 Non-Condensing Tankless',       tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 65000,  firstHourRating: 192, expectedLifeYears: 15, baseMsrp: 600,  laborHours: 4   },
+  { brand: 'Rinnai', modelPrefix: 'V53',     description: 'V53 Non-Condensing Tankless',       tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 53000,  firstHourRating: 156, expectedLifeYears: 15, baseMsrp: 540,  laborHours: 4   },
+  // Propane variants
+  { brand: 'Rinnai', modelPrefix: 'RU199L',  description: 'RU199 Sensei Propane Tankless',     tankGallons: null, fuelType: 'propane',      inputBtuOrWatts: 199000, firstHourRating: 588, expectedLifeYears: 20, baseMsrp: 1100, laborHours: 5   },
+  { brand: 'Rinnai', modelPrefix: 'V94K',    description: 'V94 Non-Condensing LP Tankless',   tankGallons: null, fuelType: 'propane',      inputBtuOrWatts: 94000,  firstHourRating: 270, expectedLifeYears: 15, baseMsrp: 760,  laborHours: 4   },
+
+  // ── Noritz ────────────────────────────────────────────────────────────────────
+  // NRC Series (condensing)
+  { brand: 'Noritz', modelPrefix: 'NRC98',   description: 'NRC98 Condensing Tankless NG',      tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199900, firstHourRating: 588, expectedLifeYears: 20, baseMsrp: 900,  laborHours: 5   },
+  { brand: 'Noritz', modelPrefix: 'NRC66',   description: 'NRC66 Condensing Tankless NG',      tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 132000, firstHourRating: 396, expectedLifeYears: 20, baseMsrp: 750,  laborHours: 5   },
+  // EZ Series
+  { brand: 'Noritz', modelPrefix: 'EZ111',   description: 'EZ111 Condensing Tankless NG',      tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199900, firstHourRating: 666, expectedLifeYears: 20, baseMsrp: 960,  laborHours: 5   },
+  { brand: 'Noritz', modelPrefix: 'EZ98',    description: 'EZ98 Condensing Tankless NG',       tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199900, firstHourRating: 588, expectedLifeYears: 20, baseMsrp: 900,  laborHours: 5   },
+  { brand: 'Noritz', modelPrefix: 'EZ75',    description: 'EZ75 Non-Condensing Tankless NG',  tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 150000, firstHourRating: 450, expectedLifeYears: 15, baseMsrp: 700,  laborHours: 4.5 },
+  // CB Combi Series
+  { brand: 'Noritz', modelPrefix: 'CB199',   description: 'CB199 Combi Condensing NG',         tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 540, expectedLifeYears: 20, baseMsrp: 1450, laborHours: 6   },
+
+  // ── Takagi ────────────────────────────────────────────────────────────────────
+  // T-H3 Series (condensing, popular residential)
+  { brand: 'Takagi', modelPrefix: 'TH3M',    description: 'T-H3M Indoor Condensing NG',        tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 180000, firstHourRating: 504, expectedLifeYears: 20, baseMsrp: 800,  laborHours: 5   },
+  { brand: 'Takagi', modelPrefix: 'TH3O',    description: 'T-H3 Outdoor Condensing NG',        tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 180000, firstHourRating: 504, expectedLifeYears: 20, baseMsrp: 750,  laborHours: 5   },
+  { brand: 'Takagi', modelPrefix: 'TH2',     description: 'T-H2 Condensing Tankless NG',       tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 600, expectedLifeYears: 20, baseMsrp: 860,  laborHours: 5   },
+  // TK Series (heavy-duty)
+  { brand: 'Takagi', modelPrefix: 'TK340',   description: 'TK-340X3 Commercial Tankless NG',   tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 340000, firstHourRating: 900, expectedLifeYears: 20, baseMsrp: 1650, laborHours: 6   },
+  { brand: 'Takagi', modelPrefix: 'TK199',   description: 'TK-199 Condensing Tankless NG',     tankGallons: null, fuelType: 'natural_gas', inputBtuOrWatts: 199000, firstHourRating: 600, expectedLifeYears: 20, baseMsrp: 860,  laborHours: 5   },
 ]
-// NOTE: State, Navien, Rinnai, Noritz, Bosch, GE, Kenmore return partial hits
-// (brand + manufacture date only). Add ModelSpec rows here to upgrade any brand.
+// NOTE: State, Bosch, GE, Kenmore return partial hits (brand + date only).
+// Navien, Rinnai, Noritz, Takagi now have full model data.
+// Add ModelSpec rows for any brand above to upgrade it from partial to full hit.
 
 // ─── Compute Job Cost ──────────────────────────────────────────────────────────
 // Call with a region key from REGION_PRICING, or pass a custom PricingConfig.
@@ -438,8 +506,9 @@ export function lookupBySerial(
 
   // modelHint is not always available from serial alone — caller should also pass model string
   // This function matches against serial prefix as fallback
+  const sClean = s.replace(/[^A-Z0-9]/g, '')
   const matched = candidates.find(m =>
-    s.startsWith(m.modelPrefix.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+    sClean.startsWith(m.modelPrefix.toUpperCase().replace(/[^A-Z0-9]/g, ''))
   ) ?? null
 
   const remainingLifeYears = matched
@@ -479,8 +548,10 @@ export function lookupByModel(
     .filter(spec => spec.brand === brandSpec.brand)
     .sort((a, b) => b.modelPrefix.length - a.modelPrefix.length)
 
+  // Strip non-alphanumeric from BOTH sides so dashes in OCR output (e.g. "NPE-240A2") still match
+  const mClean = m.replace(/[^A-Z0-9]/g, '')
   const matched = candidates.find(spec =>
-    m.startsWith(spec.modelPrefix.toUpperCase().replace(/[^A-Z0-9]/g, ''))
+    mClean.startsWith(spec.modelPrefix.toUpperCase().replace(/[^A-Z0-9]/g, ''))
   ) ?? null
 
   const now              = new Date().getFullYear()
