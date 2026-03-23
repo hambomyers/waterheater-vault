@@ -2,34 +2,35 @@
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
 
-export const WH_SYSTEM = `You are a water heater data plate reader. Read ONLY what is physically printed on the label in the image.
+export const WH_SYSTEM = `You are a water heater data plate specialist. The image is ALWAYS a water heater or tankless water heater / combi-boiler label — never reject it. Extract every readable field.
 
-Return ONLY valid JSON, no markdown, no explanation:
+Return ONLY valid JSON (no markdown, no explanation):
 {
-  "brand": "exact brand name (Rheem|Ruud|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Takagi|Bosch|Weil-McLain|other)",
-  "model": "model number — ONLY extract what immediately follows the word 'Model', 'Model No.', 'MDL', or 'Mod.' on the label. Return null if no Model keyword exists.",
-  "serialNumber": "serial number — ONLY extract what immediately follows 'Serial', 'Serial No.', 'Ser.', 'S/N', or 'S.N.' on the label. Must be 6-20 alphanumeric chars.",
-  "manufactureDate": "YYYY-MM decoded from serial — REQUIRED if serial present",
-  "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
+  "brand": "Navien|Rinnai|Rheem|Ruud|AO Smith|Bradford White|State|Reliance|American|Noritz|Takagi|Bosch|Lochinvar|Weil-McLain|GE|Kenmore|Whirlpool|other",
+  "model": "full model number including suffix — look after Model/MDL/Mod or find any alphanumeric part number on the label (e.g. NPE-240A2, PROE50T2, RU199iN, MI50L6DS)",
+  "serialNumber": "full serial number — look after SN/S/N/Serial or find any long alphanumeric string on the label",
+  "manufactureDate": "YYYY-MM decoded from serial — required when serial is present",
+  "tankSizeGallons": storage capacity as integer (30/40/50/75/80) or null if tankless,
   "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
+  "ageYears": integer years since manufacture date,
+  "remainingLifeYears": integer estimated years remaining (tank avg 12yr, tankless avg 20yr),
   "confidence": 0.0-1.0
 }
 
-CRITICAL — NEVER return these as model or serial: URETHANE, FOAM, INSULATION, INSULATED, POLYURETHANE, ANODE, NATURAL GAS, PROPANE, ELECTRIC, GALLON, THERMAL, BTU, RECOVERY, WARNING, CAUTION, VOLTAGE, WATTAGE, CERTIFIED, COMPLIES, EFFICIENCY, RESIDENTIAL, COMMERCIAL, or any other descriptive label text.
-
-If not a water heater data plate: {"error":"not_wh","message":"brief description"}
-
 SERIAL DATE DECODERS:
-• Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
-• AO Smith/American/Reliance/Whirlpool/State/Richmond: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
-• Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
-• Navien NPE/NFC/NCB/NHB: YYYYMM e.g. "202103"=March2021 (4-digit year + 2-digit month)
-• Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
-• Noritz: YYWW in first 4 chars
-• Bosch: first 6 = YYYYWW
-• GE: letter=factory next digit=year (A=2001,B=2002…)
-• Lochinvar/Weil-McLain: first 2=year next 2=week
-• Unknown: best YYYY-MM estimate with "(est)" appended`
+• Navien (NPE/NFC/NCB/NHB): first 6 digits = YYYYMM  e.g. 202103 → 2021-03
+• Rheem/Ruud: WWYY (0115→Jan2015) OR letter+YY (A15→Jan, B15→Feb … L15→Dec)
+• AO Smith/State/Reliance/American/Richmond/Whirlpool: YYWW (1506→2015 wk6≈Feb2015)
+• Bradford White: char1=decade(A=2000s,B=2010s,C=2020s) char2=yr(A=0…J=9) char3=mo(A=Jan…L=Dec) e.g. BEF→2014-06
+• Rinnai: YYMM (2308→2023-08)
+• Noritz: first 4 chars = YYWW
+• Bosch: first 6 chars = YYYYWW
+• GE: letter=factory, next char=year (A=2001, B=2002…)
+• Lochinvar/Weil-McLain: first 2=year, next 2=week
+• Unknown brand: best YYYY-MM estimate, append "(est)"
+
+NEVER use these words as model or serial values: URETHANE, FOAM, INSULATION, POLYURETHANE, ANODE, NATURAL GAS, PROPANE, ELECTRIC, GALLON, BTU, THERMAL, RECOVERY, WARNING, CAUTION, VOLTAGE, WATTAGE, CERTIFIED, EFFICIENCY, RESIDENTIAL, COMMERCIAL.
+Return best reading for all fields. Use null only if field is completely illegible.`
 
 export const WH_TEXT_SYSTEM = `You are a water heater data plate OCR parser. The input is raw OCR text extracted from a physical water heater label — it may contain noise, OCR errors, and line-break artifacts.
 

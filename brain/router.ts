@@ -68,19 +68,21 @@ class BrainRouter {
   }
 
   /**
-   * Full processing: Grok Vision always (when online).
-   * Vision sees the actual image — handles partial/garbled labels correctly.
+   * Full processing: Grok Vision always (when online) — no OCR on cloud path.
    * Offline falls back to on-device Tesseract.
    */
   async processImage(
     imageData: Blob,
     options?: { useCloud?: boolean; onDevicePreview?: OnDevicePreview }
   ): Promise<ProcessingResult> {
-    const preview = options?.onDevicePreview
-    const [imageBase64, ocrResult] = await Promise.all([
-      this.blobToDataUrl(imageData),
-      preview?.rawText
-        ? Promise.resolve({
+    const isOnline = typeof navigator !== 'undefined' && navigator.onLine
+
+    // Offline: use preview OCR data or run Tesseract
+    if (!isOnline || options?.useCloud === false) {
+      const imageBase64 = await this.blobToDataUrl(imageData)
+      const preview = options?.onDevicePreview
+      const ocrResult: OnDeviceExtractionResult = preview?.rawText
+        ? {
             product: preview.extractedData.product || 'Water Heater',
             brand: preview.extractedData.brand || 'Unknown',
             model: preview.extractedData.model || 'Unknown',
@@ -93,29 +95,23 @@ class BrainRouter {
             serialCandidate: preview.serialCandidate,
             detectedBrand: preview.detectedBrand ?? '',
             categoryHint: preview.categoryHint,
-          } as OnDeviceExtractionResult)
-        : extractOnDevice(imageData),
-    ])
-
-    const isOnline = typeof navigator !== 'undefined' && navigator.onLine
-
-    if (!isOnline || options?.useCloud === false) {
+          } as OnDeviceExtractionResult
+        : await extractOnDevice(imageData)
       return this.onDeviceResult(ocrResult, imageBase64)
     }
 
-    // Always Grok Vision — sees the real image, not garbled OCR text
-    try {
-      const result: GrokScanResult = await extractFromImage(imageData)
-      return {
-        extractedData: result.extractedData,
-        valuation: { ...result.valuation, lastUpdated: new Date().toISOString() },
-        docs: result.docs,
-        processingMethod: 'grok-vision',
-        confidence: result.valuation.confidence,
-        imageBase64,
-      }
-    } catch (err) {
-      return this.onDeviceResult(ocrResult, imageBase64)
+    // Online: Grok Vision + base64 encode fire in parallel — no OCR
+    const [imageBase64, result] = await Promise.all([
+      this.blobToDataUrl(imageData),
+      extractFromImage(imageData),
+    ])
+    return {
+      extractedData: result.extractedData,
+      valuation: { ...result.valuation, lastUpdated: new Date().toISOString() },
+      docs: result.docs,
+      processingMethod: 'grok-vision',
+      confidence: result.valuation.confidence,
+      imageBase64,
     }
   }
 

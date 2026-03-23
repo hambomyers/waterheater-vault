@@ -2,16 +2,15 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { brainRouter, OnDevicePreview } from '../../brain/router'
+import { brainRouter } from '../../brain/router'
 
 /**
- * Scan flow phases (single-shot, auto-proceed):
+ * Scan flow phases:
  *   idle       → Snap button shown
  *   camera-1   → Live viewfinder, capture button
- *   scanning-1 → Tesseract OCR running
- *   processing → Cloud processing, auto-redirects to /results
+ *   processing → Grok Vision running, auto-redirects to /results
  */
-type Phase = 'idle' | 'camera-1' | 'scanning-1' | 'processing'
+type Phase = 'idle' | 'camera-1' | 'processing'
 
 function friendlyError(msg: string): string {
   if (msg.includes('401') || msg.toLowerCase().includes('api key'))
@@ -28,7 +27,6 @@ function friendlyError(msg: string): string {
 export default function ScanPage() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [shotUrl, setShotUrl] = useState<string | null>(null)
-  const [onDevicePreview, setOnDevicePreview] = useState<OnDevicePreview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
   const [isDragging, setIsDragging] = useState(false)
@@ -159,28 +157,18 @@ export default function ScanPage() {
     if (file) handleFileSelect(file)
   }, [])
 
-  // ── Scan: OCR → cloud → redirect (single shot, fully automatic) ─────────────
+  // ── Scan: Grok Vision fires immediately on capture, auto-redirects ──────────
 
   const runScan = async (blob: Blob) => {
-    setPhase('scanning-1')
+    setPhase('processing')
     setError(null)
     try {
-      const preview = await brainRouter.extractOnDevicePreview(blob)
-      setOnDevicePreview(preview)
-      setPhase('processing')
-      const result = await brainRouter.processImage(blob, { useCloud: isOnline, onDevicePreview: preview })
+      const result = await brainRouter.processImage(blob, { useCloud: isOnline })
       sessionStorage.setItem('scan-result', JSON.stringify(result))
       window.location.href = '/results'
     } catch (err) {
-      // Cloud failed — fall back to on-device result
-      try {
-        const fallback = await brainRouter.processImage(blob, { useCloud: false, onDevicePreview: onDevicePreview ?? undefined })
-        sessionStorage.setItem('scan-result', JSON.stringify(fallback))
-        window.location.href = '/results'
-      } catch {
-        setError(err instanceof Error ? friendlyError(err.message) : 'Processing failed.')
-        setPhase('idle')
-      }
+      setError(err instanceof Error ? friendlyError(err.message) : 'Processing failed. Check connection and try again.')
+      setPhase('idle')
     }
   }
 
@@ -188,7 +176,6 @@ export default function ScanPage() {
     stopCamera()
     setPhase('idle')
     setShotUrl(null)
-    setOnDevicePreview(null)
     setError(null)
     shotBlobRef.current = null
   }
@@ -286,8 +273,8 @@ export default function ScanPage() {
             </div>
           )}
 
-          {/* SCANNING / PROCESSING — same thumbnail + spinner */}
-          {(phase === 'scanning-1' || phase === 'processing') && (
+          {/* PROCESSING */}
+          {phase === 'processing' && (
             <div className="text-center space-y-6 w-full max-w-xs">
               {shotUrl && (
                 <div className="w-48 h-48 rounded-2xl overflow-hidden mx-auto">
@@ -302,7 +289,7 @@ export default function ScanPage() {
                   />
                 </div>
                 <p className="animate-pulse text-white text-opacity-50 text-sm font-light">
-                  {phase === 'scanning-1' ? 'Reading label…' : 'Analysing…'}
+                  Analysing…
                 </p>
               </div>
             </div>
@@ -345,7 +332,7 @@ export default function ScanPage() {
             )}
 
             {/* Drop zone */}
-            {(phase === 'idle' || phase === 'scanning-1') && (
+            {phase === 'idle' && (
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -355,18 +342,11 @@ export default function ScanPage() {
                   isDragging ? 'border-blue-accent bg-blue-accent bg-opacity-5' : 'border-white border-opacity-20 bg-white bg-opacity-[0.02] hover:border-opacity-40'
                 }`}
               >
-                {phase === 'scanning-1' ? (
-                  <div className="text-center animate-pulse">
-                    <div className="text-4xl mb-3">🔍</div>
-                    <div className="text-white text-opacity-60 font-light">Reading label…</div>
-                  </div>
-                ) : (
-                  <div className="text-center">
+                <div className="text-center">
                     <div className="text-5xl mb-4">{isDragging ? '📥' : '📄'}</div>
                     <div className="text-white text-lg font-light mb-2">{isDragging ? 'Drop here' : 'Drop the data plate photo'}</div>
                     <div className="text-white text-opacity-40 text-sm">or click to browse</div>
                   </div>
-                )}
               </div>
             )}
 

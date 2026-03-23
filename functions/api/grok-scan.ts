@@ -51,7 +51,7 @@ async function callGrok(
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot2Base64}`, detail: 'high' } },
       ]
     : [
-        { type: 'text', text: 'Analyze this water heater image. Extract all data from the data plate label — serial number, model, brand, manufacture date, warranty, tank size.' },
+        { type: 'text', text: 'This is a water heater or tankless water heater / combi-boiler data plate label. Extract every readable field: brand, model number, serial number, manufacture date, tank size or tankless indicator, fuel type.' },
         { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${shot1Base64}`, detail: 'high' } },
       ]
 
