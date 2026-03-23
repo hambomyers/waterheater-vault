@@ -5,21 +5,13 @@ import Link from 'next/link'
 import { brainRouter, OnDevicePreview } from '../../brain/router'
 
 /**
- * Scan flow phases:
- *   idle        → Open Camera button shown
- *   camera-1    → Live viewfinder, floating Capture button
- *   scanning-1  → Tesseract OCR + optional Grok identify running on Shot 1
- *   guide       → Category identified — "Looks like a laptop, snap the bottom sticker"
- *   camera-2    → Live viewfinder for targeted close-up shot
- *   processing  → Both shots sent to Grok — animated progress bar shown
+ * Scan flow phases (single-shot, auto-proceed):
+ *   idle       → Snap button shown
+ *   camera-1   → Live viewfinder, capture button
+ *   scanning-1 → Tesseract OCR running
+ *   processing → Cloud processing, auto-redirects to /results
  */
-type Phase =
-  | 'idle'
-  | 'camera-1'
-  | 'scanning-1'
-  | 'guide'
-  | 'camera-2'
-  | 'processing'
+type Phase = 'idle' | 'camera-1' | 'scanning-1' | 'processing'
 
 function friendlyError(msg: string): string {
   if (msg.includes('401') || msg.toLowerCase().includes('api key'))
@@ -35,7 +27,7 @@ function friendlyError(msg: string): string {
 
 export default function ScanPage() {
   const [phase, setPhase] = useState<Phase>('idle')
-  const [shot1Url, setShot1Url] = useState<string | null>(null)
+  const [shotUrl, setShotUrl] = useState<string | null>(null)
   const [onDevicePreview, setOnDevicePreview] = useState<OnDevicePreview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
@@ -45,16 +37,9 @@ export default function ScanPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const galleryInputRef = useRef<HTMLInputElement>(null)
-  const shot1BlobRef = useRef<Blob | null>(null)
-  const shot2BlobRef = useRef<Blob | null>(null)
-  const filePickerShotRef = useRef<1 | 2>(1)
-  const grokResultRef = useRef<Promise<any> | null>(null)
-  // Track phase + active shot in refs so orientation listener can read them
+  const shotBlobRef = useRef<Blob | null>(null)
   const phaseRef = useRef<Phase>('idle')
-  const activeShotRef = useRef<1 | 2>(1)
 
-  // Keep phaseRef in sync so the orientation listener can read it
   useEffect(() => { phaseRef.current = phase }, [phase])
 
   useEffect(() => {
@@ -64,34 +49,24 @@ export default function ScanPage() {
     window.addEventListener('online', up)
     window.addEventListener('offline', dn)
 
-    // When the phone rotates while the camera is open, restart the stream
-    // instead of losing it — keeps the scan flow uninterrupted
     const handleOrientationChange = () => {
-      const p = phaseRef.current
-      if (p === 'camera-1' || p === 'camera-2') {
-        const shot = activeShotRef.current
-        // Small delay to let the screen finish rotating before restarting
-        setTimeout(() => {
-          if (streamRef.current) {
-            streamRef.current.getTracks().forEach((t) => t.stop())
-            streamRef.current = null
-          }
-          navigator.mediaDevices
-            .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
-            .then((stream) => {
-              streamRef.current = stream
-              if (videoRef.current) videoRef.current.srcObject = stream
-            })
-            .catch(() => {
-              // Camera failed to restart after rotation — let user retry
-            })
-        }, 350)
-      }
+      if (phaseRef.current !== 'camera-1') return
+      setTimeout(() => {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((t) => t.stop())
+          streamRef.current = null
+        }
+        navigator.mediaDevices
+          .getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } })
+          .then((stream) => {
+            streamRef.current = stream
+            if (videoRef.current) videoRef.current.srcObject = stream
+          })
+          .catch(() => {})
+      }, 350)
     }
-
     window.addEventListener('orientationchange', handleOrientationChange)
     screen.orientation?.addEventListener('change', handleOrientationChange)
-
     return () => {
       window.removeEventListener('online', up)
       window.removeEventListener('offline', dn)
@@ -110,25 +85,23 @@ export default function ScanPage() {
     }
   }
 
-  const openCamera = async (forShot: 1 | 2) => {
+  const openCamera = async () => {
     setError(null)
-    activeShotRef.current = forShot
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
       })
       streamRef.current = stream
-      setPhase(forShot === 1 ? 'camera-1' : 'camera-2')
+      setPhase('camera-1')
       setTimeout(() => {
         if (videoRef.current) videoRef.current.srcObject = stream
       }, 50)
     } catch {
-      filePickerShotRef.current = forShot
       fileInputRef.current?.click()
     }
   }
 
-  const captureFromCamera = (forShot: 1 | 2) => {
+  const captureFromCamera = () => {
     if (!videoRef.current || !canvasRef.current) return
     const video = videoRef.current
     const canvas = canvasRef.current
@@ -139,27 +112,18 @@ export default function ScanPage() {
     canvas.width = Math.round(video.videoWidth * scale)
     canvas.height = Math.round(video.videoHeight * scale)
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return
-        stopCamera()
-        if (forShot === 1) {
-          shot1BlobRef.current = blob
-          setShot1Url(URL.createObjectURL(blob))
-          runOnDeviceExtraction(blob)
-        } else {
-          shot2BlobRef.current = blob
-          processTwoShots()
-        }
-      },
-      'image/jpeg',
-      0.72
-    )
+    canvas.toBlob((blob) => {
+      if (!blob) return
+      stopCamera()
+      shotBlobRef.current = blob
+      setShotUrl(URL.createObjectURL(blob))
+      runScan(blob)
+    }, 'image/jpeg', 0.72)
   }
 
-  // ── File import (desktop) ───────────────────────────────────────────────────
+  // ── File import ─────────────────────────────────────────────────────────────
 
-  const handleFileSelect = (file: File, forShot: 1 | 2) => {
+  const handleFileSelect = (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file (JPEG, PNG, WebP)')
       return
@@ -178,14 +142,9 @@ export default function ScanPage() {
       ctx.drawImage(img, 0, 0, cv.width, cv.height)
       cv.toBlob((blob) => {
         if (!blob) return
-        if (forShot === 1) {
-          shot1BlobRef.current = blob
-          setShot1Url(URL.createObjectURL(blob))
-          runOnDeviceExtraction(blob)
-        } else {
-          shot2BlobRef.current = blob
-          processTwoShots()
-        }
+        shotBlobRef.current = blob
+        setShotUrl(URL.createObjectURL(blob))
+        runScan(blob)
       }, 'image/jpeg', 0.72)
     }
     img.src = objectUrl
@@ -197,70 +156,30 @@ export default function ScanPage() {
     e.preventDefault()
     setIsDragging(false)
     const file = e.dataTransfer.files[0]
-    if (file) handleFileSelect(file, filePickerShotRef.current)
+    if (file) handleFileSelect(file)
   }, [])
 
-  // ── Processing ──────────────────────────────────────────────────────────────
+  // ── Scan: OCR → cloud → redirect (single shot, fully automatic) ─────────────
 
-  const runOnDeviceExtraction = async (blob: Blob) => {
+  const runScan = async (blob: Blob) => {
     setPhase('scanning-1')
     setError(null)
     try {
-      // Run OCR once, then pass result to processImage so Tesseract isn't re-run
       const preview = await brainRouter.extractOnDevicePreview(blob)
       setOnDevicePreview(preview)
-      setPhase('guide')
-      // Fire cloud processing with the preview — OCR is reused, not repeated
-      grokResultRef.current = brainRouter.processImage(blob, { useCloud: true, onDevicePreview: preview })
-    } catch {
-      setPhase('guide')
-      // Preview failed — fire processImage without it (will run its own OCR)
-      grokResultRef.current = brainRouter.processImage(blob, { useCloud: true })
-    }
-  }
-
-  const processTwoShots = async () => {
-    const s1 = shot1BlobRef.current
-    const s2 = shot2BlobRef.current
-    if (!s1 || !s2) return
-
-    stopCamera()
-    setPhase('processing')
-    setError(null)
-
-    if (!isOnline) {
-      try {
-        const result = await brainRouter.processImage(s1, {
-          useCloud: false,
-          onDevicePreview: onDevicePreview ?? undefined,
-        })
-        sessionStorage.setItem('scan-result', JSON.stringify(result))
-        window.location.href = '/results'
-      } catch (err) {
-        setError(err instanceof Error ? friendlyError(err.message) : 'Processing failed.')
-        setPhase('guide')
-      }
-      return
-    }
-
-    try {
-      // Label (Shot 1) is authoritative — use already-in-flight Grok result if available
-      const result = await (grokResultRef.current ?? brainRouter.processImage(s1, { useCloud: true }))
+      setPhase('processing')
+      const result = await brainRouter.processImage(blob, { useCloud: isOnline, onDevicePreview: preview })
       sessionStorage.setItem('scan-result', JSON.stringify(result))
       window.location.href = '/results'
     } catch (err) {
-      const msg = err instanceof Error ? friendlyError(err.message) : 'Processing failed.'
-      setError(msg)
-      if (onDevicePreview) {
-        try {
-          const fallback = await brainRouter.processImage(s1, { useCloud: false, onDevicePreview })
-          sessionStorage.setItem('scan-result', JSON.stringify(fallback))
-          window.location.href = '/results'
-        } catch {
-          setPhase('guide')
-        }
-      } else {
-        setPhase('guide')
+      // Cloud failed — fall back to on-device result
+      try {
+        const fallback = await brainRouter.processImage(blob, { useCloud: false, onDevicePreview: onDevicePreview ?? undefined })
+        sessionStorage.setItem('scan-result', JSON.stringify(fallback))
+        window.location.href = '/results'
+      } catch {
+        setError(err instanceof Error ? friendlyError(err.message) : 'Processing failed.')
+        setPhase('idle')
       }
     }
   }
@@ -268,14 +187,13 @@ export default function ScanPage() {
   const handleReset = () => {
     stopCamera()
     setPhase('idle')
-    setShot1Url(null)
+    setShotUrl(null)
     setOnDevicePreview(null)
     setError(null)
-    shot1BlobRef.current = null
-    shot2BlobRef.current = null
+    shotBlobRef.current = null
   }
 
-  const cameraActive = phase === 'camera-1' || phase === 'camera-2'
+  const cameraActive = phase === 'camera-1'
 
   // ── UI ──────────────────────────────────────────────────────────────────────
   return (
@@ -288,46 +206,26 @@ export default function ScanPage() {
         </div>
       )}
 
-      {/* CAMERA — outside layout split so it stays visible in landscape (md:hidden would hide it) */}
+      {/* CAMERA */}
       {cameraActive && (
         <div className="fixed inset-0 z-[60] bg-black">
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full object-cover"
-          />
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
           <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 pt-[max(1.5rem,env(safe-area-inset-top))]">
-            <button
-              onClick={handleReset}
-              className="text-white text-opacity-70 font-light text-sm bg-black bg-opacity-40 px-4 py-2 rounded-full touch-manipulation"
-            >
+            <button onClick={handleReset} className="text-white text-opacity-70 font-light text-sm bg-black bg-opacity-40 px-4 py-2 rounded-full touch-manipulation">
               Cancel
             </button>
             <span className="text-white text-opacity-60 text-xs font-light bg-black bg-opacity-40 px-3 py-1 rounded-full">
-              {phase === 'camera-1' ? 'Shot 1 — Overview' : 'Shot 2 — Label Close-up'}
+              Snap the data plate label
             </span>
           </div>
           <p className="absolute left-6 right-6 top-[max(4rem,calc(env(safe-area-inset-top)+3rem))] text-center text-white text-opacity-40 text-xs font-light">
-            Any angle, upside down — just clear 🙂
+            Any angle — just keep it in frame 🙂
           </p>
-          {phase === 'camera-2' && (
-            <div className="absolute left-4 right-4 bottom-36 bg-black bg-opacity-75 rounded-2xl p-4 text-center">
-              <p className="text-white text-sm font-light">
-                📍 <span className="font-medium">Find the silver data plate on the side or front of the tank.</span>
-              </p>
-            </div>
-          )}
-          <div
-            className="absolute left-0 right-0 flex justify-center"
-            style={{ bottom: 'max(2rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}
-          >
+          <div className="absolute left-0 right-0 flex justify-center" style={{ bottom: 'max(2rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}>
             <button
-              onClick={() => captureFromCamera(phase === 'camera-1' ? 1 : 2)}
+              onClick={captureFromCamera}
               className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-2xl active:scale-95 focus:outline-none touch-manipulation"
               aria-label="Capture photo"
-              style={{ zIndex: 30 }}
             >
               <div className="w-16 h-16 rounded-full bg-white border-4 border-gray-300" />
             </button>
@@ -365,22 +263,22 @@ export default function ScanPage() {
           {phase === 'idle' && (
             <div className="w-full max-w-sm space-y-8 text-center">
               <div>
-                <p className="text-white text-opacity-60 font-light text-sm mb-1">Step 1 — data plate</p>
-                <p className="text-white text-lg font-light">Snap the data plate label</p>
+                <p className="text-white text-opacity-60 font-light text-sm mb-1">Point at the data plate</p>
+                <p className="text-white text-lg font-light">The silver sticker on the side of your tank</p>
                 <p className="text-white text-opacity-40 text-sm mt-2 font-light">
-                  The silver sticker on the side of your tank — has brand, serial, and date.
+                  Has brand, model, serial, and date — one shot, instant results.
                 </p>
               </div>
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center gap-4">
                 <button
-                  onClick={() => openCamera(1)}
+                  onClick={openCamera}
                   className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Snap the data plate →
                 </button>
                 <button
-                  onClick={() => { filePickerShotRef.current = 1; galleryInputRef.current?.click() }}
-                  className="mt-14 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-70 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-70 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
                 >
                   Photo Gallery
                 </button>
@@ -388,125 +286,14 @@ export default function ScanPage() {
             </div>
           )}
 
-          {/* SCANNING SHOT 1 */}
-          {phase === 'scanning-1' && (
-            <div className="text-center space-y-4">
-              {shot1Url && (
+          {/* SCANNING / PROCESSING — same thumbnail + spinner */}
+          {(phase === 'scanning-1' || phase === 'processing') && (
+            <div className="text-center space-y-6 w-full max-w-xs">
+              {shotUrl && (
                 <div className="w-48 h-48 rounded-2xl overflow-hidden mx-auto">
-                  <img src={shot1Url} alt="Shot 1" className="w-full h-full object-cover" />
+                  <img src={shotUrl} alt="Label" className="w-full h-full object-cover" />
                 </div>
               )}
-              <div className="animate-pulse text-white text-opacity-60 font-light">
-                Reading label…
-              </div>
-            </div>
-          )}
-
-          {/* GUIDE — between Shot 1 and Shot 2 */}
-          {phase === 'guide' && (
-            <div className="w-full max-w-sm space-y-6">
-              {/* Shot 1 thumbnail */}
-              {shot1Url && (
-                <div className="w-full aspect-video rounded-2xl overflow-hidden border border-white border-opacity-10">
-                  <img src={shot1Url} alt="Overview" className="w-full h-full object-cover" />
-                </div>
-              )}
-
-              {/* Guided instruction card */}
-              <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5 space-y-3">
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">✅</span>
-                  <div>
-                    <p className="text-white font-medium text-base">Label captured!</p>
-                    <p className="text-white text-opacity-60 font-light text-sm mt-1 leading-relaxed">
-                      Optional: snap the full unit for a visual condition check — or skip straight to your results.
-                    </p>
-                  </div>
-                </div>
-                {onDevicePreview?.extractedData.brand &&
-                  onDevicePreview.extractedData.brand !== 'Unknown' && (
-                    <div className="flex gap-2 pt-1">
-                      <span className="text-xs px-2 py-1 rounded-full bg-blue-accent bg-opacity-20 text-blue-accent">
-                        {onDevicePreview.extractedData.brand}
-                      </span>
-                    </div>
-                  )}
-              </div>
-
-              <div className="flex flex-col items-center">
-                <button
-                  onClick={() => openCamera(2)}
-                  className="w-full min-h-[56px] py-5 px-10 bg-blue-accent text-white rounded-full font-medium text-lg active:scale-[0.97] focus:outline-none touch-manipulation"
-                >
-                  Add overview photo →
-                </button>
-                <button
-                  onClick={() => { filePickerShotRef.current = 2; galleryInputRef.current?.click() }}
-                  className="mt-4 w-1/2 py-2.5 px-6 bg-blue-accent bg-opacity-70 text-white rounded-full font-light text-sm active:scale-[0.97] focus:outline-none touch-manipulation"
-                >
-                  Photo Gallery
-                </button>
-                <button
-                  onClick={async () => {
-                    if (!shot1BlobRef.current) return
-                    setPhase('processing')
-                    try {
-                      // Await already-in-flight Grok call started on Shot 1
-                      const result = await (grokResultRef.current ?? brainRouter.processImage(shot1BlobRef.current, { useCloud: true }))
-                      sessionStorage.setItem('scan-result', JSON.stringify(result))
-                      window.location.href = '/results'
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : 'Failed')
-                      setPhase('guide')
-                    }
-                  }}
-                  className="mt-10 w-full py-3 text-white text-opacity-35 font-light text-sm touch-manipulation"
-                >
-                  Skip — show my results now
-                </button>
-              </div>
-
-              {!isOnline && (
-                <button
-                  onClick={async () => {
-                    if (!shot1BlobRef.current) return
-                    setPhase('processing')
-                    try {
-                      const result = await brainRouter.processImage(shot1BlobRef.current, {
-                        useCloud: false,
-                        onDevicePreview: onDevicePreview ?? undefined,
-                      })
-                      sessionStorage.setItem('scan-result', JSON.stringify(result))
-                      window.location.href = '/results'
-                    } catch (err) {
-                      setError(err instanceof Error ? err.message : 'Failed')
-                      setPhase('guide')
-                    }
-                  }}
-                  className="w-full min-h-[48px] py-4 border border-white border-opacity-20 text-white text-opacity-60 rounded-full font-light text-sm touch-manipulation"
-                >
-                  Save On-Device Data Only
-                </button>
-              )}
-
-              <button
-                onClick={handleReset}
-                className="w-full min-h-[44px] py-3 text-white text-opacity-40 font-light text-sm touch-manipulation"
-              >
-                Start Over
-              </button>
-            </div>
-          )}
-
-          {/* PROCESSING */}
-          {phase === 'processing' && (
-            <div className="text-center space-y-8 w-full max-w-xs">
-              {shot1Url && (
-                <div className="w-24 h-24 rounded-xl overflow-hidden mx-auto opacity-50">
-                  <img src={shot1Url} alt="Shot 1" className="w-full h-full object-cover" />
-                </div>
-              )}
-              {/* Animated progress bar — fills in ~5s, then pulses */}
               <div className="space-y-3">
                 <div className="relative w-full h-px bg-white bg-opacity-10 rounded-full overflow-hidden">
                   <div
@@ -514,8 +301,8 @@ export default function ScanPage() {
                     style={{ animation: 'scanProgress 5s cubic-bezier(0.4,0,0.6,1) forwards' }}
                   />
                 </div>
-                <p className="text-white text-opacity-35 text-xs font-light tracking-wide">
-                  Analysing…
+                <p className="animate-pulse text-white text-opacity-50 text-sm font-light">
+                  {phase === 'scanning-1' ? 'Reading label…' : 'Analysing…'}
                 </p>
               </div>
             </div>
@@ -524,12 +311,12 @@ export default function ScanPage() {
 
         <canvas ref={canvasRef} className="hidden" />
         <input
-          ref={galleryInputRef}
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           onChange={(e) => {
             const f = e.target.files?.[0]
-            if (f) handleFileSelect(f, filePickerShotRef.current)
+            if (f) handleFileSelect(f)
             e.target.value = ''
           }}
           className="hidden"
@@ -546,12 +333,8 @@ export default function ScanPage() {
                 <span className="font-light text-lg">Back</span>
               </Link>
               <div className="flex items-center gap-4">
-                <Link href="/vault" className="text-white text-opacity-40 hover:text-opacity-70 font-light text-sm transition-all">
-                  Vault
-                </Link>
-                <Link href="/debug" className="text-white text-opacity-30 hover:text-opacity-60 font-light text-xs transition-all">
-                  Debug
-                </Link>
+                <Link href="/vault" className="text-white text-opacity-40 hover:text-opacity-70 font-light text-sm transition-all">Vault</Link>
+                <Link href="/debug" className="text-white text-opacity-30 hover:text-opacity-60 font-light text-xs transition-all">Debug</Link>
               </div>
             </div>
 
@@ -561,107 +344,46 @@ export default function ScanPage() {
               </div>
             )}
 
-            {/* Step indicator */}
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 text-sm font-medium ${phase === 'idle' || phase === 'camera-1' || phase === 'scanning-1' ? 'text-blue-accent' : 'text-white text-opacity-40'}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${phase === 'idle' || phase === 'camera-1' || phase === 'scanning-1' ? 'border-blue-accent bg-blue-accent bg-opacity-20' : 'border-white border-opacity-20'}`}>1</span>
-                Overview photo
-              </div>
-              <div className="flex-1 h-px bg-white bg-opacity-10" />
-              <div className={`flex items-center gap-2 text-sm font-medium ${phase === 'guide' || phase === 'camera-2' || phase === 'processing' ? 'text-blue-accent' : 'text-white text-opacity-40'}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${phase === 'guide' || phase === 'camera-2' || phase === 'processing' ? 'border-blue-accent bg-blue-accent bg-opacity-20' : 'border-white border-opacity-20'}`}>2</span>
-                Serial / label
-              </div>
-            </div>
-
-            {/* Drop zone — adapts to phase */}
-            {(phase === 'idle' || phase === 'guide' || phase === 'scanning-1') && (
+            {/* Drop zone */}
+            {(phase === 'idle' || phase === 'scanning-1') && (
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                onClick={() => {
-                  filePickerShotRef.current = phase === 'guide' ? 2 : 1
-                  fileInputRef.current?.click()
-                }}
+                onClick={() => fileInputRef.current?.click()}
                 className={`aspect-video rounded-3xl border-2 border-dashed transition-all flex items-center justify-center cursor-pointer ${
-                  isDragging
-                    ? 'border-blue-accent bg-blue-accent bg-opacity-5'
-                    : 'border-white border-opacity-20 bg-white bg-opacity-[0.02] hover:border-opacity-40'
+                  isDragging ? 'border-blue-accent bg-blue-accent bg-opacity-5' : 'border-white border-opacity-20 bg-white bg-opacity-[0.02] hover:border-opacity-40'
                 }`}
               >
                 {phase === 'scanning-1' ? (
                   <div className="text-center animate-pulse">
                     <div className="text-4xl mb-3">🔍</div>
-                    <div className="text-white text-opacity-60 font-light">Identifying product…</div>
-                  </div>
-                ) : phase === 'guide' ? (
-                  <div className="text-center p-8">
-                    <div className="text-4xl mb-4">📍</div>
-                    <div className="text-white text-lg font-light mb-2">Now drop the data plate photo (Shot 2)</div>
-                    <div className="text-white text-opacity-40 text-sm">Drop Shot 2 here or click to browse</div>
+                    <div className="text-white text-opacity-60 font-light">Reading label…</div>
                   </div>
                 ) : (
                   <div className="text-center">
                     <div className="text-5xl mb-4">{isDragging ? '📥' : '📄'}</div>
-                    <div className="text-white text-lg font-light mb-2">
-                      {isDragging ? 'Drop here' : 'Drop overview photo here'}
-                    </div>
+                    <div className="text-white text-lg font-light mb-2">{isDragging ? 'Drop here' : 'Drop the data plate photo'}</div>
                     <div className="text-white text-opacity-40 text-sm">or click to browse</div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Guide card on desktop */}
-            {phase === 'guide' && shot1Url && (
-              <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-6 flex gap-5 items-start">
-                <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                  <img src={shot1Url} alt="Shot 1" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">
-                    ✅ Got overview. Now snap the <span className="text-blue-accent">data plate</span>
-                  </p>
-                  <p className="text-white text-opacity-60 text-sm font-light mt-1">Silver sticker on the side or front of the tank — brand, model, serial, manufacture date.</p>
-                </div>
-              </div>
-            )}
-
             {phase === 'processing' && (
-              <div className="aspect-video rounded-3xl border border-white border-opacity-10 flex items-center justify-center animate-pulse">
-                <div className="text-center">
+              <div className="aspect-video rounded-3xl border border-white border-opacity-10 flex items-center justify-center">
+                <div className="text-center animate-pulse">
                   <div className="text-4xl mb-4">🔍</div>
-                  <div className="text-white text-opacity-60 font-light">Analysing water heater data…</div>
-                  <div className="text-white text-opacity-30 text-sm mt-1">3–5 seconds</div>
+                  <div className="text-white text-opacity-60 font-light">Analysing…</div>
+                  <div className="text-white text-opacity-30 text-sm mt-1">~2–5 seconds</div>
                 </div>
               </div>
             )}
 
-            {(phase === 'guide' || phase === 'idle') && (
-              <div className="flex gap-3">
-                {phase === 'guide' && !isOnline && (
-                  <button
-                    onClick={async () => {
-                      if (!shot1BlobRef.current) return
-                      setPhase('processing')
-                      const result = await brainRouter.processImage(shot1BlobRef.current, {
-                        useCloud: false, onDevicePreview: onDevicePreview ?? undefined,
-                      })
-                      sessionStorage.setItem('scan-result', JSON.stringify(result))
-                      window.location.href = '/results'
-                    }}
-                    className="flex-1 min-h-[48px] py-3 border border-white border-opacity-20 text-white text-opacity-60 rounded-full font-light text-sm hover:border-opacity-40"
-                  >
-                    Save On-Device Only
-                  </button>
-                )}
-                {(phase === 'guide') && (
-                  <button onClick={handleReset} className="py-3 px-6 text-white text-opacity-40 font-light text-sm hover:text-opacity-70">
-                    Start Over
-                  </button>
-                )}
-              </div>
+            {phase === 'idle' && (
+              <button onClick={handleReset} className="py-3 px-6 text-white text-opacity-40 font-light text-sm hover:text-opacity-70">
+                Reset
+              </button>
             )}
 
             <input
@@ -670,7 +392,7 @@ export default function ScanPage() {
               accept="image/*"
               onChange={(e) => {
                 const f = e.target.files?.[0]
-                if (f) handleFileSelect(f, filePickerShotRef.current)
+                if (f) handleFileSelect(f)
                 e.target.value = ''
               }}
               className="hidden"
@@ -683,18 +405,16 @@ export default function ScanPage() {
           <div className="max-w-md space-y-6">
             <h2 className="text-white text-4xl font-light">
               Water heater<br />
-              <span className="text-blue-accent">precision scan</span>
+              <span className="text-blue-accent">instant scan</span>
             </h2>
             <p className="text-white text-opacity-40 font-light">
-              Shot 1 — overview of the unit. Shot 2 — the silver data plate with serial number. Grok sees both for maximum accuracy.
+              One photo of the data plate label — brand, model, serial, age, cost. Done.
             </p>
-            <div className="space-y-4">
-              <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5">
-                <h4 className="text-white font-medium mb-1 text-sm">Connection</h4>
-                <p className={`text-sm font-medium ${isOnline ? 'text-blue-accent' : 'text-yellow-400'}`}>
-                  {isOnline ? '● Online — full Grok accuracy' : '● Offline — on-device only'}
-                </p>
-              </div>
+            <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5">
+              <h4 className="text-white font-medium mb-1 text-sm">Connection</h4>
+              <p className={`text-sm font-medium ${isOnline ? 'text-blue-accent' : 'text-yellow-400'}`}>
+                {isOnline ? '● Online — full accuracy' : '● Offline — on-device only'}
+              </p>
             </div>
           </div>
         </div>
