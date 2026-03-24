@@ -40,7 +40,7 @@ async function callGrok(
   shot1Base64: string,
   shot2Base64: string | null,
   categoryHint: string | null,
-): Promise<Response> {
+): Promise<string> {
   const isTwoShot = Boolean(shot2Base64)
 
   const userContent: any[] = isTwoShot
@@ -62,21 +62,53 @@ async function callGrok(
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'grok-4.20-beta',
+        model: 'grok-2-vision-1212',
         messages: [
           { role: 'system', content: WH_SYSTEM },
           { role: 'user', content: userContent },
         ],
-        max_tokens: 500,
+        max_tokens: 300,
         temperature: 0.1,
+        stream: true,
       }),
       signal: controller.signal,
     })
+
+    if (!res.ok) {
+      clearTimeout(timeout)
+      const errStatus = res.status
+      throw Object.assign(new Error(userFriendlyError(errStatus)), { status: errStatus })
+    }
+
+    // Read SSE stream — bytes flow after ~4s, defeating the CF 30s wall-clock timeout
+    const reader = res.body!.getReader()
+    const decoder = new TextDecoder()
+    let content = ''
+    let buffer = ''
+
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const data = line.slice(6).trim()
+        if (data === '[DONE]') break
+        try {
+          const chunk = JSON.parse(data)
+          const delta = chunk.choices?.[0]?.delta?.content
+          if (delta) content += delta
+        } catch { /* partial SSE chunk — ignore */ }
+      }
+    }
+
     clearTimeout(timeout)
-    return res
+    return content
   } catch (err: any) {
     clearTimeout(timeout)
-    if (err.name === 'AbortError') throw new Error('Scan timed out — xAI API took too long. Please try again.')
+    if (err.name === 'AbortError') throw new Error('Scan timed out — please try again.')
     throw err
   }
 }
@@ -222,30 +254,19 @@ export const onRequest = async (context: any) => {
       )
     }
 
-    // ── Step 1: Call Grok (single attempt — fast fail) ──
-    let grokResponse: Response
-    let lastStatus = 0
+    // ── Step 1: Call Grok (streaming — bytes flow immediately, prevents CF 504) ──
+    let grokContent: string
     try {
-      grokResponse = await callGrok(grokKey, shot1, shot2, categoryHint)
-      lastStatus = grokResponse.status
+      grokContent = await callGrok(grokKey, shot1, shot2, categoryHint)
     } catch (err: any) {
+      const httpStatus = (err as any).status
       return new Response(
-        JSON.stringify({ error: 'timeout', message: err.message || 'Scan timed out. Please try again.' }),
-        { status: 504, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        JSON.stringify({ error: 'api_error', message: err.message || 'Scan timed out. Please try again.' }),
+        { status: httpStatus === 401 || httpStatus === 429 || httpStatus === 404 ? 502 : 504,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
 
-    if (!grokResponse || !grokResponse.ok) {
-      const errorBody = await grokResponse?.text().catch(() => '')
-      console.error(`Grok API error ${lastStatus}:`, errorBody)
-      return new Response(
-        JSON.stringify({ error: 'grok_api_error', status: lastStatus, message: userFriendlyError(lastStatus) }),
-        { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      )
-    }
-
-    const grokData = await grokResponse.json()
-    const grokContent = grokData.choices?.[0]?.message?.content
     if (!grokContent) {
       return new Response(
         JSON.stringify({ error: 'empty_response', message: 'Grok returned an empty response.' }),
