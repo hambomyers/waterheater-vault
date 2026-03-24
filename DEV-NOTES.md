@@ -1,7 +1,7 @@
-# WaterHeaterVault — Dev Notes
+# Water Heater Plan — Dev Notes
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*
-*Last updated: 2026-03-22 — Full session: label-first scan, TCPA consent, $49/mo, /pro/claim page, PriceBreakdownCard, auto-lead trigger, pro_claims migration, GROK-PROMPT.md + OnboardingPrompt deleted.*
+*Last updated: 2026-03-24 — COMPLETE OVERHAUL: Tesla-sleek minimalism, simple homeowner view, on-device vision first, $49/mo plumber geofenced zones.*
 
 ---
 
@@ -12,55 +12,67 @@
 
 ## What This Is
 
-**WaterHeaterVault** is a free AI scanner that tells homeowners the exact age, warranty status, replacement cost, recall status, and available utility rebates for their water heater — in 60 seconds, from a photo.
+**Water Heater Plan** is a Tesla-sleek, on-device AI scanner that creates a simple "Water Heater Profile" for homeowners — showing how much life is left and connecting them to screened local plumbers with one tap.
 
-**waterheaterplan.com** is the homeowner-first entry point. The free scanner IS the growth engine.
-**waterheaterplan.com/pro** is the SaaS platform that converts scanner traffic into paying pro customers — $49/mo for white-label branding, auto-leads, and a public directory listing.
+**waterheaterplan.com** — Free for homeowners, always. Simple, jargon-free interface. No shop talk on main screens.
+**waterheaterplan.com/pro** — $49/month for plumbers to access geofenced zones (max 3 screened plumbers per zone) and receive rich technical data.
 
-**Entity:** VaultPro LLC (new standalone LLC filed for legal/tax separation). Domains, product names, and branding are 100% unchanged.
+**Entity:** VaultPro LLC. Domains, product names, and branding unchanged.
 
-**Tagline:** *AI Water Heater Scanner for Homeowners & Pros*
+**Core Concept:** "Water Heater Profile" — a clean digital record for each unit. Simple card for homeowners, rich technical details for plumbers.
 
-**One-sentence pitch (consumer):** *"Point your phone at your water heater's data plate — we'll tell you how old it is, how much life it has left, what it'll cost to replace, and whether it's been recalled."*
+**Tagline:** *Your Water Heater's Digital Profile*
 
-**One-sentence pitch (pro):** *"For $49/mo your name and number appear on every water heater scan in your area — with auto-leads when the heater is in the danger zone."*
+**One-sentence pitch (homeowner):** *"Scan your water heater, see how much life it has left, and send the profile to a screened plumber with one tap."*
 
-**One-sentence pitch (investor):** *"The Carfax of water heaters — free to the homeowner, SaaS to the pro, data asset to the enterprise."*
+**One-sentence pitch (plumber):** *"$49/month gets you a geofenced zone with max 3 plumbers — you receive full technical profiles and job tickets from every homeowner scan in your area."*
+
+**One-sentence pitch (investor):** *"The seed of the Residential Mechanical Longevity OS — free consumer trust layer, SaaS plumber revenue, longitudinal data asset."*
 
 ---
 
 ## Business Model
 
-### Layer 1 — Consumer (Free, Always)
-Free scanner builds trust + organic traffic. No service delivery. No local ops.
+### Layer 1 — Homeowners (Free, Always)
+Completely free. Simple, jargon-free interface. No shop talk on main screens.
 
-| What | Value |
-|------|-------|
-| 60-second AI scan | Age, life, cost, recalls, rebates |
-| PDF Report Card | Branded with matched local pro |
-| Invite My Plumber button | Viral pro acquisition loop |
-| Vault | Saved heaters + recall monitoring |
+**What homeowners see:**
+- Simple "Water Heater Profile" card: age, life remaining (in plain English), estimated replacement cost
+- One big button: **"Send to My Plumber"** — hero action, one-tap PDF + job ticket
+- Optional "Details" link for those who want technical specs (but hidden by default)
+- No serial numbers, BTUs, glass lining, or technical jargon on main screen
 
-### Layer 2 — Pro SaaS (NOW — Primary Revenue)
-Screened local contractors pay flat $49/mo. No wrenches. Pure software.
+**What homeowners get:**
+- Instant scan results (on-device vision, no waiting)
+- Clean profile card they can understand
+- Easy connection to screened local plumbers
+- Free forever — no upsells, no manipulation
 
-| Feature | What pros get |
-|---------|---------------|
-| White-label branding | Name + number on every scan/PDF in their area |
-| Auto-leads | Notified when heater age > 8yr or remaining < 3yr |
-| Directory listing | `waterheaterplan.com/pro/directory` — SEO-indexed |
-| Multiple pros per zip | Competition is fine — more pros = more coverage |
+### Layer 2 — Plumbers ($49/month)
+Screened local plumbers pay $49/month for geofenced zone access.
+
+**Geofenced Zones:**
+- Max 3 screened plumbers per geographic zone
+- First-come, first-served until zone is full
+- Quality maintained through ongoing review screening
+
+**What plumbers get:**
+- Full technical data: serial numbers, model specs, BTU ratings, tank size, manufacture date, warranty status
+- Rich "Details" view that homeowners don't see
+- Job tickets with complete technical specifications
+- Auto-notifications when heaters in their zone are in danger zone (age > 8yr or remaining < 3yr)
+- Directory listing on waterheaterplan.com/pro/directory
 
 **Unit economics:**
-- CAC: ~$0 (viral invite loop) or cheap text/email blast
-- Price: $49/mo or $499/yr
+- Price: $49/mo flat (no annual option — keep it simple)
+- CAC: ~$0 (viral "Send to My Plumber" loop)
 - Gross margin: ~95% (pure SaaS)
-- 12-mo LTV: $499–$588
-- No service delivery, no Hamilton Plumbing, no local ops
+- LTV: $588/year per plumber
+- No service delivery, no local ops, no wrenches
 
-**Pro gate:** Grok AI screens Google Business Profile reviews.
-- 4.5+ stars → Stripe checkout → active
-- Re-screen every 30 days (n8n cron)
+**Pro gate:** AI screens Google Business Profile reviews
+- 4.5+ stars required → Stripe checkout → active
+- Re-screen every 30 days
 - Below 4.5 → auto-paused, email notification
 
 ### Layer 3 — B2B Verticals (MONTH 2–6)
@@ -77,33 +89,53 @@ Strategic buyers: Dominion Energy (rebate targeting), AHS/home warranty cos (pre
 
 ### Viral Growth Loop
 ```
-Homeowner scans → results page → "Invite my plumber → get branded reports"
+Homeowner scans → simple Profile card → big "Send to My Plumber" button
        ↓
-Pro gets invite link → visits /pro/onboard → Grok screens reviews
+Plumber receives PDF + job ticket with full technical details
        ↓
-4.5+ stars → Stripe $49/mo → branding activated
+Plumber sees value → visits /pro to claim their zone
        ↓
-Every scan in their area now shows their name/number
+4.5+ stars → Stripe $49/mo → zone activated
        ↓
-Pro sends the app to every customer → more scans → more invites
+Plumber shares app with every customer → more scans → more zone claims
+       ↓
+Geofenced zones fill up (max 3 per zone) → creates urgency for other plumbers
 ```
 
-**Secondary growth:** Cheap targeted text/email blasts to local plumbers. Ads on "water heater age check" keywords.
+**Secondary growth:** Targeted outreach to plumbers in unfilled zones. Ads on "water heater age check" keywords.
 
 ---
 
 ## Design Rules (locked — never break)
 
+**Tesla-Sleek Minimalism:**
 - Background: pure black `#000000` always
 - Text: white, SF Pro font stack, `font-light` body, `font-medium` emphasis
-- Accent: blue `#0066ff` — sparingly (scan button, active states, dollar values)
-- Logo: WF text upper portion (y=42) + thin white line (y=82), no background rect — the page IS the canvas
-- Mobile: full screen, max 3 elements per viewport, no clutter, 44px min touch targets
-- Desktop: App Shell (fixed TopNav), centered content columns, spacious, subtle hover states
-- No gradients. No heavy shadows. `animate-pulse-glow` only.
-- Buttons: `rounded-full` pill, `touch-manipulation` on mobile
+- Accent: blue `#0066ff` — sparingly (scan button, active states, critical info)
+- Form follows function: delete anything that is not essential
+- Max 3 elements per viewport on mobile
+- 44px minimum touch targets
+- No gradients. No heavy shadows. Clean lines only.
+- Buttons: `rounded-full` pill style, `touch-manipulation` on mobile
+
+**Homeowner View (Simple):**
+- No serial numbers on main screen
+- No BTU ratings, glass lining, or technical jargon
+- Plain English only: "8 years old" not "Manufactured 2018"
+- "~4 years remaining" not "Expected life: 12 years, current age: 8 years"
+- Big, clear actions: "Send to My Plumber" as hero button
+- Technical details hidden behind "Details" link
+
+**Plumber View (Rich):**
+- Full technical specifications
+- Serial numbers, model codes, BTU ratings, tank size
+- Manufacture date, warranty status, installation specs
+- Everything a plumber needs for accurate quoting
+
+**Universal:**
 - No mock data — real errors shown to user
 - No `alert()` — all feedback is inline state
+- No loading spinners that spin forever — show progress or fail fast
 
 ---
 
@@ -181,9 +213,13 @@ for residential physical longevity in the 21st century.
 
 ## Core Principle
 
-**"AI understands → Brave verifies."**
-Grok never hallucinates a URL. It generates search queries. Brave finds the live page.
-This extends to every reference: serial decoders, warranty terms, manuals, recall pages.
+**"On-device first. Cloud only when necessary."**
+
+Primary path: PaddleOCR-VL-1.5 (text extraction) + Phi-4-reasoning-vision-15B (understanding) — runs on-device, instant results, zero API cost.
+
+Fallback path: Grok Vision (grok-4.20-beta) — only for blurry/damaged labels or when on-device confidence is low.
+
+Brave Search: Optional manual lookup for warranty docs, manuals, rebate programs. Not required for basic scan results.
 
 ---
 

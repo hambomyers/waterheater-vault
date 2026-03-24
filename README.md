@@ -1,101 +1,140 @@
-# WaterHeaterVault
+# Water Heater Plan
 
-**The seed of the Residential Mechanical Longevity OS.**  
-*One photo of any data plate today becomes the first node in every American home's mechanical digital twin.*
+**Your Water Heater's Digital Profile**
 
-America's 140 million homes are entering a 15–25 year mechanical renewal supercycle. The system for managing it — Google searches, plumber roulette, Sunday floods — is medieval. We are building the digital-twin layer that maps the failure curves of every mechanical system in every home, starting with the easiest serial number on Earth: the water heater data plate.
+Tesla-sleek, on-device AI scanner that creates a simple "Water Heater Profile" for homeowners — showing how much life is left and connecting them to screened local plumbers with one tap.
 
-Every scan is a new node. Every node is permanent. The homeowner owns it forever.
+**For Homeowners:** Completely free. Scan your water heater, see how much life it has left in plain English, send the profile to a screened plumber with one button.
 
-*Early revenue:* `waterheaterplan.com/pro` — $49/mo white-label leads for screened local contractors  
-*The company:* longitudinal serial-level data on every major home system, queryable by insurers, utilities, manufacturers, and home robots
+**For Plumbers:** $49/month for geofenced zone access (max 3 plumbers per zone). Receive full technical profiles and job tickets from every homeowner scan in your area.
+
+**The Long Game:** The seed of the Residential Mechanical Longevity OS — free consumer trust layer, SaaS plumber revenue, longitudinal data asset.
 
 ---
 
 ## How It Works
 
+### For Homeowners (Simple View)
+
 ```
-Homeowner points phone at data plate (free, always, works offline)
-       ↓
-Tesseract OCR → hardcoded lookup table → instant decode in <3s (90% of scans)
-       ↓
-Age · life · fair price · recalls · rebates · manual links — all local, no API wait
-       ↓
-Hero CTA: "Export Job Ticket" → .ics drops into any calendar / field service app
-       ↓
-"Text my plumber this report" → plumber gets personal invite link
-       ↓
-Plumber visits /pro/claim → free unit claim → taste value → $49/mo leads
-       ↓
-Year 1 reminder: "Your Navien turns 8. Mike's Plumbing recommends a check."
-Year 3 alert:    "Replacement window open. Fair price: $1,700–$2,100."
+1. Scan → Point phone at water heater data plate
+   ↓
+2. On-device vision (PaddleOCR-VL + Phi-4) extracts info instantly
+   ↓
+3. Simple Profile Card appears:
+   • "8 years old"
+   • "~4 years remaining"
+   • "Estimated replacement: $1,800–$2,400"
+   ↓
+4. Big button: "Send to My Plumber"
+   ↓
+5. One tap → PDF + job ticket sent to screened local plumber
+   ↓
+6. Done. No jargon. No confusion. Just clear info and easy next step.
 ```
 
-**The moat is not the scanner. It is the annual loop and the longitudinal data it produces.**  
-**Pro gate:** Grok AI screens Google Business Profile reviews (4.5+ stars required). Auto-pause if re-screen fails.
+**Optional:** "Details" link reveals full technical specs for those who want them.
+
+### For Plumbers (Rich View)
+
+```
+1. Receive PDF + job ticket from homeowner
+   ↓
+2. See full technical profile:
+   • Serial number, model code, manufacture date
+   • BTU rating, tank size, fuel type
+   • Warranty status, installation specs
+   • Everything needed for accurate quote
+   ↓
+3. Visit /pro to claim geofenced zone
+   ↓
+4. $49/mo → receive all scans in your zone
+   ↓
+5. Auto-notifications when heaters hit danger zone (age > 8yr)
+```
+
+**The moat:** Annual reminder loop + longitudinal data. Every scan is a node in the Residential Mechanical Longevity OS.
 
 ---
 
-## What It Does
+## What Homeowners See
 
-**Offline-first** scan — data plate photo → hardcoded lookup table decodes serial + model in <3s for 90% of scans. Grok/Gemini Flash handles the remaining 10% (unknown models, blurry labels). Brave Search fetches live manual + warranty URLs (cached after first lookup).
+**Simple Profile Card (No Jargon):**
+- Age in plain English: "8 years old"
+- Life remaining: "~4 years remaining" (color-coded gauge: green/amber/red)
+- Estimated replacement cost: "$1,800–$2,400"
+- Recall status: "No active recalls" or "⚠️ Recall Alert"
+- One big button: **"Send to My Plumber"**
 
-Results page shows:
-- Brand · Model · Serial · Manufacture Date · Age · Fuel Type
-- Remaining Life Gauge (color-coded: green/amber/red)
-- **Fair Price Breakdown** — unit cost, labor, planned total (green) vs emergency total (red) vs national chain reference
-- Rebate Maximizer Card (live utility rebate via Brave Search)
-- CPSC Recall Status
-- One-click PDF Report Card (branded with matched pro)
-- **"Export Job Ticket"** — hero button: `.ics` calendar event + `.csv` field service row (works offline, zero APIs)
-- **"Text my plumber this report"** — personal homeowner invite (not a sales pitch)
-- TCPA-compliant email/SMS capture — explicit written consent checkbox, phone field
-- Direct links: owner manual, warranty terms, serial decoder, rebate program
+**Hidden Behind "Details" Link:**
+- Brand, model, serial number
+- Manufacture date, fuel type, tank size
+- BTU rating, warranty status
+- Manual links, technical specs
+
+## What Plumbers Get
+
+**Full Technical Profile:**
+- Complete serial number and model code
+- Manufacture date and age calculation
+- Fuel type, BTU rating, tank size (gallons)
+- Warranty status and expected life
+- Installation specifications
+- Recall status and safety notes
+- Job ticket ready for field service app
+
+**Plus:**
+- PDF report with all technical details
+- .ics calendar event for scheduling
+- .csv export for field service software
+- Auto-notifications for danger zone heaters in their zone
 
 ---
 
 ## Stack
 
 | Layer | Technology |
-|-------|-----------|
+|-------|------------|
 | Framework | Next.js 14 — static export, all `use client` |
 | Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue accent |
-| On-device AI | Tesseract.js OCR — canvas preprocessing, PSM-6, brand/serial detection |
-| **Primary path** | **Hardcoded lookup table** — `lib/wh-lookup.ts` — top 10 brands, ~500 models, offline, <3s |
-| Cloud AI | Grok-2 text / Gemini Flash — **fallback only** (unknown model or low OCR confidence) |
-| Docs search | Brave Search API — live verified URLs, cached in serial_cache after first fetch |
+| **Primary Vision** | **PaddleOCR-VL-1.5** (text extraction) + **Phi-4-reasoning-vision-15B** (understanding) — on-device, instant, zero API cost |
+| Fallback Vision | Grok Vision (grok-4.20-beta) — only for blurry/damaged labels or low confidence |
+| Optional Search | Brave Search API — manual lookup for warranty docs, manuals, rebates (not required for basic scan) |
 | Storage | IndexedDB (offline-first) + Cloudflare D1 (cloud sync + leads + pros) |
 | Auth | Magic-link via Resend + JWT (no Clerk, no OAuth) |
-| Payments | Stripe Checkout — Pro $49/mo or $499/yr |
-| Export | `lib/exportJobTicket.ts` — pure client-side `.ics` + `.csv` download, zero APIs, works offline |
+| Payments | Stripe Checkout — Pro $49/mo flat |
+| Export | `lib/profile/job-ticket.ts` — pure client-side `.ics` + `.csv` download, zero APIs, works offline |
 | PDF | html2canvas + jsPDF — client-side report card generation |
 | Deployment | Cloudflare Pages — static export + CF Pages Functions |
 | PWA | Service worker + manifest, installable on iOS/Android |
 
 ---
 
-## Core Flow (4 screens max)
+## Core Flow (3 screens max)
 
 ```
 Screen 1 — Scan
   Camera opens → user points at data plate
-  Tesseract OCR runs on-device (canvas preprocessing)
-  Brand + serial detected → lookup table hit in <3s for 90% of scans
+  On-device vision (PaddleOCR-VL + Phi-4) extracts info instantly
+  No waiting, no spinners (on-device = instant)
 
-Screen 2 — Results (instant for 90%)
-  Age · remaining life · fair price · recall status · rebate
-  [Export Job Ticket]  ← hero button
-  [Text my plumber]    ← primary CTA
-  [Save to Vault]      ← secondary
+Screen 2 — Simple Profile Card (homeowner view)
+  • "8 years old"
+  • "~4 years remaining" (color gauge)
+  • "Estimated replacement: $1,800–$2,400"
+  • [Send to My Plumber]  ← BIG hero button
+  • [Details]             ← small link (reveals technical specs)
 
-Screen 3 — Job Ticket Export
-  .ics → Google Calendar, Apple Calendar, Outlook, Housecall Pro, Jobber
-  .csv → any field service app
-  Zero APIs — pure client-side, works offline after scan
-
-Screen 4 — Vault
-  Saved heaters with recall badges, life gauge, annual reminders
+Screen 3 — Send to My Plumber
+  One tap → PDF + job ticket generated
+  Plumber receives full technical profile
+  Homeowner sees confirmation
+  Done.
 ```
+
+**Optional Screens:**
+- **Details View:** Full technical specs for curious homeowners or DIYers
+- **Vault:** Saved profiles with recall monitoring and annual reminders
 
 ---
 
@@ -136,97 +175,26 @@ File: `WaterHeater-Job-{Serial}.csv`
 
 ---
 
-## Hardcoded Lookup Table
-
-`lib/wh-lookup.ts` — ships with the app bundle, zero network required. ~500 models covering 90%+ of US installed base.
-
-### Brand Serial Decode Rules
-
-| Brand | Aliases | Pattern | Decode |
-|-------|---------|---------|--------|
-| Rheem | Ruud | `WWYY` at pos 2 | `04**24***` → Wk 04, 2024 |
-| A.O. Smith | State, American | `YYWW` at pos 0 | `2404*****` → 2024 wk 04 |
-| Bradford White | — | `BWL` — char 2=year letter, 3-4=week | `MF42*` → 2006+cycle, wk 42 |
-| Navien | — | `YYYYMM` at pos 0 | `202403***` → Mar 2024 |
-| Rinnai | — | `YYMM` at pos 2 | `**2403**` → Mar 2024 |
-| Noritz | — | `YYWW` at pos 0 | `2404****` → 2024 wk 04 |
-| Bosch | — | `YYYYWW` at pos 0 | `202404**` → 2024 wk 04 |
-| GE / GEO | — | `LETTER_YY` at pos 0 | `D24*****` → Apr 2024 |
-
-Bradford White year letter (cycles every 20yr): `A=1984/2004, B=1985/2005, C=1986/2006… Z=2003/2023`  
-GE month letter: `A=Jan B=Feb C=Mar D=Apr E=May F=Jun G=Jul H=Aug J=Sep K=Oct L=Nov M=Dec`
-
-### Model Spec Schema (`lib/wh-lookup.ts`)
-
-```typescript
-export interface ModelSpec {
-  brand: string
-  modelPrefix: string       // match first N chars of scanned model number
-  description: string
-  tankGallons: number | null  // null for tankless
-  fuelType: 'natural_gas' | 'propane' | 'electric' | 'heat_pump'
-  inputBtuOrWatts: number
-  firstHourRating: number
-  expectedLifeYears: number
-  unitCostMin: number       // total installed USD
-  unitCostMax: number
-  laborHours: number
-}
-
-export interface BrandSpec {
-  brand: string
-  aliases: string[]
-  serialPattern: 'WWYY' | 'YYWW' | 'BWL' | 'YYMM' | 'YYYYWW' | 'YYYYMM' | 'LETTER_YY'
-  serialOffset: number
-}
-```
-
-### Seed Data (top models — expand to ~500 in implementation)
-
-| Brand | Prefix | Description | Gal | Fuel | Life | Cost Range |
-|-------|--------|-------------|-----|------|------|-----------|
-| Rheem | XG40 | Performance 40gal gas | 40 | NG | 12yr | $900–$1,200 |
-| Rheem | XG50 | Performance 50gal gas | 50 | NG | 12yr | $1,000–$1,300 |
-| Rheem | XR50 | Performance Plus 50gal | 50 | NG | 13yr | $1,100–$1,450 |
-| Rheem | PROE50 | Professional 50gal | 50 | NG | 14yr | $1,200–$1,600 |
-| Rheem | XE40 | Performance 40gal electric | 40 | Elec | 11yr | $700–$950 |
-| Rheem | XE50 | Performance 50gal electric | 50 | Elec | 11yr | $750–$1,000 |
-| A.O. Smith | GPVH-40 | Signature 40gal gas | 40 | NG | 12yr | $900–$1,200 |
-| A.O. Smith | GPVH-50 | Signature 50gal gas | 50 | NG | 12yr | $1,000–$1,350 |
-| A.O. Smith | GPSH-50 | ProLine 50gal gas | 50 | NG | 13yr | $1,100–$1,450 |
-| A.O. Smith | GPHE-50 | Vertex 50gal high-eff | 50 | NG | 15yr | $1,400–$1,800 |
-| A.O. Smith | EES-40 | Signature 40gal electric | 40 | Elec | 11yr | $700–$950 |
-| Bradford White | MI30S6 | AeroTherm 30gal gas | 30 | NG | 12yr | $850–$1,100 |
-| Bradford White | MI40L6 | AeroTherm 40gal gas | 40 | NG | 12yr | $950–$1,250 |
-| Bradford White | MI50L6 | AeroTherm 50gal gas | 50 | NG | 12yr | $1,050–$1,350 |
-| Bradford White | RE240 | 40gal electric | 40 | Elec | 11yr | $700–$950 |
-| Navien | NPE-240A | Condensing tankless 11.2 GPM | — | NG | 20yr | $2,800–$3,800 |
-| Navien | NHB-150H | Condensing combo boiler | — | NG | 20yr | $3,200–$4,500 |
-| Rinnai | V65EP | Tankless 6.5 GPM propane | — | LP | 20yr | $1,800–$2,400 |
-| Rinnai | RL75EP | Tankless 7.5 GPM propane | — | LP | 20yr | $2,000–$2,600 |
-| Rinnai | RU199iN | Ultra 9.8 GPM gas | — | NG | 20yr | $2,400–$3,200 |
-| Noritz | NRC661-DV | Condensing tankless | — | NG | 20yr | $2,000–$2,700 |
-| Bosch | ES8 | 8gal point-of-use electric | 8 | Elec | 10yr | $500–$700 |
-| State | GP6-40 | ProLine 40gal gas | 40 | NG | 12yr | $900–$1,200 |
-| State | GP6-50 | ProLine 50gal gas | 50 | NG | 12yr | $1,000–$1,300 |
-
----
-
 ## Routes
+
+**Consumer Routes (Simple, Jargon-Free):**
 
 | Route | What it does |
 |-------|-------------|
-| `/` | Homeowner landing — headline + Scan CTA + proof pills + pro link |
-| `/scan` | Label-first guided scan — data plate required, unit overview optional |
-| `/results` | Results: gauge, price, rebate, **Export Job Ticket**, PDF, invite, TCPA |
-| `/vault` | Saved heaters — recall badges, life gauge, list |
-| `/vault/item?id=xxx` | Item detail — inline edit, recall banner, PDF, invite |
-| `/pro` | Pro marketing — $49/mo, how it works, quality gate |
-| `/pro/claim` | Free plumber claim — invited plumber claims unit, TCPA consent, upsell |
-| `/pro/onboard` | Full pro signup: GBP URL → Grok AI screen → Stripe $49/mo checkout |
-| `/pro/directory` | Public searchable directory of screened pros |
-| `/pro/dashboard` | Pro weekly scan counts by zip |
-| `/debug` | Dev pipeline test (NODE_ENV guard needed) |
+| `/` | Landing page — big Scan button, simple value prop |
+| `/scan` | Camera scan with on-device vision |
+| `/profile` | Simple Profile Card — age, life remaining, cost estimate, "Send to My Plumber" button |
+| `/profile/details` | Rich technical view (hidden by default) — serial, model, BTU, specs |
+| `/send-plumber` | One-tap send flow — generates PDF + job ticket |
+
+**Pro Routes:**
+
+| Route | What it does |
+|-------|-------------|
+| `/pro` | Pro marketing — $49/mo, geofenced zones, how it works |
+| `/pro/claim` | Zone claim page — plumber claims their geofenced zone |
+| `/pro/dashboard` | Pro dashboard — scan counts, leads, zone status |
+| `/pro/directory` | Public directory of screened pros |
 
 ---
 
@@ -257,16 +225,14 @@ Alias: **scan.waterheaterplan.com** → same app
 | `JWT_SECRET` | Sign/verify tokens (32+ chars) |
 | `STRIPE_SECRET_KEY` | Stripe — create checkout sessions |
 | `STRIPE_PRICE_ID_MONTHLY` | Stripe Price ID for $49/mo Pro plan |
-| `STRIPE_PRICE_ID_ANNUAL` | Stripe Price ID for $499/yr Pro plan |
 | `DB` | Cloudflare D1 binding |
 
 ### Stripe Setup
 
-1. [dashboard.stripe.com/products](https://dashboard.stripe.com/products) → **Add product** → `WaterHeaterVault Pro`
+1. [dashboard.stripe.com/products](https://dashboard.stripe.com/products) → **Add product** → `Water Heater Plan Pro`
 2. Price: **$49.00/month** recurring → copy `price_...` → `STRIPE_PRICE_ID_MONTHLY`
-3. Price: **$499.00/year** recurring → copy `price_...` → `STRIPE_PRICE_ID_ANNUAL`
-4. [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) → `STRIPE_SECRET_KEY`
-5. Webhook: `https://scan.waterheaterplan.com/api/pro/webhook`
+3. [dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys) → `STRIPE_SECRET_KEY`
+4. Webhook: `https://scan.waterheaterplan.com/api/pro/webhook`
    - Events: `checkout.session.completed`, `customer.subscription.deleted`
 
 > Testing? Use `sk_test_...` keys. Test card: `4242 4242 4242 4242`.
@@ -321,12 +287,14 @@ wrangler d1 execute waterheater-vault --file=migrations/0009_learn.sql --remote
 
 | Sprint | What | Status |
 |--------|------|--------|
-| Sprint 1 | Scanner, results, vault, auth, recall, rebates, PDF | ✅ Live |
-| Sprint 2 | InvitePlumberButton, /pro/onboard, /pro/directory, Stripe | ✅ Code complete |
-| Sprint 3 | Label-first scan, single-shot fast path, Google doc fallback | ✅ Shipped |
-| Sprint 4 | TCPA gate, $49 pricing, /pro/claim, PriceBreakdownCard, auto-lead trigger | ✅ Shipped 2026-03-22 |
-| Sprint 5 | 3-tier hybrid scan, self-improving flywheel, canvas OCR preprocessing | ✅ Shipped 2026-03-22 |
-| Sprint 6 | Hardcoded lookup table (~500 models) + Export Job Ticket (.ics + .csv) | 🔲 Next |
+| Sprint 1-5 | Original architecture (Tesseract + Grok hybrid, complex flows) | ✅ Archived |
+| **Sprint 6** | **COMPLETE OVERHAUL: Tesla-sleek minimalism, on-device vision first** | 🔄 In Progress |
+| | • Documentation updated (DEV-NOTES.md, README.md) | ✅ Done |
+| | • New file structure: app/(consumer) with simple/rich view split | 🔲 Next |
+| | • On-device vision: PaddleOCR-VL + Phi-4 pipeline | 🔲 Next |
+| | • Simple Profile Card (homeowner view, no jargon) | 🔲 Next |
+| | • Rich Details view (plumber view, full specs) | 🔲 Next |
+| | • "Send to My Plumber" hero flow | 🔲 Next |
 
 ---
 
