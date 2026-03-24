@@ -1,9 +1,8 @@
 /**
  * On-Device Vision Scanner
- * Primary path: PaddleOCR-VL-1.5 (text extraction) + Phi-4-reasoning-vision-15B (understanding)
- * Runs entirely on-device, instant results, zero API cost
- * 
- * Fallback: Grok Vision (grok-4.20-beta) only for blurry/damaged labels or low confidence
+ * 100% on-device processing using Tesseract.js OCR + pattern matching
+ * No external API calls - works completely offline
+ * Includes image preprocessing for better accuracy
  */
 
 export interface ScanResult {
@@ -49,26 +48,42 @@ export async function scanWaterHeater(
   const finalConfig = { ...DEFAULT_CONFIG, ...config }
   
   try {
-    // Step 1: Extract text with Tesseract.js
-    console.log('[SCAN] Starting OCR extraction...')
-    const ocrResult = await extractTextWithTesseract(imageData)
-    console.log('[SCAN] OCR complete. Text length:', ocrResult.text.length)
+    // Step 1: Preprocess image for better OCR
+    console.log('[SCAN] Preprocessing image...')
+    const { preprocessImage } = await import('./image-preprocessor')
+    const preprocessedImage = await preprocessImage(imageData)
+    console.log('[SCAN] Image preprocessed')
     
-    // Step 2: Pattern matching extraction
+    // Step 2: Extract text with Tesseract.js
+    console.log('[SCAN] Starting OCR extraction...')
+    const ocrResult = await extractTextWithTesseract(preprocessedImage)
+    console.log('[SCAN] OCR complete. Text length:', ocrResult.text.length, 'Confidence:', ocrResult.confidence)
+    
+    // If OCR extracted very little text, return soft error
+    if (ocrResult.text.length < 10) {
+      console.log('[SCAN] OCR extracted very little text')
+      throw new Error("Couldn't read the label clearly. Try better lighting and hold the phone straight.")
+    }
+    
+    // Step 3: Pattern matching extraction
     console.log('[SCAN] Trying pattern matching...')
     const tier1Result = await tryPatternExtraction(ocrResult.text)
     
-    if (tier1Result.success && tier1Result.confidence >= 70) {
+    // Lower threshold to 60 for more tolerance
+    if (tier1Result.success && tier1Result.confidence >= 60) {
       console.log('[SCAN] ✅ Pattern matching succeeded')
       return buildScanResult(tier1Result)
     }
     
     // If pattern matching fails, show user-friendly error
-    throw new Error('Could not read the water heater label clearly. Please try again with better lighting and make sure the data plate is clearly visible.')
+    console.log('[SCAN] Pattern matching failed. Confidence:', tier1Result.confidence)
+    throw new Error("Couldn't read the label clearly. Try better lighting and hold the phone straight.")
     
   } catch (error) {
     console.error('[SCAN] Scan failed:', error)
-    throw error
+    // Always throw user-friendly error, never crash
+    const message = error instanceof Error ? error.message : "Couldn't read the label clearly. Try better lighting and hold the phone straight."
+    throw new Error(message)
   }
 }
 
@@ -89,7 +104,7 @@ async function extractTextWithTesseract(imageData: string | Blob): Promise<{ tex
       imageUrl = imageData
     }
     
-    // Run Tesseract OCR
+    // Run Tesseract OCR with optimized settings for data plates
     const result = await Tesseract.recognize(
       imageUrl,
       'eng',
@@ -108,7 +123,11 @@ async function extractTextWithTesseract(imageData: string | Blob): Promise<{ tex
     }
   } catch (error) {
     console.error('Tesseract OCR failed:', error)
-    throw new Error('OCR extraction failed')
+    // Return soft error instead of crashing
+    return {
+      text: '',
+      confidence: 0
+    }
   }
 }
 
