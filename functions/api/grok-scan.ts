@@ -314,20 +314,8 @@ export const onRequest = async (context: any) => {
       )
     }
 
-    // ── Level 2: looks like WH but serial + model both missing ───────────────
-    const hasBrand = parsed.brand && parsed.brand !== 'Unknown' && parsed.brand !== 'other'
-    if (hasBrand && !parsed.serialNumber && !parsed.model) {
-      const nudges = [
-        `Looks like a ${parsed.brand} — but we need to see the serial number and model. Move a little closer to the data plate and try again 📸`,
-        `We see ${parsed.brand} but can't read the label clearly. Get a bit closer to the silver sticker — model and serial should be visible 🙂`,
-        `Almost! We spotted ${parsed.brand} but the serial and model aren't readable. Inch closer to the data plate for a sharper shot!`,
-      ]
-      const msg = nudges[Math.floor(Math.random() * nudges.length)]
-      return new Response(
-        JSON.stringify({ error: 'not_a_water_heater', message: msg }),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      )
-    }
+    // ── Level 2: brand found but serial + model missing — return partial result, don't error ──
+    // We have useful data (brand) so proceed. The results page handles missing fields gracefully.
 
     // ── Step 2: Compute all derived fields server-side ──
     parsed = computeDerivedFields(parsed)
@@ -336,7 +324,7 @@ export const onRequest = async (context: any) => {
     const braveKey = context.env.BRAVE_API_KEY
     if (braveKey && Array.isArray(parsed.docs)) {
       parsed.docs = await Promise.all(
-        parsed.docs.slice(0, 5).map(async (doc: any) => {
+        parsed.docs.slice(0, 3).map(async (doc: any) => {
           if (!doc.searchQuery) return { ...doc, url: null }
           const url = await braveSearch(braveKey, doc.searchQuery)
           return { type: doc.type, label: doc.label, url, searchQuery: doc.searchQuery }

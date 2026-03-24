@@ -96,7 +96,7 @@ export async function braveSearch(apiKey: string, query: string): Promise<string
   try {
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=3&search_lang=en`
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 4000)
+    const timeout = setTimeout(() => controller.abort(), 2000)
     const res = await fetch(url, {
       headers: {
         'Accept': 'application/json',

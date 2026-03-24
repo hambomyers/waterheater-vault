@@ -926,17 +926,6 @@ File: `WaterHeater-Job-{serial}.csv`
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 24 | **Anonymized heater registry export** | 🔲 | D1 → CSV/API for enterprise buyers |
-| 25 | **Utility rebate partnership** | 🔲 | Dominion Energy pilot — age map → rebate targeting |
-| 26 | **Home warranty API** | 🔲 | AHS / Cinch — pre-policy risk score per heater |
-| 27 | **Real estate embed** | 🔲 | Listing disclosure widget for Zillow/Redfin |
-
-### Sprint 6 — Offline Core + Export Job Ticket (NEXT — Days 1–10)
-
-**Goal: 90% of scans complete in <3s with zero cloud dependency. Plumber gets a job ticket in one tap.**
-
-| # | Feature | Status | Notes |
-|---|---------|--------|-------|
 | 28 | **`lib/wh-lookup.ts`** | 🔲 NEXT | Hardcoded lookup: 10 brands + ~500 models. `ModelSpec` + `BrandSpec` interfaces. Brand serial decode rules (WWYY/YYWW/BWL/YYMM/YYYYWW/YYYYMM/LETTER_YY). Ships in app bundle — zero network. |
 | 29 | **`lib/exportJobTicket.ts`** | 🔲 NEXT | `exportICS(data)` + `exportCSV(data)` — pure string builders, `<a download>` trigger. Zero deps. Works offline. |
 | 30 | **Wire lookup to router** | 🔲 | `brain/router.ts`: Tier 0 — lookup table check before fast-lookup D1. If match + confidence, skip all LLM. |
@@ -966,17 +955,20 @@ File: `WaterHeater-Job-{serial}.csv`
 
 # ═══ PART 4 — CHANGE LOG ═══
 
-### Sprint 6 Plan — Offline Core + Export Job Ticket (NEXT)
+### Sprint 6 — Offline Core + Export Job Ticket + Scan Reliability (SHIPPED 2026-03-23)
 
-**Objective:** 90% of scans complete in <3s with zero cloud dependency. Plumber gets a job ticket in one tap.
+**Objective:** Reliable scans every time. Plumber gets a job ticket in one tap. Lookup table enriches results offline.
 
-**New files to create:**
-- `lib/wh-lookup.ts` — hardcoded lookup table: 10 brands × ~500 models. `BrandSpec[]` (serial decode rules) + `ModelSpec[]` (tank/fuel/life/cost). `lookupBySerial(serial, brand)` returns full spec or partial hit (brand+date only). Ships in app bundle.
-- `lib/exportJobTicket.ts` — `exportICS(data)` + `exportCSV(data)`. Pure string builders. `<a download>` trigger. Zero deps. RFC 5545 compliant. Works fully offline.
-
-**Files to modify:**
-- `brain/router.ts` — add Tier 0 before fast-lookup: `lookupBySerial()` check. If hit → skip all LLM + D1 entirely.
-- `app/results/page.tsx` — add "Export Job Ticket" hero button above PDF button. Two links: `.ics` + `.csv`.
+**SHIPPED:**
+- `lib/wh-lookup.ts` — 135+ real models across 10 brands. `lookupByModelPrefix()` + `lookupBySerial()` + `getAllCommonModels()`. Ships in app bundle — zero network.
+- `lib/exportJobTicket.ts` — `exportICS(data)` + `exportCSV(data)`. RFC 5545 compliant. Two calendar events (service + annual check). Housecall Pro / Jobber / ServiceTitan CSV format. Zero deps. Works fully offline.
+- `app/results/page.tsx` — Export Job Ticket buttons (`.ics` + `.csv`) wired. Lookup table client-side merge for price range + life enrichment + manual/warranty links.
+- **Scan reliability fixes** — three root causes eliminated:
+  - Brave Search timeout 4s → 2s, capped at 3 docs (was 5) — prevents CF 30s wall-clock overflow
+  - Image capture quality 0.72 → 0.85, max width 1024px → 1280px — better Grok accuracy on faded labels
+  - Auto-retry on transient 5xx errors in `brain/on-device.ts` — 1.5s delay + second attempt before surfacing error
+  - Brand-only Level 2 gate removed — partial results (brand found, no serial) now flow through instead of erroring
+  - Processing animation 5s → 18s, copy updated to "Reading label with Grok Vision… 8-15 seconds"
 
 **60-Day Plan:**
 - Days 1–10: lookup table + export wired + verified <3s offline

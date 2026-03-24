@@ -70,17 +70,22 @@ async function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
+async function attemptGrokScan(base64: string): Promise<Response> {
+  const formData = new FormData()
+  formData.append('image', base64)
+  return fetch('/api/grok-scan', { method: 'POST', body: formData })
+}
+
 export async function extractFromImage(imageData: Blob): Promise<GrokScanResult> {
   const base64 = await blobToBase64(imageData)
 
-  const formData = new FormData()
-  formData.append('image', base64)
-  // (single-shot call — no shot2)
+  let response = await attemptGrokScan(base64)
 
-  const response = await fetch('/api/grok-scan', {
-    method: 'POST',
-    body: formData,
-  })
+  // Auto-retry once on transient server errors (504, 502, 503) or network failure
+  if (!response.ok && (response.status >= 500 || response.status === 0)) {
+    await new Promise(r => setTimeout(r, 1500))
+    response = await attemptGrokScan(base64)
+  }
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => 'Unknown error')

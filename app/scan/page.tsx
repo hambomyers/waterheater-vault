@@ -105,7 +105,7 @@ export default function ScanPage() {
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    const MAX_W = 1024
+    const MAX_W = 1280
     const scale = Math.min(1, MAX_W / video.videoWidth)
     canvas.width = Math.round(video.videoWidth * scale)
     canvas.height = Math.round(video.videoHeight * scale)
@@ -116,7 +116,7 @@ export default function ScanPage() {
       shotBlobRef.current = blob
       setShotUrl(URL.createObjectURL(blob))
       runScan(blob)
-    }, 'image/jpeg', 0.72)
+    }, 'image/jpeg', 0.85)
   }
 
   // ── File import ─────────────────────────────────────────────────────────────
@@ -130,7 +130,7 @@ export default function ScanPage() {
     const img = new window.Image()
     img.onload = () => {
       URL.revokeObjectURL(objectUrl)
-      const MAX_W = 1024
+      const MAX_W = 1280
       const scale = Math.min(1, MAX_W / img.width)
       const cv = document.createElement('canvas')
       cv.width = Math.round(img.width * scale)
@@ -143,7 +143,7 @@ export default function ScanPage() {
         shotBlobRef.current = blob
         setShotUrl(URL.createObjectURL(blob))
         runScan(blob)
-      }, 'image/jpeg', 0.72)
+      }, 'image/jpeg', 0.85)
     }
     img.src = objectUrl
   }
@@ -285,11 +285,14 @@ export default function ScanPage() {
                 <div className="relative w-full h-px bg-white bg-opacity-10 rounded-full overflow-hidden">
                   <div
                     className="absolute inset-y-0 left-0 bg-blue-accent rounded-full"
-                    style={{ animation: 'scanProgress 5s cubic-bezier(0.4,0,0.6,1) forwards' }}
+                    style={{ animation: 'scanProgress 18s cubic-bezier(0.4,0,0.6,1) forwards' }}
                   />
                 </div>
                 <p className="animate-pulse text-white text-opacity-50 text-sm font-light">
-                  Analysing…
+                  Reading label with Grok Vision…
+                </p>
+                <p className="text-white text-opacity-25 text-xs font-light">
+                  Takes 8–15 seconds — do not close this page
                 </p>
               </div>
             </div>
@@ -354,8 +357,8 @@ export default function ScanPage() {
               <div className="aspect-video rounded-3xl border border-white border-opacity-10 flex items-center justify-center">
                 <div className="text-center animate-pulse">
                   <div className="text-4xl mb-4">🔍</div>
-                  <div className="text-white text-opacity-60 font-light">Analysing…</div>
-                  <div className="text-white text-opacity-30 text-sm mt-1">~2–5 seconds</div>
+                  <div className="text-white text-opacity-60 font-light">Reading label with Grok Vision…</div>
+                  <div className="text-white text-opacity-30 text-sm mt-1">8–15 seconds</div>
                 </div>
               </div>
             )}
