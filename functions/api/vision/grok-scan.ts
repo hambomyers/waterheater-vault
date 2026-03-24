@@ -59,7 +59,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     })
 
     if (!grokResponse.ok) {
-      throw new Error(`Grok API failed: ${grokResponse.statusText}`)
+      const errorText = await grokResponse.text()
+      console.error('Grok API error:', {
+        status: grokResponse.status,
+        statusText: grokResponse.statusText,
+        body: errorText
+      })
+      throw new Error(`Grok API failed: ${grokResponse.status} ${grokResponse.statusText} - ${errorText}`)
     }
 
     const grokData = await grokResponse.json()
