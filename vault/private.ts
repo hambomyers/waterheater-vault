@@ -1,6 +1,39 @@
 // Private user vault - IndexedDB + per-user KV storage
-import { ExtractedData } from '../brain/on-device'
-import { ValuationData } from '../brain/router'
+
+export interface PriceBreakdown {
+  unitLow: number
+  unitHigh: number
+  laborLow: number
+  laborHigh: number
+  emergencyPremiumLow: number
+  emergencyPremiumHigh: number
+  nationalChainLow: number
+  nationalChainHigh: number
+}
+
+export interface ExtractedData {
+  product: string
+  brand: string
+  model: string
+  serialNumber: string
+  manufactureDate: string
+  tankSizeGallons?: number
+  fuelType: 'gas' | 'electric' | 'tankless' | 'unknown'
+  ageYears: number
+  remainingLifeYears: number
+  estimatedReplacementCost: number
+  currentWarranty: string
+  priceBreakdown?: PriceBreakdown
+}
+
+export interface ValuationData {
+  currentValue: number
+  originalPrice: number
+  depreciationRate: number
+  marketTrend: 'up' | 'down' | 'stable'
+  confidence: number
+  lastUpdated: string
+}
 
 export interface VaultDocItem {
   type: string         // e.g. "ownerManual", "warrantyTerms", "installationManual"
