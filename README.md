@@ -114,9 +114,10 @@ Tesla-sleek, on-device AI scanner that creates a simple "Water Heater Profile" f
 
 ```
 Screen 1 — Scan
-  Camera opens → user points at data plate
-  On-device vision (PaddleOCR-VL + Phi-4) extracts info instantly
-  No waiting, no spinners (on-device = instant)
+  Mobile: Camera opens → user points at data plate → tap capture button
+  Desktop: File upload → choose photo from computer
+  On-device vision (Tesseract.js OCR + pattern extraction) extracts info
+  Fallback: Grok Vision API for low confidence or unclear labels
 
 Screen 2 — Simple Profile Card (homeowner view)
   • "8 years old"
@@ -289,12 +290,15 @@ wrangler d1 execute waterheater-vault --file=migrations/0009_learn.sql --remote
 |--------|------|--------|
 | Sprint 1-5 | Original architecture (Tesseract + Grok hybrid, complex flows) | ✅ Archived |
 | **Sprint 6** | **COMPLETE OVERHAUL: Tesla-sleek minimalism, on-device vision first** | 🔄 In Progress |
-| | • Documentation updated (DEV-NOTES.md, README.md) | ✅ Done |
-| | • New file structure: app/(consumer) with simple/rich view split | 🔲 Next |
-| | • On-device vision: PaddleOCR-VL + Phi-4 pipeline | 🔲 Next |
-| | • Simple Profile Card (homeowner view, no jargon) | 🔲 Next |
-| | • Rich Details view (plumber view, full specs) | 🔲 Next |
-| | • "Send to My Plumber" hero flow | 🔲 Next |
+| | • Route conflict fixed (app/pro vs app/(pro)) | ✅ Done |
+| | • Build passing successfully | ✅ Done |
+| | • Scan page: Device detection (mobile camera / desktop file upload) | ✅ Done |
+| | • Scan page: Prominent capture button with "Tap to Capture" label | ✅ Done |
+| | • On-device vision: Tesseract.js OCR + pattern extraction | ✅ Implemented |
+| | • Grok Vision fallback for low confidence scans | ✅ Implemented |
+| | • Simple Profile Card (homeowner view, no jargon) | 🔲 Needs Testing |
+| | • Rich Details view (plumber view, full specs) | 🔲 Needs Testing |
+| | • "Send to My Plumber" hero flow | 🔲 Needs Testing |
 
 ---
 

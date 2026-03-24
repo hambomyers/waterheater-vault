@@ -2,10 +2,11 @@
 
 /**
  * Scan Page - Camera interface with on-device vision
- * Instant results, no waiting, no spinners
+ * Desktop: File upload
+ * Mobile: Camera capture
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { scanWaterHeater } from '@/lib/vision/on-device-scanner'
 import type { ScanResult } from '@/lib/vision/on-device-scanner'
@@ -16,9 +17,21 @@ export default function ScanPage() {
   const router = useRouter()
   const [state, setState] = useState<ScanState>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    // Detect if mobile device
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent.toLowerCase()
+      const mobile = /iphone|ipad|ipod|android|webos|blackberry|windows phone/i.test(userAgent)
+      setIsMobile(mobile)
+    }
+    checkMobile()
+  }, [])
 
   const startCamera = async () => {
     try {
@@ -104,6 +117,29 @@ export default function ScanPage() {
     setState('idle')
   }
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setState('processing')
+
+    try {
+      // Scan the uploaded file
+      const result = await scanWaterHeater(file, {
+        confidenceThreshold: 70,
+        useFallback: true
+      })
+
+      // Store result and navigate to profile
+      sessionStorage.setItem('scanResult', JSON.stringify(result))
+      router.push('/profile')
+    } catch (err) {
+      console.error('Scan error:', err)
+      setError('Scan failed. Please try again with a clearer photo.')
+      setState('error')
+    }
+  }
+
   return (
     <main className="flex min-h-screen flex-col bg-black">
       {/* Header */}
@@ -126,7 +162,7 @@ export default function ScanPage() {
       {/* Camera View */}
       <div className="relative flex flex-1 items-center justify-center">
         {state === 'idle' && (
-          <div className="text-center">
+          <div className="text-center px-6">
             <div className="mb-8 flex justify-center">
               <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-white/20">
                 <svg className="h-12 w-12 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,16 +177,44 @@ export default function ScanPage() {
               </div>
             </div>
             <p className="mb-8 text-lg font-light text-white/80">
-              Point your camera at the
-              <br />
-              water heater data plate
+              {isMobile ? (
+                <>
+                  Point your camera at the
+                  <br />
+                  water heater data plate
+                </>
+              ) : (
+                <>
+                  Upload a photo of your
+                  <br />
+                  water heater data plate
+                </>
+              )}
             </p>
-            <button
-              onClick={startCamera}
-              className="rounded-full bg-[#0066ff] px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
-            >
-              Open Camera
-            </button>
+            {isMobile ? (
+              <button
+                onClick={startCamera}
+                className="rounded-full bg-[#0066ff] px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
+              >
+                Open Camera
+              </button>
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-full bg-[#0066ff] px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
+                >
+                  Choose Photo
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -164,14 +228,16 @@ export default function ScanPage() {
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Capture Button */}
-            <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+            {/* Capture Button - Prominent and visible */}
+            <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-3">
               <button
                 onClick={captureAndScan}
-                className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-[#0066ff] transition-transform hover:scale-105 active:scale-95"
+                className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white shadow-2xl transition-transform hover:scale-105 active:scale-95"
+                aria-label="Capture photo"
               >
-                <div className="h-16 w-16 rounded-full bg-white" />
+                <div className="h-16 w-16 rounded-full bg-[#0066ff]" />
               </button>
+              <p className="text-sm font-medium text-white drop-shadow-lg">Tap to Capture</p>
             </div>
 
             {/* Guide Overlay */}
