@@ -89,10 +89,14 @@ export async function extractFromImage(imageData: Blob): Promise<GrokScanResult>
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => 'Unknown error')
+    console.error('Scan API error response:', errorBody)
     let message = `API error ${response.status}`
     try {
       const parsed = JSON.parse(errorBody)
       message = parsed.error || parsed.message || message
+      if (parsed.trace) {
+        console.error('Error trace:', parsed.trace)
+      }
     } catch { /* use default message */ }
     throw new Error(message)
   }
