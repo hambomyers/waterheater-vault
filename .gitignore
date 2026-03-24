@@ -10,3 +10,4 @@ dist
 .env.test.local
 .env.production.local
 .wrangler
+.dev.vars

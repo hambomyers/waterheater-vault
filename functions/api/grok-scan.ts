@@ -202,6 +202,18 @@ async function openRouterVLM(base64: string, apiKey: string): Promise<string> {
   }
 }
 
+// ── Inject manual/warranty/recall URLs from hardcoded table (replaces Brave Search) ──
+function injectTableUrls(docs: any[], brand: string | null, model: string | null): any[] {
+  const entry = (model ? tableByModelPrefix(model) : null) ?? (brand ? tableByBrand(brand) : null)
+  const recallUrl = `https://www.cpsc.gov/recalls?q=${encodeURIComponent((brand ?? '') + ' water heater')}`
+  return (Array.isArray(docs) ? docs : []).map((doc: any) => {
+    if (doc.type === 'manual'   && entry?.manualUrl)   return { ...doc, url: entry.manualUrl }
+    if (doc.type === 'warranty' && entry?.warrantyUrl) return { ...doc, url: entry.warrantyUrl }
+    if (doc.type === 'recall')                         return { ...doc, url: recallUrl }
+    return doc
+  })
+}
+
 // ── Build a full result from lookup table entry + OCR-extracted fields ─────────
 function buildFromEntry(entry: WHEntry, ocr: { brand: string | null; model: string | null; serial: string | null }, tier: string): any {
   const dateResult = (ocr.serial && entry.brand) ? decodeWHSerial(entry.brand, ocr.serial) : null
@@ -454,17 +466,8 @@ export const onRequest = async (context: any) => {
     // ── Step 2: Compute all derived fields server-side ──
     parsed = computeDerivedFields(parsed)
 
-    // ── Step 3: Brave Search — enrich docs with verified URLs ──
-    const braveKey = context.env.BRAVE_API_KEY
-    if (braveKey && Array.isArray(parsed.docs)) {
-      parsed.docs = await Promise.all(
-        parsed.docs.slice(0, 3).map(async (doc: any) => {
-          if (!doc.searchQuery) return { ...doc, url: null }
-          const url = await braveSearch(braveKey, doc.searchQuery)
-          return { type: doc.type, label: doc.label, url, searchQuery: doc.searchQuery }
-        })
-      )
-    }
+    // ── Step 3: Inject doc URLs from hardcoded lookup table (instant, no network) ──
+    parsed.docs = injectTableUrls(parsed.docs, parsed.brand ?? null, parsed.model ?? null)
 
     // ── Step 4: Record scan event for pro dashboard ───────────────────────────
     if (context.env.DB && parsed.ageYears != null) {
