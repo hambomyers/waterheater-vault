@@ -31,7 +31,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         'Authorization': `Bearer ${env.GROK_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'grok-vision-beta',
+        model: 'grok-2-vision-1212',
         messages: [
           {
             role: 'system',
