@@ -105,7 +105,18 @@ export function decodeWHSerial(brand: string, serial: string): SerialDecodeResul
     }
   }
 
-  if (b.includes('navien') || b.includes('noritz') || b.includes('lochinvar') || b.includes('weil')) {
+  // Navien NPE-series: plant letter + two-digit year suffix (e.g. A19=2019, C14=2014)
+  if (b.includes('navien')) {
+    const match = s.match(/[A-Z](\d{2})/)
+    if (match) {
+      const year = 2000 + parseInt(match[1])
+      if (year >= 2000 && year <= 2040) {
+        return { year, month: 1, manufactureDate: fmt(year, 1), patternType: 'NAVIEN_LETTER_YY' }
+      }
+    }
+  }
+
+  if (b.includes('noritz') || b.includes('lochinvar') || b.includes('weil')) {
     const year = 2000 + parseInt(s.slice(0, 2))
     const week = parseInt(s.slice(2, 4))
     if (year >= 2000 && year <= 2040 && week >= 1 && week <= 52) {

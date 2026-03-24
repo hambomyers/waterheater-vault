@@ -135,12 +135,14 @@ export function decodeWHSerial(brand: string, serial: string): SerialDecodeResul
     }
   }
 
-  // ── Navien (YYYYMM — 4-digit year, 2-digit month) ─────────────────────────
+  // ── Navien NPE-series: plant letter + two-digit year suffix (e.g. A19=2019, C14=2014) ───
   if (b.includes('navien')) {
-    const year  = parseInt(s.slice(0, 4))
-    const month = parseInt(s.slice(4, 6))
-    if (year >= 2000 && year <= 2040 && month >= 1 && month <= 12) {
-      return { year, month, manufactureDate: fmt(year, month), patternType: 'YYYYMM' }
+    const match = s.match(/[A-Z](\d{2})/)
+    if (match) {
+      const year = 2000 + parseInt(match[1])
+      if (year >= 2000 && year <= 2040) {
+        return { year, month: 1, manufactureDate: fmt(year, 1), patternType: 'NAVIEN_LETTER_YY' }
+      }
     }
   }
 
