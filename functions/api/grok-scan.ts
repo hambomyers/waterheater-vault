@@ -162,44 +162,52 @@ async function googleVisionOCR(base64: string, apiKey: string): Promise<string> 
   }
 }
 
-// ── Tier 1: OpenRouter free VLM (Qwen-VL, Gemma vision, etc.) ─────────────────
+// Free vision models confirmed available on OpenRouter (March 2026)
+const OR_VISION_MODELS = [
+  'meta-llama/llama-3.2-11b-vision-instruct:free',
+  'google/gemma-3-27b-it:free',
+]
+
 async function openRouterVLM(base64: string, apiKey: string): Promise<string> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 20000)
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://waterheaterplan.com',
-        'X-Title': 'WaterHeaterVault',
-      },
-      body: JSON.stringify({
-        model: 'qwen/qwen2.5-vl-7b-instruct:free',
-        messages: [
-          { role: 'system', content: WH_SYSTEM },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: 'This is a water heater data plate label. Extract every readable field.' },
-              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}`, detail: 'auto' } },
-            ],
-          },
-        ],
-        max_tokens: 300,
-        temperature: 0.1,
-      }),
-      signal: controller.signal,
-    })
-    clearTimeout(timeout)
-    if (!res.ok) return ''
-    const data: any = await res.json()
-    return data?.choices?.[0]?.message?.content ?? ''
-  } catch {
-    clearTimeout(timeout)
-    return ''
+  for (const model of OR_VISION_MODELS) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 18000)
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://waterheaterplan.com',
+          'X-Title': 'WaterHeaterVault',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: WH_SYSTEM },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: 'This is a water heater data plate label. Extract every readable field.' },
+                { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } },
+              ],
+            },
+          ],
+          max_tokens: 300,
+          temperature: 0.1,
+        }),
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+      if (!res.ok) continue
+      const data: any = await res.json()
+      const content = data?.choices?.[0]?.message?.content ?? ''
+      if (content) return content
+    } catch {
+      clearTimeout(timeout)
+    }
   }
+  return ''
 }
 
 // ── Inject manual/warranty/recall URLs from hardcoded table (replaces Brave Search) ──
