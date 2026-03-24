@@ -430,8 +430,9 @@ export const onRequest = async (context: any) => {
       grokContent = await callGrok(grokKey, shot1, shot2, categoryHint)
     } catch (err: any) {
       const httpStatus = (err as any).status
+      const trace = { openRouterKey: !!context.env.OPENROUTER_API_KEY, grokKey: !!context.env.GROK_API_KEY, error: err?.message, status: httpStatus }
       return new Response(
-        JSON.stringify({ error: 'api_error', message: err.message || 'Scan timed out. Please try again.' }),
+        JSON.stringify({ error: 'api_error', message: err.message || 'Scan timed out. Please try again.', trace }),
         { status: httpStatus === 401 || httpStatus === 429 || httpStatus === 404 ? 502 : 504,
           headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
