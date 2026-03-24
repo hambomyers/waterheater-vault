@@ -2,33 +2,6 @@
 
 import type { WHLookupEntry } from './types'
 
-// ─── Pricing Config ─────────────────────────────────────────────────────────
-// Final installed price = (unit cost × markup) + labor + permit
-// Edit DEFAULT_PRICING for market rate changes.
-
-export interface PricingConfig {
-  laborRatePerHour: number
-  unitMarkupPercent: number
-  permitCost: number
-  inflationFactor: number
-  regionalMultiplier: number    // 1.0 = national avg; 0.95 = Central VA
-}
-
-export const DEFAULT_PRICING: PricingConfig = {
-  laborRatePerHour: 95,
-  unitMarkupPercent: 25,
-  permitCost: 75,
-  inflationFactor: 1.0,
-  regionalMultiplier: 0.95,
-}
-
-export const REGION_PRICING: Record<string, PricingConfig> = {
-  'central-va':  { laborRatePerHour: 95,  unitMarkupPercent: 25, permitCost: 75,  inflationFactor: 1.0, regionalMultiplier: 0.95 },
-  'richmond-va': { laborRatePerHour: 98,  unitMarkupPercent: 25, permitCost: 80,  inflationFactor: 1.0, regionalMultiplier: 0.98 },
-  'northern-va': { laborRatePerHour: 115, unitMarkupPercent: 25, permitCost: 100, inflationFactor: 1.0, regionalMultiplier: 1.2  },
-  'national-avg':{ laborRatePerHour: 100, unitMarkupPercent: 25, permitCost: 85,  inflationFactor: 1.0, regionalMultiplier: 1.0  },
-}
-
 // ─── Model Table ─────────────────────────────────────────────────────────────
 // 10 brands × 8-12 real catalog models each.
 // Price ranges are installed (labor + parts) for Central Virginia 2024-2025.

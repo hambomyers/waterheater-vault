@@ -62,7 +62,7 @@ SERIAL DATE DECODERS:
 • Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
 • AO Smith/American/Reliance/Whirlpool/State/Richmond: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
 • Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
-• Navien NPE/NFC/NCB/NHB: YYYYMM e.g. "202103"=March2021 (4-digit year + 2-digit month)
+• Navien NPE/NFC/NCB/NHB: find plant letter in serial, TWO digits after = year (e.g. A19→2019, C14→2014). Month not encoded — use YYYY-01
 • Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
 • Noritz: YYWW in first 4 chars
 • Bosch: first 6 = YYYYWW
