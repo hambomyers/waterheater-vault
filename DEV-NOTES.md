@@ -587,101 +587,103 @@ Still needed: Immutable audit log (timestamp chain — proves pre-loss)
 
 ---
 
-## File Structure (current, accurate as of Sprint 5)
+## File Structure (current, accurate as of Sprint 6 - 2026-03-24)
 
 ```
 waterheater-vault/
 ├── app/
-│   ├── layout.tsx                  Root layout, metadata, TopNav
-│   ├── globals.css                 Tailwind base, black theme, SF Pro
-│   ├── page.tsx                    Homeowner landing: headline + Scan CTA + proof pills + pro link
-│   ├── scan/page.tsx               Two-shot: idle→camera→scanning→guide→processing
-│   │                                Preview runs OCR once; processImage reuses result (no double Tesseract)
-│   ├── results/page.tsx            Gauge + price breakdown + rebate card + PDF + invite + TCPA capture
-│   ├── vault/
-│   │   ├── page.tsx                List + background recall check + recall badges
-│   │   └── item/page.tsx           Detail + inline edit + recall banner + delete
-│   ├── pro/
-│   │   ├── page.tsx                Pro marketing: how it works, $49/mo pricing, quality gate
-│   │   ├── claim/page.tsx          Free plumber claim: heater summary + form + TCPA + upsell
-│   │   ├── onboard/page.tsx        Pro signup: GBP URL → Grok AI screen → Stripe checkout
-│   │   ├── directory/page.tsx      Public searchable directory of screened pros
-│   │   └── dashboard/page.tsx      Pro weekly scan counts by zip
-│   ├── debug/page.tsx              Dev pipeline test (NODE_ENV guard needed)
-│   └── components/
-│       ├── Logo.tsx                SVG: WH text y=42 + thin line y=82
-│       ├── TopNav.tsx              Fixed desktop nav: logo + Vault + Scan pill
-│       ├── InvitePlumberButton.tsx Share URL via native share / clipboard copy
-│       ├── RebateMaximizerCard.tsx Shows utility rebate doc from Grok/Brave
-│       └── PDFReportGenerator.tsx  html2canvas + jsPDF client-side report card
-│
-├── brain/
-│   ├── on-device.ts                extractFromImage() + extractFromTwoShots() → /api/grok-scan
-│   │                                extractFromText() → /api/parse-text (Tier 2)
-│   │                                extractFastLookup() → /api/fast-lookup (Tier 1, returns null on miss)
-│   └── router.ts                   BrainRouter singleton
-│                                    extractOnDevicePreview() → OCR + gate fields
-│                                    processImage() → 3-tier gate: fast-lookup → text-parse → grok-vision
-│                                    processTwoShots() → always vision (two-shot accuracy)
+│   ├── (consumer)/                 ✅ NEW - Tesla-sleek consumer routes
+│   │   ├── layout.tsx              Minimal consumer layout (black bg, no nav)
+│   │   ├── page.tsx                Landing: big Scan button, simple value prop
+│   │   ├── scan/
+│   │   │   └── page.tsx            Camera interface + on-device vision (Tesseract + pattern matching)
+│   │   ├── profile/
+│   │   │   ├── page.tsx            Simple homeowner card (age, life, cost - NO jargon)
+│   │   │   └── details/
+│   │   │       └── page.tsx        Rich technical view (serial, BTU, specs - for plumbers)
+│   │   └── send-plumber/
+│   │       └── page.tsx            Hero flow: TCPA consent + job ticket generation
+│   │
+│   ├── pro/                        ✅ KEPT - Plumber routes (will update Phase 3)
+│   │   ├── page.tsx                Pro marketing: $49/mo, geofenced zones
+│   │   ├── claim/page.tsx          Zone claim page
+│   │   ├── onboard/page.tsx        Pro signup: GBP screen → Stripe checkout
+│   │   ├── directory/page.tsx      Public directory of screened pros
+│   │   └── dashboard/page.tsx      Pro dashboard
+│   │
+│   ├── layout.tsx                  ✅ UPDATED - Root layout (no TopNav, minimal)
+│   └── globals.css                 ✅ KEPT - Tailwind base, black theme
 │
 ├── lib/
-│   ├── onDeviceExtractor.ts        Enhanced Tesseract.js: canvas preprocessing + PSM-6 worker API
-│   │                                Outputs: rawText · confidenceScore(0-100) · serialCandidate · detectedBrand
-│   ├── wh-lookup.ts                Hardcoded lookup table — ships in bundle, zero network
-│   │                                BrandSpec[] (serial decode rules per brand)
-│   │                                ModelSpec[] (~500 models: prefix → tank/fuel/life/cost)
-│   │                                lookupBySerial(serial, brand) → ModelSpec | null
-│   ├── exportJobTicket.ts          Pure client-side export — zero APIs, works offline
-│   │                                exportICS(data) → downloads WaterHeater-Job-{serial}.ics
-│   │                                exportCSV(data) → downloads WaterHeater-Job-{serial}.csv
-│   │                                Compatible: Google Cal · Apple Cal · Outlook · Housecall Pro · Jobber
-│   ├── whSerialDecoder.ts          JS serial date decoder (client runtime)
-│   │                                detectWHBrand() · extractWHSerial() · decodeWHSerial()
-│   │                                Brands: Rheem(WWYY) · AO Smith(YYWW) · Bradford White(BWL)
-│   │                                        Navien/Noritz(YYWW) · Rinnai(YYMM) · Bosch(YYYYWW) · GE(LETTER_YY)
-│   ├── recallChecker.ts            CPSC recall check: needsRecallCheck() + checkItemForRecalls()
-│   │                                Conservative 2-field match (brand + model required)
-│   └── auth.ts                     Magic-link auth, onboarding flags, sync mode, bootstrapAuthAndSync
+│   ├── vision/                     ✅ NEW - 3-tier vision pipeline
+│   │   ├── on-device-scanner.ts    Main scanner: Tesseract → Tier 1 → Tier 2 → Tier 3
+│   │   ├── pattern-extractor.ts    Tier 1: Pattern matching (90% of scans, <1s, $0)
+│   │   │                            - Brand detection (10 brands)
+│   │   │                            - Serial extraction & decoding (8 formats)
+│   │   │                            - Model/fuel/tank extraction
+│   │   ├── prompt-templates.ts     Minimal prompts for on-device models
+│   │   └── result-parser.ts        Validation, normalization, formatting
+│   │
+│   ├── profile/                    ✅ NEW - Profile system
+│   │   ├── profile-builder.ts      buildSimpleProfile() + buildRichProfile() + buildJobTicket()
+│   │   └── job-ticket.ts           Pure client-side .ics + .csv export (works offline)
+│   │
+│   ├── auth.ts                     ✅ KEPT - Magic-link auth
+│   ├── recallChecker.ts            ✅ KEPT - CPSC recall checking
+│   └── types.ts                    ✅ KEPT - Type definitions
 │
 ├── vault/
-│   └── private.ts                  IndexedDB v2: CRUD + getStats + syncQueue + mergeFromCloud
-│                                    VaultItem, VaultDocs[], VaultDocItem, ActiveRecall, normalizeDocs()
+│   └── private.ts                  ✅ KEPT - IndexedDB vault implementation
 │
 ├── functions/api/
-│   ├── _utils/
-│   │   ├── wh-compute.ts           Shared: computeDerivedFields · extractOutermostJson · braveSearch
-│   │   │                            learnFromScan() · normalizeBrand() · getBrandPatternType()
-│   │   │                            WH_SYSTEM (vision prompt) · WH_TEXT_SYSTEM (text prompt)
-│   │   ├── whSerialDecoder.ts      CF Workers mirror of lib/whSerialDecoder.ts
-│   │   ├── auth.ts                 requireSessionUser · signJwt · verifyJwt · makeSessionCookie
+│   ├── vision/                     ✅ NEW - Sprint 6 vision endpoints
+│   │   └── grok-scan.ts            Tier 3: Grok Vision fallback (blurry/damaged labels)
+│   │                                POST /api/vision/grok-scan
+│   │                                Logs to D1 scan_events for analytics
+│   │
+│   ├── _utils/                     ✅ KEPT - Shared utilities
+│   │   ├── wh-compute.ts           Shared: computeDerivedFields · braveSearch (old system)
+│   │   ├── whSerialDecoder.ts      CF Workers serial decoder (old system)
+│   │   ├── auth.ts                 requireSessionUser · signJwt · verifyJwt
 │   │   └── http.ts                 CORS_HEADERS · jsonResponse
-│   ├── fast-lookup.ts              Tier 1: serial_cache exact hit OR D1 pattern decode (<100ms, no LLM)
-│   │                                Requires brand confidence ≥ 0.9 + sample_count ≥ 10
-│   ├── parse-text.ts               Tier 2: rawText → grok-2-1212 (text-only) → full result (~1-2s)
-│   │                                Calls learnFromScan() after every parse
-│   ├── grok-scan.ts                Tier 3: vision LLM grok-4.20-beta → Brave Search → full result
-│   │                                Also handles mode=review-screen for pro AI screening
-│   │                                Calls learnFromScan() after every successful vision scan
-│   ├── recall-check.ts             CPSC SaferProducts API proxy (handles CORS)
-│   ├── capture-lead.ts             POST: save lead (email + phone + sms_consent + heater data)
-│   ├── detect-location.ts          CF Worker geolocation → zip from request.cf
-│   ├── pro/
-│   │   ├── checkout.ts             Stripe checkout session creation ($49/mo or $499/yr)
-│   │   ├── claim.ts                Free plumber claim → pro_claims D1 table
+│   │
+│   ├── recall-check.ts             ✅ KEPT - CPSC SaferProducts API proxy
+│   ├── capture-lead.ts             ✅ KEPT - POST: save lead to D1
+│   ├── detect-location.ts          ✅ KEPT - CF Worker geolocation → zip
+│   │
+│   ├── fast-lookup.ts              ⚠️ OLD - Tier 1 from Sprint 5 (not used by new consumer routes)
+│   ├── parse-text.ts               ⚠️ OLD - Tier 2 from Sprint 5 (not used by new consumer routes)
+│   ├── grok-scan.ts                ⚠️ OLD - Tier 3 from Sprint 5 (moved to /api/vision/grok-scan)
+│   ├── pro/                        ✅ KEPT - Plumber endpoints
+│   │   ├── checkout.ts             Stripe checkout ($49/mo only in Sprint 6)
+│   │   ├── claim.ts                Free plumber claim → pro_claims D1
 │   │   ├── directory.ts            GET screened pros (public)
-│   │   ├── search-business.ts      Brave Search GBP lookup for onboard flow
-│   │   ├── stats.ts                GET /api/pro/stats?zip= → thisWeek/lastWeek/critical counts
-│   │   └── webhook.ts              Stripe webhook: activate/deactivate pro on subscription events
-│   ├── auth/
-│   │   ├── send-magic-link.ts      Resend email + signed JWT token
-│   │   ├── verify.ts               Validate token, set session cookie, create user in D1
-│   │   └── me.ts                   Return user from session cookie
-│   └── vault/
+│   │   ├── search-business.ts      Brave Search GBP lookup
+│   │   ├── stats.ts                GET /api/pro/stats?zip=
+│   │   └── webhook.ts              Stripe webhook handler
+│   ├── auth/                       ✅ KEPT - Authentication
+│   │   ├── send-magic-link.ts      Resend email + signed JWT
+│   │   ├── verify.ts               Validate token, set session cookie
+│   │   └── me.ts                   Return user from session
+│   └── vault/                      ✅ KEPT - Vault sync
 │       ├── sync.ts                 GET all items / POST upsert (authed)
 │       └── item/[id].ts            DELETE item (authed)
 │
 ├── workers/
 │   └── reminder-cron.ts            Cloudflare Cron Worker: quarterly lead reminders via Resend
+│
+├── archive/                        ✅ NEW - Sprint 6 tree-shake
+│   ├── app-scan-old/               Old scan route (Tesseract + brain router)
+│   ├── app-results-old/            Old results page
+│   ├── app-vault-old/              Old vault implementation
+│   ├── app-debug-old/              Old debug page
+│   ├── app-components-old/         Old components (TopNav, Logo, InvitePlumberButton, etc.)
+│   ├── app-page-old.tsx            Old landing page
+│   ├── brain-old/                  Old 3-tier router (on-device.ts + router.ts)
+│   ├── lib-onDeviceExtractor-old.ts    Old Tesseract implementation
+│   ├── lib-wh-lookup-old.ts        Old hardcoded lookup table (33KB)
+│   ├── lib-whSerialDecoder-old.ts  Old serial decoder
+│   └── lib-exportJobTicket-old.ts  Old job ticket exporter
 │
 ├── migrations/                     All applied to remote D1
 │   ├── 0001_auth_sync.sql          users + vault_items
