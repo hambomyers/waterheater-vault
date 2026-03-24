@@ -9,8 +9,9 @@ import InvitePlumberButton from '../components/InvitePlumberButton'
 import PDFReportGenerator from '../components/PDFReportGenerator'
 import RebateMaximizerCard from '../components/RebateMaximizerCard'
 import { exportICS, exportCSV, ExportData } from '../../lib/exportJobTicket'
+import { lookupByModelPrefix } from '../../lib/wh-lookup'
 
-function ExportJobTicketButtons({ extractedData }: { extractedData: ExtractedData }) {
+function ExportJobTicketButtons({ extractedData, priceLow, priceHigh }: { extractedData: ExtractedData; priceLow: number; priceHigh: number }) {
   const data: ExportData = {
     brand:               extractedData.brand || 'Unknown',
     model:               extractedData.model || 'Unknown',
@@ -19,10 +20,8 @@ function ExportJobTicketButtons({ extractedData }: { extractedData: ExtractedDat
     remainingLifeYears:  extractedData.remainingLifeYears || 0,
     fuelType:            extractedData.fuelType || 'unknown',
     tankGallons:         extractedData.tankSizeGallons ?? null,
-    costMin:             extractedData.estimatedReplacementCost || 0,
-    costMax:             extractedData.estimatedReplacementCost
-                           ? Math.round(extractedData.estimatedReplacementCost * 1.15)
-                           : 0,
+    costMin:             priceLow,
+    costMax:             priceHigh,
     installYear:         new Date().getFullYear() - (extractedData.ageYears || 0),
     recallStatus:        'Not checked',
   }
@@ -309,6 +308,14 @@ export default function ResultsPage() {
 
   const rebateDoc = docs.find(d => d.type === 'utilityRebate') ?? null
 
+  // ── Lookup table merge (client-side, zero network hops) ───────────────────
+  const tableEntry = lookupByModelPrefix(extractedData.model || '')
+  const isKnownModel = !!tableEntry
+  const enrichedRemaining = (tableEntry?.typicalLifeYears ?? 12) - (extractedData.ageYears || 0)
+  const priceLow  = tableEntry?.fairPriceRangeLow  ?? extractedData.estimatedReplacementCost ?? 1800
+  const priceHigh = tableEntry?.fairPriceRangeHigh ?? (extractedData.estimatedReplacementCost ? Math.round(extractedData.estimatedReplacementCost * 1.15) : 2400)
+  const finalConfidence = isKnownModel ? confidence : Math.min(confidence, 0.65)
+
   return (
     <div className="min-h-screen bg-black">
       {/* Mobile Layout */}
@@ -332,9 +339,16 @@ export default function ResultsPage() {
             </div>
           )}
 
+          {/* Re-scan banner for unknown models */}
+          {!isKnownModel && (
+            <div className="px-4 py-3 rounded-2xl bg-yellow-500 bg-opacity-10 border border-yellow-500 border-opacity-25 text-yellow-300 text-sm font-light">
+              ⚠️ Unusual model — results may be estimated. Re-scan recommended for exact pricing.
+            </div>
+          )}
+
           {/* Remaining Life Gauge */}
           <div className="bg-white bg-opacity-5 rounded-2xl border border-white border-opacity-10 p-5">
-            <RemainingLifeGauge remainingLifeYears={extractedData.remainingLifeYears} ageYears={extractedData.ageYears} />
+            <RemainingLifeGauge remainingLifeYears={Math.max(0, enrichedRemaining)} ageYears={extractedData.ageYears} />
           </div>
 
           {/* PRIMARY CTA — Save to Vault */}
@@ -363,8 +377,8 @@ export default function ResultsPage() {
               { label: 'Fuel Type', value: extractedData.fuelType },
               { label: 'Tank Size', value: extractedData.tankSizeGallons ? `${extractedData.tankSizeGallons} gal` : null },
               { label: 'Warranty', value: extractedData.currentWarranty },
-              { label: 'Replacement Cost', value: extractedData.estimatedReplacementCost ? `$${extractedData.estimatedReplacementCost.toLocaleString()}` : null },
-              { label: 'Confidence', value: `${(confidence * 100).toFixed(0)}%` },
+              { label: 'Fair Price Range', value: `$${priceLow.toLocaleString()} – $${priceHigh.toLocaleString()}` },
+              { label: 'Confidence', value: `${(finalConfidence * 100).toFixed(0)}%` },
             ].filter(r => r.value).map((row) => (
               <div key={row.label} className="flex justify-between items-center border-t border-white border-opacity-5 pt-3">
                 <span className="text-white text-opacity-50 text-sm font-light">{row.label}</span>
@@ -392,9 +406,27 @@ export default function ResultsPage() {
           {/* Rebate Maximizer */}
           <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
 
+          {/* Manual + Warranty links if known */}
+          {(tableEntry?.manualUrl || tableEntry?.warrantyUrl) && (
+            <div className="flex gap-3">
+              {tableEntry.manualUrl && (
+                <a href={tableEntry.manualUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 py-2.5 text-center rounded-full border border-white border-opacity-15 text-white text-opacity-60 text-sm font-light hover:border-opacity-30 transition-colors">
+                  📄 Manual
+                </a>
+              )}
+              {tableEntry.warrantyUrl && (
+                <a href={tableEntry.warrantyUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 py-2.5 text-center rounded-full border border-white border-opacity-15 text-white text-opacity-60 text-sm font-light hover:border-opacity-30 transition-colors">
+                  🛡️ Warranty
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Secondary CTAs */}
           <div className="space-y-3">
-            <ExportJobTicketButtons extractedData={extractedData} />
+            <ExportJobTicketButtons extractedData={extractedData} priceLow={priceLow} priceHigh={priceHigh} />
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
             <InvitePlumberButton extractedData={extractedData} />
           </div>
@@ -533,9 +565,27 @@ export default function ResultsPage() {
             <RebateMaximizerCard rebateDoc={rebateDoc} brand={extractedData.brand} fuelType={extractedData.fuelType} />
           </div>
 
+          {/* Manual + Warranty links if known */}
+          {(tableEntry?.manualUrl || tableEntry?.warrantyUrl) && (
+            <div className="flex gap-3 mb-4">
+              {tableEntry.manualUrl && (
+                <a href={tableEntry.manualUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 py-2.5 text-center rounded-full border border-white border-opacity-15 text-white text-opacity-60 text-sm font-light hover:border-opacity-30 transition-colors">
+                  📄 Manual
+                </a>
+              )}
+              {tableEntry.warrantyUrl && (
+                <a href={tableEntry.warrantyUrl} target="_blank" rel="noopener noreferrer"
+                  className="flex-1 py-2.5 text-center rounded-full border border-white border-opacity-15 text-white text-opacity-60 text-sm font-light hover:border-opacity-30 transition-colors">
+                  🛡️ Warranty
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Secondary CTAs */}
           <div className="mb-4">
-            <ExportJobTicketButtons extractedData={extractedData} />
+            <ExportJobTicketButtons extractedData={extractedData} priceLow={priceLow} priceHigh={priceHigh} />
           </div>
           <div className="flex gap-4 mb-6">
             <PDFReportGenerator extractedData={extractedData} imageBase64={scanResult.imageBase64 ?? undefined} />
