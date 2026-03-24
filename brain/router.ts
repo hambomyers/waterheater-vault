@@ -16,7 +16,7 @@ export interface ProcessingResult {
   extractedData: ExtractedData
   valuation: ValuationData
   docs?: VaultDocs
-  processingMethod: 'on-device' | 'text-parse' | 'fast-lookup' | 'grok-vision'
+  processingMethod: 'on-device' | 'text-parse' | 'fast-lookup' | 'grok-vision' | 'table-lookup' | 'openrouter-vlm'
   confidence: number
   imageBase64?: string
   shot1Note?: string | null
@@ -109,7 +109,7 @@ class BrainRouter {
       extractedData: result.extractedData,
       valuation: { ...result.valuation, lastUpdated: new Date().toISOString() },
       docs: result.docs,
-      processingMethod: 'grok-vision',
+      processingMethod: (result as any).processingMethod ?? 'grok-vision',
       confidence: result.valuation.confidence,
       imageBase64,
     }

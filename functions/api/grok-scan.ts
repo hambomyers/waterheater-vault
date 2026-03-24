@@ -1,4 +1,6 @@
 import { computeDerivedFields, extractOutermostJson, braveSearch, learnFromScan, WH_SYSTEM } from './_utils/wh-compute'
+import { parseOCRText, tableByModelPrefix, tableByBrand, WHEntry } from './_utils/wh-table'
+import { decodeWHSerial } from './_utils/whSerialDecoder'
 
 function userFriendlyError(status: number): string {
   switch (status) {
@@ -138,6 +140,83 @@ async function callGrokReviewScreen(
   })
 }
 
+// ── Tier 0: Google Cloud Vision free-tier OCR (~300ms, 1000 free/month) ────────
+async function googleVisionOCR(base64: string, apiKey: string): Promise<string> {
+  try {
+    const res = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{ image: { content: base64 }, features: [{ type: 'TEXT_DETECTION', maxResults: 1 }] }],
+        }),
+        signal: AbortSignal.timeout(5000),
+      }
+    )
+    if (!res.ok) return ''
+    const data: any = await res.json()
+    return data?.responses?.[0]?.fullTextAnnotation?.text ?? ''
+  } catch {
+    return ''
+  }
+}
+
+// ── Tier 1: OpenRouter free VLM (Qwen-VL, Gemma vision, etc.) ─────────────────
+async function openRouterVLM(base64: string, apiKey: string): Promise<string> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 20000)
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://waterheaterplan.com',
+        'X-Title': 'WaterHeaterVault',
+      },
+      body: JSON.stringify({
+        model: 'qwen/qwen2.5-vl-7b-instruct:free',
+        messages: [
+          { role: 'system', content: WH_SYSTEM },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'This is a water heater data plate label. Extract every readable field.' },
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}`, detail: 'auto' } },
+            ],
+          },
+        ],
+        max_tokens: 300,
+        temperature: 0.1,
+      }),
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+    if (!res.ok) return ''
+    const data: any = await res.json()
+    return data?.choices?.[0]?.message?.content ?? ''
+  } catch {
+    clearTimeout(timeout)
+    return ''
+  }
+}
+
+// ── Build a full result from lookup table entry + OCR-extracted fields ─────────
+function buildFromEntry(entry: WHEntry, ocr: { brand: string | null; model: string | null; serial: string | null }, tier: string): any {
+  const dateResult = (ocr.serial && entry.brand) ? decodeWHSerial(entry.brand, ocr.serial) : null
+  const base = {
+    brand: entry.brand,
+    model: ocr.model || entry.modelFull,
+    serialNumber: ocr.serial || null,
+    manufactureDate: dateResult?.manufactureDate ?? null,
+    tankSizeGallons: entry.tankSizeGallons,
+    fuelType: entry.fuelType,
+    confidence: (ocr.model && ocr.serial) ? 0.90 : (ocr.model ? 0.80 : 0.65),
+  }
+  return { ...computeDerivedFields(base), processingMethod: tier }
+}
+
 // ── Request handler ───────────────────────────────────────────────────────────
 export const onRequest = async (context: any) => {
   const corsHeaders = {
@@ -246,10 +325,65 @@ export const onRequest = async (context: any) => {
       })
     }
 
+    // ── Tier 0: Google Vision OCR + hardcoded lookup table (free, <500ms) ─────
+    const googleKey = context.env.GOOGLE_VISION_API_KEY
+    if (googleKey) {
+      const rawText = await googleVisionOCR(shot1, googleKey)
+      if (rawText.length > 20) {
+        const ocr = parseOCRText(rawText)
+        const entry = (ocr.model ? tableByModelPrefix(ocr.model) : null)
+                   ?? (ocr.brand ? tableByBrand(ocr.brand) : null)
+        if (entry && ocr.confidence === 'high') {
+          const result = buildFromEntry(entry, ocr, 'table-lookup')
+          learnFromScan(context.env.DB, result).catch(() => {})
+          if (context.env.DB && ocr.serial) {
+            context.env.DB.prepare(`
+              INSERT INTO serial_cache (serial_number, grok_result_json, brand, hit_count, created_at, last_hit_at)
+              VALUES (?, ?, ?, 1, ?, ?)
+              ON CONFLICT(serial_number) DO UPDATE SET grok_result_json = excluded.grok_result_json, last_hit_at = excluded.last_hit_at
+            `).bind(ocr.serial, JSON.stringify(result), entry.brand, new Date().toISOString(), new Date().toISOString()).run().catch(() => {})
+          }
+          return new Response(JSON.stringify(result), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders, 'X-Tier': '0-table-lookup' },
+          })
+        }
+      }
+    }
+
+    // ── Tier 1: OpenRouter free VLM (~1-3s, Qwen-VL and others) ──────────────
+    const openRouterKey = context.env.OPENROUTER_API_KEY
+    if (openRouterKey) {
+      const vlmContent = await openRouterVLM(shot1, openRouterKey)
+      if (vlmContent) {
+        const rawJson1 = extractOutermostJson(vlmContent)
+        if (rawJson1) {
+          try {
+            let parsed1: any = JSON.parse(rawJson1)
+            if (!parsed1.error && (parsed1.brand || parsed1.model)) {
+              parsed1 = computeDerivedFields(parsed1)
+              parsed1.processingMethod = 'openrouter-vlm'
+              learnFromScan(context.env.DB, parsed1).catch(() => {})
+              if (context.env.DB && parsed1.serialNumber) {
+                context.env.DB.prepare(`
+                  INSERT INTO serial_cache (serial_number, grok_result_json, brand, hit_count, created_at, last_hit_at)
+                  VALUES (?, ?, ?, 1, ?, ?)
+                  ON CONFLICT(serial_number) DO UPDATE SET grok_result_json = excluded.grok_result_json, last_hit_at = excluded.last_hit_at
+                `).bind(parsed1.serialNumber, JSON.stringify(parsed1), parsed1.brand || null, new Date().toISOString(), new Date().toISOString()).run().catch(() => {})
+              }
+              return new Response(JSON.stringify(parsed1), {
+                headers: { 'Content-Type': 'application/json', ...corsHeaders, 'X-Tier': '1-openrouter' },
+              })
+            }
+          } catch { /* fall through to Grok */ }
+        }
+      }
+    }
+
+    // ── Tier 2: Grok Vision (fallback — only runs when Tier 0 + 1 miss) ────────
     const grokKey = context.env.GROK_API_KEY
     if (!grokKey) {
       return new Response(
-        JSON.stringify({ error: 'API key not configured', message: 'GROK_API_KEY is not set in Cloudflare Pages environment variables.' }),
+        JSON.stringify({ error: 'API key not configured', message: 'No vision API keys configured. Set GOOGLE_VISION_API_KEY, OPENROUTER_API_KEY, or GROK_API_KEY in Cloudflare Pages environment variables.' }),
         { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
@@ -373,7 +507,7 @@ export const onRequest = async (context: any) => {
     }
 
     return new Response(finalJson, {
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders, 'X-Tier': '2-grok-vision' },
     })
 
   } catch (error: any) {
