@@ -168,7 +168,10 @@ const OR_VISION_MODELS = [
   'google/gemma-3-27b-it:free',
 ]
 
-async function openRouterVLM(base64: string, apiKey: string): Promise<string> {
+interface ORResult { content: string; modelUsed: string | null; errorReason: string | null }
+
+async function openRouterVLM(base64: string, apiKey: string): Promise<ORResult> {
+  const errors: string[] = []
   for (const model of OR_VISION_MODELS) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 18000)
@@ -199,15 +202,21 @@ async function openRouterVLM(base64: string, apiKey: string): Promise<string> {
         signal: controller.signal,
       })
       clearTimeout(timeout)
-      if (!res.ok) continue
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '')
+        errors.push(`${model}: HTTP ${res.status} — ${errBody.slice(0, 120)}`)
+        continue
+      }
       const data: any = await res.json()
       const content = data?.choices?.[0]?.message?.content ?? ''
-      if (content) return content
-    } catch {
+      if (content) return { content, modelUsed: model, errorReason: null }
+      errors.push(`${model}: empty response`)
+    } catch (e: any) {
       clearTimeout(timeout)
+      errors.push(`${model}: ${e?.message ?? 'timeout/network error'}`)
     }
   }
-  return ''
+  return { content: '', modelUsed: null, errorReason: errors.join(' | ') }
 }
 
 // ── Inject manual/warranty/recall URLs from hardcoded table (replaces Brave Search) ──
@@ -370,12 +379,12 @@ export const onRequest = async (context: any) => {
       }
     }
 
-    // ── Tier 1: OpenRouter free VLM (~1-3s, Qwen-VL and others) ──────────────
+    // ── Tier 1: OpenRouter free VLM ────────────────────────────────────────────
     const openRouterKey = context.env.OPENROUTER_API_KEY
     if (openRouterKey) {
-      const vlmContent = await openRouterVLM(shot1, openRouterKey)
-      if (vlmContent) {
-        const rawJson1 = extractOutermostJson(vlmContent)
+      const orResult = await openRouterVLM(shot1, openRouterKey)
+      if (orResult.content) {
+        const rawJson1 = extractOutermostJson(orResult.content)
         if (rawJson1) {
           try {
             let parsed1: any = JSON.parse(rawJson1)
@@ -391,19 +400,26 @@ export const onRequest = async (context: any) => {
                 `).bind(parsed1.serialNumber, JSON.stringify(parsed1), parsed1.brand || null, new Date().toISOString(), new Date().toISOString()).run().catch(() => {})
               }
               return new Response(JSON.stringify(parsed1), {
-                headers: { 'Content-Type': 'application/json', ...corsHeaders, 'X-Tier': '1-openrouter' },
+                headers: { 'Content-Type': 'application/json', ...corsHeaders, 'X-Tier': `1-openrouter:${orResult.modelUsed}` },
               })
             }
-          } catch { /* fall through to Grok */ }
+          } catch (e: any) {
+            // JSON parse failed — fall to Grok with this context
+            console.error('OpenRouter JSON parse failed:', e?.message, orResult.content.slice(0, 200))
+          }
         }
+      } else {
+        // OpenRouter failed entirely — log the real reason
+        console.error('OpenRouter all models failed:', orResult.errorReason)
       }
     }
 
-    // ── Tier 2: Grok Vision (fallback — only runs when Tier 0 + 1 miss) ────────
+    // ── Tier 2: Grok Vision (true last resort) ────────────────────────
     const grokKey = context.env.GROK_API_KEY
     if (!grokKey) {
+      const orErr = openRouterKey ? 'OpenRouter returned no usable result.' : 'OPENROUTER_API_KEY not set.'
       return new Response(
-        JSON.stringify({ error: 'API key not configured', message: 'No vision API keys configured. Set GOOGLE_VISION_API_KEY, OPENROUTER_API_KEY, or GROK_API_KEY in Cloudflare Pages environment variables.' }),
+        JSON.stringify({ error: 'scan_failed', message: `${orErr} Set OPENROUTER_API_KEY or GROK_API_KEY in Cloudflare Pages → Settings → Environment Variables.` }),
         { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       )
     }
