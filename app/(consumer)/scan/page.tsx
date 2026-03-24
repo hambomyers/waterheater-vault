@@ -99,7 +99,8 @@ export default function ScanPage() {
       router.push('/profile')
     } catch (err) {
       console.error('Scan error:', err)
-      setError('Scan failed. Please try again with better lighting.')
+      const errorMessage = err instanceof Error ? err.message : 'Scan failed. Please try again with better lighting.'
+      setError(errorMessage)
       setState('error')
       stopCamera()
     }
@@ -135,7 +136,8 @@ export default function ScanPage() {
       router.push('/profile')
     } catch (err) {
       console.error('Scan error:', err)
-      setError('Scan failed. Please try again with a clearer photo.')
+      const errorMessage = err instanceof Error ? err.message : 'Scan failed. Please try again with a clearer photo.'
+      setError(errorMessage)
       setState('error')
     }
   }

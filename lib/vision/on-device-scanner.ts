@@ -50,43 +50,24 @@ export async function scanWaterHeater(
   
   try {
     // Step 1: Extract text with Tesseract.js
-    console.log('[SCAN] Step 1: Starting OCR extraction...')
+    console.log('[SCAN] Starting OCR extraction...')
     const ocrResult = await extractTextWithTesseract(imageData)
-    console.log('[SCAN] OCR complete. Text length:', ocrResult.text.length, 'Confidence:', ocrResult.confidence)
-    console.log('[SCAN] OCR text preview:', ocrResult.text.substring(0, 200))
+    console.log('[SCAN] OCR complete. Text length:', ocrResult.text.length)
     
-    // Step 2: Try Tier 1 - Pattern matching (fast, zero cost)
-    console.log('[SCAN] Step 2: Trying Tier 1 pattern matching...')
+    // Step 2: Pattern matching extraction
+    console.log('[SCAN] Trying pattern matching...')
     const tier1Result = await tryPatternExtraction(ocrResult.text)
-    console.log('[SCAN] Tier 1 result:', { success: tier1Result.success, confidence: tier1Result.confidence, brand: tier1Result.brand })
     
-    if (tier1Result.success && tier1Result.confidence >= 90) {
-      console.log('[SCAN] ✅ Tier 1 SUCCESS! Returning result.')
+    if (tier1Result.success && tier1Result.confidence >= 70) {
+      console.log('[SCAN] ✅ Pattern matching succeeded')
       return buildScanResult(tier1Result)
     }
     
-    console.log('[SCAN] ⚠️ Tier 1 failed or low confidence. Moving to fallback...')
+    // If pattern matching fails, show user-friendly error
+    throw new Error('Could not read the water heater label clearly. Please try again with better lighting and make sure the data plate is clearly visible.')
     
-    // Step 3: Try Tier 2 - Phi-2 reasoning (medium speed, zero cost)
-    // TODO: Implement Phi-2 integration
-    // For now, skip directly to Tier 3
-    
-    // Step 4: Fallback to Tier 3 - Grok Vision (slow, paid)
-    if (finalConfig.useFallback) {
-      console.log('[SCAN] Step 3: Falling back to Grok Vision API...')
-      return await fallbackToGrokVision(imageData)
-    }
-    
-    throw new Error('All extraction tiers failed and fallback disabled')
   } catch (error) {
-    console.error('[SCAN] ❌ Error in scan pipeline:', error)
-    console.error('[SCAN] Error details:', error instanceof Error ? error.message : String(error))
-    
-    if (finalConfig.useFallback) {
-      console.log('[SCAN] Attempting Grok Vision fallback after error...')
-      return await fallbackToGrokVision(imageData)
-    }
-    
+    console.error('[SCAN] Scan failed:', error)
     throw error
   }
 }
@@ -178,49 +159,6 @@ function buildScanResult(patternResult: any): ScanResult {
   }
 }
 
-/**
- * Fallback to Grok Vision API when on-device confidence is low
- */
-async function fallbackToGrokVision(imageData: string | Blob): Promise<ScanResult> {
-  console.log('[GROK] Converting image to base64...')
-  // Convert Blob to base64 if needed
-  let base64Image: string
-  if (imageData instanceof Blob) {
-    base64Image = await blobToBase64(imageData)
-    console.log('[GROK] Blob converted. Base64 length:', base64Image.length)
-  } else {
-    base64Image = imageData
-    console.log('[GROK] Using provided base64. Length:', base64Image.length)
-  }
-  
-  console.log('[GROK] Calling Grok Vision API...')
-  // Call Grok Vision API
-  const response = await fetch('/api/vision/grok-scan', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      image: base64Image
-    })
-  })
-  
-  console.log('[GROK] API response status:', response.status, response.statusText)
-  
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('[GROK] API error response:', errorText)
-    throw new Error(`Grok Vision API failed: ${response.status} ${response.statusText} - ${errorText}`)
-  }
-  
-  const result = await response.json()
-  console.log('[GROK] ✅ Grok Vision succeeded. Result:', result)
-  
-  return {
-    ...result,
-    processingMethod: 'grok-vision'
-  }
-}
 
 /**
  * Convert Blob to base64 string
