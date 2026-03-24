@@ -8,8 +8,14 @@ database_name = "waterheater-vault"
 database_id = "15010cce-24bc-450a-b49f-74d73b82ca38"
 
 # ── Environment variables — set ALL in Cloudflare Pages → Settings → Environment Variables ──
-# RESEND_API_KEY        — email delivery (Resend). Send from: reports@waterheaterplan.com
-# GROK_API_KEY          — xAI Grok Vision (Tier 2 fallback only). console.x.ai
-# GOOGLE_VISION_API_KEY — Google Cloud Vision Text Detection (Tier 0, 1000 free/month). console.cloud.google.com → APIs → Cloud Vision API → Credentials
-# OPENROUTER_API_KEY    — OpenRouter free VLMs (Tier 1, Qwen-VL etc). openrouter.ai/keys
-# BRAVE_API_KEY         — Brave Search for doc URL enrichment. api.search.brave.com
+# GROK_API_KEY             — xAI Grok Vision (Tier 3 fallback only, ~2% of scans). console.x.ai
+# BRAVE_API_KEY            — Brave Search for manual/warranty docs (optional). api.search.brave.com
+# RESEND_API_KEY           — Email delivery (Resend). Send from: reports@waterheaterplan.com
+# JWT_SECRET               — Sign/verify tokens (32+ chars)
+# STRIPE_SECRET_KEY        — Stripe checkout sessions
+# STRIPE_PRICE_ID_MONTHLY  — Stripe Price ID for $49/mo Pro plan
+#
+# NEW ARCHITECTURE (Sprint 6):
+# Tier 1: Pattern matching (90% of scans, <1s, $0) — on-device, no API
+# Tier 2: Phi-2 reasoning (8% of scans, 3-8s, $0) — on-device, no API (TODO)
+# Tier 3: Grok Vision (2% of scans, 10-25s, ~$0.01) — cloud fallback
