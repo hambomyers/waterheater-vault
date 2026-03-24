@@ -64,7 +64,7 @@ async function callGrok(
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'grok-2-vision',
+        model: 'grok-2-vision-latest',
         messages: [
           { role: 'system', content: WH_SYSTEM },
           { role: 'user', content: userContent },
@@ -409,8 +409,11 @@ export const onRequest = async (context: any) => {
           }
         }
       } else {
-        // OpenRouter failed entirely — log the real reason
-        console.error('OpenRouter all models failed:', orResult.errorReason)
+        // OpenRouter failed entirely — return error instead of silent fallthrough
+        return new Response(
+          JSON.stringify({ error: 'openrouter_failed', message: `OpenRouter error: ${orResult.errorReason}. Set GROK_API_KEY for fallback.` }),
+          { status: 502, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        )
       }
     }
 
