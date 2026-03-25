@@ -61,7 +61,6 @@ export const onRequestPost = async ({ request, env }: any) => {
           model: TEXT_MODEL,
           max_tokens: 400,
           temperature: 0.1,
-          response_format: { type: 'json_object' },
           messages: [
             { role: 'system', content: WH_TEXT_SYSTEM },
             {
