@@ -122,6 +122,22 @@ export default function ScanPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      setError(`Invalid file type: ${file.type}. Please upload a JPG, PNG, or WEBP image.`)
+      setState('error')
+      return
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File too large. Please upload an image smaller than 10MB.')
+      setState('error')
+      return
+    }
+
+    console.log('File uploaded:', file.name, file.type, `${(file.size / 1024).toFixed(1)}KB`)
     setState('processing')
 
     try {
@@ -205,7 +221,7 @@ export default function ScanPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   onChange={handleFileUpload}
                   className="hidden"
                 />
