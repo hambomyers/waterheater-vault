@@ -8,23 +8,28 @@ const CORS = {
 }
 
 export const onRequestPost = async ({ request, env }: any) => {
+  // Non-critical endpoint - always return success to not block scans
   if (!env.DB) {
-    return Response.json({ error: 'Database not configured' }, { status: 500, headers: CORS })
+    console.warn('DB not configured, skipping image save')
+    return Response.json({ success: false, reason: 'db_not_configured' }, { headers: CORS })
   }
 
   try {
     const { imageBase64, serialNumber, userId } = await request.json()
 
     if (!imageBase64) {
-      return Response.json({ error: 'imageBase64 required' }, { status: 400, headers: CORS })
+      return Response.json({ success: false, reason: 'no_image' }, { headers: CORS })
     }
 
     // Extract dimensions and calculate file size
     const base64Data = imageBase64.split(',')[1] || imageBase64
     const fileSizeKb = Math.round((base64Data.length * 3) / 4 / 1024)
 
-    // Generate thumbnail (simplified - just store original for now, can add resize later)
-    const thumbnailData = null
+    // Skip if image is too large (>5MB to avoid D1 limits)
+    if (fileSizeKb > 5120) {
+      console.warn(`Image too large: ${fileSizeKb}KB, skipping save`)
+      return Response.json({ success: false, reason: 'image_too_large', fileSizeKb }, { headers: CORS })
+    }
 
     const imageId = crypto.randomUUID()
 
@@ -36,7 +41,7 @@ export const onRequestPost = async ({ request, env }: any) => {
       userId || null,
       serialNumber || null,
       base64Data,
-      thumbnailData,
+      null, // thumbnail_data
       new Date().toISOString(),
       fileSizeKb
     ).run()
@@ -48,10 +53,11 @@ export const onRequestPost = async ({ request, env }: any) => {
     }, { headers: CORS })
 
   } catch (err: any) {
+    // Log but don't fail - this is non-critical
     console.error('Save image error:', err)
     return Response.json(
-      { error: 'internal_error', message: err.message || 'Failed to save image' },
-      { status: 500, headers: CORS }
+      { success: false, reason: 'error', message: err.message },
+      { headers: CORS }
     )
   }
 }
