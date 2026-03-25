@@ -48,42 +48,71 @@ export async function scanWaterHeater(
   const finalConfig = { ...DEFAULT_CONFIG, ...config }
   
   try {
-    // Step 1: Preprocess image for better OCR
-    console.log('[SCAN] Preprocessing image...')
-    const { preprocessImage } = await import('./image-preprocessor')
-    const preprocessedImage = await preprocessImage(imageData)
-    console.log('[SCAN] Image preprocessed')
+    console.log('[SCAN] Starting scan...')
     
-    // Step 2: Extract text with Tesseract.js
-    console.log('[SCAN] Starting OCR extraction...')
-    const ocrResult = await extractTextWithTesseract(preprocessedImage)
-    console.log('[SCAN] OCR complete. Text length:', ocrResult.text.length, 'Confidence:', ocrResult.confidence)
-    
-    // If OCR extracted very little text, return soft error
-    if (ocrResult.text.length < 10) {
-      console.log('[SCAN] OCR extracted very little text')
-      throw new Error("Couldn't read the label clearly. Try better lighting and hold the phone straight.")
+    // DEMO MODE: Return mock data for testing
+    // Remove this after real scanning works
+    if (isDemoMode()) {
+      console.log('[SCAN] 🎭 DEMO MODE - Returning mock data')
+      return getMockScanResult()
     }
     
-    // Step 3: Pattern matching extraction
-    console.log('[SCAN] Trying pattern matching...')
-    const tier1Result = await tryPatternExtraction(ocrResult.text)
+    // Extract text with Tesseract.js (no preprocessing - keep it simple)
+    console.log('[SCAN] Running OCR...')
+    const ocrResult = await extractTextWithTesseract(imageData)
+    console.log('[SCAN] OCR done. Text:', ocrResult.text.substring(0, 200))
+    console.log('[SCAN] OCR confidence:', ocrResult.confidence)
     
-    // Lower threshold to 60 for more tolerance
-    if (tier1Result.success && tier1Result.confidence >= 60) {
-      console.log('[SCAN] ✅ Pattern matching succeeded')
-      return buildScanResult(tier1Result)
+    // Try pattern matching with very low threshold
+    console.log('[SCAN] Pattern matching...')
+    const result = await tryPatternExtraction(ocrResult.text)
+    console.log('[SCAN] Pattern result:', result)
+    
+    // Accept anything with confidence > 30 (very permissive)
+    if (result.success && result.confidence >= 30) {
+      console.log('[SCAN] ✅ Success')
+      return buildScanResult(result)
     }
     
-    // If pattern matching fails, show user-friendly error
-    console.log('[SCAN] Pattern matching failed. Confidence:', tier1Result.confidence)
-    throw new Error("Couldn't read the label clearly. Try better lighting and hold the phone straight.")
+    // If we got here, OCR worked but pattern matching failed
+    // Show the OCR text so user can see what was extracted
+    console.log('[SCAN] ❌ Pattern matching failed')
+    console.log('[SCAN] Extracted text:', ocrResult.text)
+    throw new Error("Couldn't identify the water heater brand and model. The scanner is in development - try the demo mode or contact support.")
     
   } catch (error) {
-    console.error('[SCAN] Scan failed:', error)
-    // Always throw user-friendly error, never crash
-    const message = error instanceof Error ? error.message : "Couldn't read the label clearly. Try better lighting and hold the phone straight."
-    throw new Error(message)
+    console.error('[SCAN] Error:', error)
+    throw error
+  }
+}
+
+/**
+ * Check if demo mode is enabled (for testing without real photos)
+ */
+function isDemoMode(): boolean {
+  if (typeof window === 'undefined') return false
+  // Enable demo mode if URL has ?demo=true
+  return window.location.search.includes('demo=true')
+}
+
+/**
+ * Return mock scan result for demo/testing
+ */
+function getMockScanResult(): ScanResult {
+  return {
+    brand: 'Rheem',
+    model: 'XE40M06ST45U1',
+    serial: '0423A12345',
+    manufactureDate: '2023-01-23',
+    age: 3,
+    fuelType: 'natural_gas',
+    tankSizeGallons: 40,
+    expectedLifeYears: 12,
+    remainingYears: 9,
+    estimatedCostMin: 1000,
+    estimatedCostMax: 1400,
+    confidence: 95,
+    processingMethod: 'on-device'
   }
 }
 
