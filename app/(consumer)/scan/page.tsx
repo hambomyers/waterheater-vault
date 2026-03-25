@@ -12,6 +12,19 @@ import { scanWaterHeater } from '@/lib/vision/on-device-scanner'
 
 type ScanState = 'idle' | 'camera' | 'processing' | 'error'
 
+// Helper: Convert Blob to base64 string
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const base64 = reader.result as string
+      resolve(base64.split(',')[1]) // Remove data:image/jpeg;base64, prefix
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
 export default function ScanPage() {
   const router = useRouter()
   const [state, setState] = useState<ScanState>('idle')
@@ -111,8 +124,27 @@ export default function ScanPage() {
       // Stop camera
       stopCamera()
 
-      // Scan with on-device scanner (3-tier hybrid)
-      const result = await scanWaterHeater(blob, { useFallback: true })
+      // STEP 1: Save image FIRST (before any AI processing)
+      console.log('[SCAN] Saving image to server...')
+      const imageBase64 = await blobToBase64(blob)
+      const storeResponse = await fetch('/api/store-image', {
+        method: 'POST',
+        body: (() => {
+          const fd = new FormData()
+          fd.append('image', imageBase64)
+          return fd
+        })()
+      })
+
+      if (!storeResponse.ok) {
+        throw new Error('Failed to save image')
+      }
+
+      const { imageId } = await storeResponse.json()
+      console.log('[SCAN] Image saved with ID:', imageId)
+
+      // STEP 2: Now scan with saved imageId (AI models will fetch from server)
+      const result = await scanWaterHeater(blob, { useFallback: true, imageId })
 
       // Store result in sessionStorage and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
@@ -161,8 +193,27 @@ export default function ScanPage() {
     setState('processing')
 
     try {
-      // Scan the uploaded file with on-device scanner (3-tier hybrid)
-      const result = await scanWaterHeater(file, { useFallback: true })
+      // STEP 1: Save image FIRST (before any AI processing)
+      console.log('[SCAN] Saving image to server...')
+      const imageBase64 = await blobToBase64(file)
+      const storeResponse = await fetch('/api/store-image', {
+        method: 'POST',
+        body: (() => {
+          const fd = new FormData()
+          fd.append('image', imageBase64)
+          return fd
+        })()
+      })
+
+      if (!storeResponse.ok) {
+        throw new Error('Failed to save image')
+      }
+
+      const { imageId } = await storeResponse.json()
+      console.log('[SCAN] Image saved with ID:', imageId)
+
+      // STEP 2: Now scan with saved imageId (AI models will fetch from server)
+      const result = await scanWaterHeater(file, { useFallback: true, imageId })
 
       // Store result in sessionStorage and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))

@@ -119,11 +119,24 @@ export const onRequest = async (context: any) => {
 
   try {
     const formData = await context.request.formData()
-    const shot1 = formData.get('image') as string
+    const imageId = formData.get('imageId') as string | null
+    let shot1 = formData.get('image') as string
     const shot2 = formData.get('shot2') as string | null
     const categoryHint = formData.get('category') as string | null
     const mode = formData.get('mode') as string | null
     const serialHint = (formData.get('serialHint') as string | null)?.trim() || null
+
+    // If imageId provided, fetch from D1 instead of using uploaded image
+    if (imageId && context.env.DB) {
+      const stored = await context.env.DB.prepare(
+        `SELECT image_data FROM scan_images WHERE id = ?`
+      ).bind(imageId).first()
+      
+      if (stored?.image_data) {
+        shot1 = stored.image_data as string
+        console.log('[GROK] Using saved image:', imageId)
+      }
+    }
 
     // ── Serial cache: skip Grok if we've seen this serial before ──────────────
     if (serialHint && context.env.DB) {

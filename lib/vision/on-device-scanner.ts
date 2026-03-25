@@ -24,6 +24,7 @@ export interface ScanResult {
 export interface OnDeviceConfig {
   confidenceThreshold: number // 0-100, default 70
   useFallback: boolean // true = allow Grok fallback if confidence low
+  imageId?: string // optional: ID of saved image for AI model processing
 }
 
 const DEFAULT_CONFIG: OnDeviceConfig = {
@@ -57,6 +58,12 @@ export async function scanWaterHeater(
       return getMockScanResult()
     }
     
+    // If imageId provided, use parallel-scan endpoint (all AI models process saved image)
+    if (finalConfig.imageId && finalConfig.useFallback) {
+      console.log('[SCAN] Using parallel-scan with imageId:', finalConfig.imageId)
+      return await scanWithParallelModels(finalConfig.imageId)
+    }
+    
     // Extract text with Tesseract.js (no preprocessing - keep it simple)
     console.log('[SCAN] Running OCR...')
     const ocrResult = await extractTextWithTesseract(imageData)
@@ -83,6 +90,56 @@ export async function scanWaterHeater(
   } catch (error) {
     console.error('[SCAN] Error:', error)
     throw error
+  }
+}
+
+/**
+ * Scan with parallel AI models (all models fetch from saved imageId)
+ */
+async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
+  console.log('[PARALLEL] Calling parallel-scan endpoint with imageId:', imageId)
+  
+  const formData = new FormData()
+  formData.append('imageId', imageId)
+  
+  const response = await fetch('/api/parallel-scan', {
+    method: 'POST',
+    body: formData
+  })
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.message || error.error || 'Parallel scan failed')
+  }
+  
+  const data = await response.json()
+  const consensus = data.consensus
+  
+  // Convert consensus to ScanResult format
+  const { calculateEstimatedCost, calculateExpectedLife } = require('./result-parser')
+  
+  const manufactureYear = consensus.manufactureDate ? parseInt(consensus.manufactureDate.split('-')[0]) : 0
+  const currentYear = new Date().getFullYear()
+  const age = manufactureYear > 1980 ? currentYear - manufactureYear : 0
+  
+  const expectedLife = calculateExpectedLife('natural_gas') // TODO: get from consensus
+  const remaining = Math.max(0, expectedLife - age)
+  const { min, max } = calculateEstimatedCost('natural_gas', 40) // TODO: get from consensus
+  
+  return {
+    brand: consensus.brand || 'Unknown',
+    model: consensus.model || 'Unknown',
+    serial: consensus.serial || '',
+    manufactureDate: consensus.manufactureDate || '',
+    age,
+    fuelType: 'natural_gas',
+    tankSizeGallons: 40,
+    expectedLifeYears: expectedLife,
+    remainingYears: remaining,
+    estimatedCostMin: min,
+    estimatedCostMax: max,
+    confidence: Math.round(consensus.confidence * 100),
+    processingMethod: 'grok-vision'
   }
 }
 
