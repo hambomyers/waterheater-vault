@@ -64,16 +64,40 @@ export default function ScanPage() {
     setState('processing')
 
     try {
-      // Capture frame from video
+      // Capture only the visible viewport area
       const canvas = canvasRef.current
       const video = videoRef.current
-      canvas.width = video.videoWidth
-      canvas.height = video.videoHeight
+      const container = video.parentElement
+      if (!container) throw new Error('Container not found')
+
+      // Use container dimensions (viewport) instead of full video dimensions
+      const viewportWidth = container.clientWidth
+      const viewportHeight = container.clientHeight
+      
+      canvas.width = viewportWidth
+      canvas.height = viewportHeight
 
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Canvas context not available')
 
-      ctx.drawImage(video, 0, 0)
+      // Calculate video scaling to match object-cover behavior
+      const videoAspect = video.videoWidth / video.videoHeight
+      const viewportAspect = viewportWidth / viewportHeight
+      
+      let sx = 0, sy = 0, sWidth = video.videoWidth, sHeight = video.videoHeight
+      
+      if (videoAspect > viewportAspect) {
+        // Video is wider - crop sides
+        sWidth = video.videoHeight * viewportAspect
+        sx = (video.videoWidth - sWidth) / 2
+      } else {
+        // Video is taller - crop top/bottom
+        sHeight = video.videoWidth / viewportAspect
+        sy = (video.videoHeight - sHeight) / 2
+      }
+
+      // Draw the cropped portion that matches what's visible on screen
+      ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, viewportWidth, viewportHeight)
 
       // Convert to blob
       const blob = await new Promise<Blob>((resolve, reject) => {
@@ -89,6 +113,19 @@ export default function ScanPage() {
 
       // Scan with brain router (3-tier hybrid)
       const result = await brainRouter.processImage(blob, { useCloud: true })
+
+      // Save the captured image for verification (non-blocking)
+      if (result.imageBase64) {
+        fetch('/api/save-scan-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: result.imageBase64,
+            serialNumber: result.extractedData.serialNumber,
+            userId: null, // TODO: add user auth
+          }),
+        }).catch(err => console.warn('Failed to save image:', err))
+      }
 
       // Store result and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
@@ -140,6 +177,19 @@ export default function ScanPage() {
       // Scan the uploaded file with brain router (3-tier hybrid)
       const result = await brainRouter.processImage(file, { useCloud: true })
 
+      // Save the captured image for verification (non-blocking)
+      if (result.imageBase64) {
+        fetch('/api/save-scan-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: result.imageBase64,
+            serialNumber: result.extractedData.serialNumber,
+            userId: null, // TODO: add user auth
+          }),
+        }).catch(err => console.warn('Failed to save image:', err))
+      }
+
       // Store result and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
       router.push('/profile')
@@ -152,7 +202,7 @@ export default function ScanPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-black">
+    <main className="flex h-screen flex-col bg-black overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-6">
         <button
@@ -171,7 +221,7 @@ export default function ScanPage() {
       </div>
 
       {/* Camera View */}
-      <div className="relative flex flex-1 items-center justify-center">
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden">
         {state === 'idle' && (
           <div className="text-center px-6">
             <div className="mb-8 flex justify-center">
@@ -233,14 +283,14 @@ export default function ScanPage() {
           <>
             <video
               ref={videoRef}
-              className="h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover"
               playsInline
               muted
             />
             <canvas ref={canvasRef} className="hidden" />
 
-            {/* Capture Button - Prominent and visible */}
-            <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-3">
+            {/* Capture Button - Fixed at bottom, always visible */}
+            <div className="fixed bottom-8 left-0 right-0 flex flex-col items-center gap-3 z-10">
               <button
                 onClick={captureAndScan}
                 className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white shadow-2xl transition-transform hover:scale-105 active:scale-95"
@@ -252,7 +302,7 @@ export default function ScanPage() {
             </div>
 
             {/* Guide Overlay */}
-            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 rounded-2xl border-2 border-white/40 p-4">
+            <div className="absolute left-8 right-8 top-1/3 -translate-y-1/2 rounded-2xl border-2 border-white/40 p-4 pointer-events-none">
               <p className="text-center text-sm text-white/80">
                 Center the data plate label
               </p>

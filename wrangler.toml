@@ -7,15 +7,30 @@ binding = "DB"
 database_name = "waterheater-vault"
 database_id = "15010cce-24bc-450a-b49f-74d73b82ca38"
 
-# ── Environment variables — set ALL in Cloudflare Pages → Settings → Environment Variables ──
-# GROK_API_KEY             — xAI Grok Vision (Tier 3 fallback only, ~2% of scans). console.x.ai
+# ── Environment variables — set in Cloudflare Pages → Settings → Environment Variables ──
+# PARALLEL FIRING SQUAD (primary scan method) - WORKS OUT OF THE BOX:
+# Uses Hugging Face Inference API (FREE, no API keys required):
+#   - llava-v1.6-mistral-7b-hf (1.5x weight)
+#   - bakllava-v1-hf (1.0x weight)
+#   - moondream2 (1.0x weight)
+#
+# OPTIONAL PREMIUM MODELS (add API keys to enable):
+# GEMINI_API_KEY           — Google Gemini 2.0 Flash (free tier, fast). aistudio.google.com
+# GROQ_API_KEY             — Groq Llama 3.2 90B Vision (free tier, blazing). console.groq.com
+# OPENAI_API_KEY           — OpenAI GPT-4o-mini ($0.00015/image). platform.openai.com
+# MISTRAL_API_KEY          — Mistral Pixtral 12B (free tier). console.mistral.ai
+# GROK_API_KEY             — xAI Grok 4.20 (premium backup, 2x weight). console.x.ai
+#
+# OTHER SERVICES:
 # BRAVE_API_KEY            — Brave Search for manual/warranty docs (optional). api.search.brave.com
 # RESEND_API_KEY           — Email delivery (Resend). Send from: reports@waterheaterplan.com
 # JWT_SECRET               — Sign/verify tokens (32+ chars)
 # STRIPE_SECRET_KEY        — Stripe checkout sessions
 # STRIPE_PRICE_ID_MONTHLY  — Stripe Price ID for $49/mo Pro plan
 #
-# NEW ARCHITECTURE (Sprint 6):
-# Tier 1: Pattern matching (90% of scans, <1s, $0) — on-device, no API
-# Tier 2: Phi-2 reasoning (8% of scans, 3-8s, $0) — on-device, no API (TODO)
-# Tier 3: Grok Vision (2% of scans, 10-25s, ~$0.01) — cloud fallback
+# ARCHITECTURE (Parallel Firing Squad):
+# Primary: 3 FREE Hugging Face models (no keys) → weighted consensus → 1-3s, $0
+# Optional: Add premium models above for higher accuracy
+# Fallback 1: Pattern matching (D1 learned patterns, <100ms, $0)
+# Fallback 2: Text-only LLM (grok-2-1212, ~1-2s, cheap)
+# Offline: On-device Tesseract OCR only

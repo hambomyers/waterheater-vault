@@ -62,13 +62,14 @@ async function callGrok(
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'grok-2-vision-1212',
+        model: 'grok-4.20-reasoning',
         messages: [
           { role: 'system', content: WH_SYSTEM },
           { role: 'user', content: userContent },
         ],
         max_tokens: 500,
         temperature: 0.1,
+        response_format: { type: 'json_object' },
       }),
       signal: controller.signal,
     })

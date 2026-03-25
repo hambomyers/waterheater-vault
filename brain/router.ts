@@ -1,5 +1,5 @@
 // Brain router — hybrid: on-device first (offline), Grok cloud for refinement + valuation (online)
-import { extractFromImage, extractFromTwoShots, extractFromText, extractFastLookup, ExtractedData, GrokScanResult } from './on-device'
+import { extractFromImage, extractFromTwoShots, extractFromText, extractFastLookup, extractFromParallelSquad, ExtractedData, GrokScanResult } from './on-device'
 import { extractOnDevice, OnDeviceExtractionResult } from '../lib/onDeviceExtractor'
 import { VaultDocs } from '../vault/private'
 
@@ -68,15 +68,14 @@ class BrainRouter {
   }
 
   /**
-   * Step 2: Full processing with 3-tier hybrid confidence gate.
+   * Step 2: Full processing with parallel firing squad.
    *
-   * Tier 1 (fast-lookup)  — zero LLM, <100ms — D1 learned patterns, serial+brand known
-   * Tier 2 (text-parse)   — text LLM,  ~1-2s  — OCR text sent to fast text model
-   * Tier 3 (grok-vision)  — vision LLM, ~15s  — full image sent to Grok (fallback only)
-   * Offline               — on-device result from enhanced OCR
+   * Primary: Parallel Squad — fires to 5+ models simultaneously, weighted consensus, 1-3s
+   * Fallback 1: fast-lookup — zero LLM, <100ms — D1 learned patterns (if serial+brand known)
+   * Fallback 2: text-parse  — text LLM, ~1-2s — OCR text sent to fast text model
+   * Offline: on-device result from enhanced OCR
    *
-   * Every successful cloud parse feeds serial_patterns + model_catalog,
-   * making Tier 1 hits more frequent over time.
+   * Every successful cloud parse feeds serial_patterns + model_catalog.
    */
   async processImage(
     imageData: Blob,
@@ -113,60 +112,62 @@ class BrainRouter {
 
     const { confidenceScore, serialCandidate, detectedBrand, rawText } = ocrResult
 
-    const highConfidence = confidenceScore >= 70 && !!serialCandidate
-
-    // ── Tier 1: fast-lookup (zero LLM) ─────────────────────────────────────────
-    if (highConfidence) {
-      try {
-        const fast = await extractFastLookup(
-          serialCandidate!,
-          detectedBrand || 'Unknown',
-        )
-        if (fast) {
-          return {
-            extractedData: fast.extractedData,
-            valuation: { ...fast.valuation, lastUpdated: new Date().toISOString() },
-            docs: fast.docs,
-            processingMethod: 'fast-lookup',
-            confidence: fast.valuation.confidence,
-            imageBase64,
-          }
-        }
-      } catch { /* fall through to Tier 2 */ }
-    }
-
-    // ── Tier 2: text-parse (fast text LLM) ─────────────────────────────────────
-    if (highConfidence && rawText.length > 20) {
-      try {
-        const textResult = await extractFromText(rawText, detectedBrand || '')
-        return {
-          extractedData: textResult.extractedData,
-          valuation: { ...textResult.valuation, lastUpdated: new Date().toISOString() },
-          docs: textResult.docs,
-          processingMethod: 'text-parse',
-          confidence: textResult.valuation.confidence,
-          imageBase64,
-        }
-      } catch { /* fall through to Tier 3 */ }
-    }
-
-    // ── Tier 3: Grok vision (fallback for low-confidence / difficult labels) ───
+    // ── Primary: Parallel Firing Squad (5+ models simultaneously) ────────────
     try {
-      const result: GrokScanResult = await extractFromImage(imageData)
+      const result: GrokScanResult = await extractFromParallelSquad(imageData)
       return {
         extractedData: result.extractedData,
         valuation: { ...result.valuation, lastUpdated: new Date().toISOString() },
         docs: result.docs,
-        processingMethod: 'grok-vision',
+        processingMethod: 'grok-vision', // will show as 'parallel-squad' in result.source
         confidence: result.valuation.confidence,
         imageBase64,
       }
-    } catch (err) {
-      // All cloud paths failed — return on-device result
+    } catch (squadErr) {
+      console.warn('Parallel squad failed, trying fallbacks:', squadErr)
+      
+      const highConfidence = confidenceScore >= 70 && !!serialCandidate
+
+      // ── Fallback 1: fast-lookup (zero LLM) ────────────────────────────────
+      if (highConfidence) {
+        try {
+          const fast = await extractFastLookup(
+            serialCandidate!,
+            detectedBrand || 'Unknown',
+          )
+          if (fast) {
+            return {
+              extractedData: fast.extractedData,
+              valuation: { ...fast.valuation, lastUpdated: new Date().toISOString() },
+              docs: fast.docs,
+              processingMethod: 'fast-lookup',
+              confidence: fast.valuation.confidence,
+              imageBase64,
+            }
+          }
+        } catch { /* fall through */ }
+      }
+
+      // ── Fallback 2: text-parse (fast text LLM) ────────────────────────────
+      if (highConfidence && rawText.length > 20) {
+        try {
+          const textResult = await extractFromText(rawText, detectedBrand || '')
+          return {
+            extractedData: textResult.extractedData,
+            valuation: { ...textResult.valuation, lastUpdated: new Date().toISOString() },
+            docs: textResult.docs,
+            processingMethod: 'text-parse',
+            confidence: textResult.valuation.confidence,
+            imageBase64,
+          }
+        } catch { /* fall through */ }
+      }
+
+      // ── All cloud paths failed — return on-device result ──────────────────
       if (options?.onDevicePreview) {
         return this.onDeviceResult(ocrResult, imageBase64)
       }
-      throw err
+      throw squadErr
     }
   }
 

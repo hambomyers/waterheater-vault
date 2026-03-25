@@ -70,6 +70,69 @@ async function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
+/** Parallel squad scan: fires image to 5+ models simultaneously, returns weighted consensus */
+export async function extractFromParallelSquad(imageData: Blob): Promise<GrokScanResult> {
+  const base64 = await blobToBase64(imageData)
+
+  const formData = new FormData()
+  formData.append('image', base64)
+
+  const response = await fetch('/api/scan-parallel', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => 'Unknown error')
+    console.error('Parallel squad error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorBody,
+    })
+    let message = `API error ${response.status}`
+    try {
+      const parsed = JSON.parse(errorBody)
+      message = parsed.message || parsed.error || message
+      console.error('Parsed error:', parsed)
+    } catch { /* use default message */ }
+    throw new Error(message)
+  }
+
+  const data = await response.json()
+
+  if (data.error === 'not_a_water_heater' || data.error === 'not_a_product') {
+    throw new Error(data.message || 'This does not appear to be a water heater. Please photograph your water heater\'s data plate.')
+  }
+
+  if (data.error) {
+    throw new Error(data.message || data.error)
+  }
+
+  return {
+    extractedData: {
+      product: data.product || 'Water Heater',
+      brand: data.brand || 'Unknown',
+      model: data.model || 'Unknown',
+      serialNumber: data.serialNumber || '',
+      manufactureDate: data.manufactureDate || '',
+      tankSizeGallons: data.tankSizeGallons ? toNum(data.tankSizeGallons) : undefined,
+      fuelType: data.fuelType || 'unknown',
+      ageYears: toNum(data.ageYears),
+      remainingLifeYears: toNum(data.remainingLifeYears),
+      estimatedReplacementCost: toNum(data.estimatedReplacementCost),
+      currentWarranty: data.currentWarranty || data.warranty || '',
+    },
+    valuation: {
+      currentValue: toNum(data.estimatedReplacementCost),
+      originalPrice: toNum(data.estimatedReplacementCost),
+      depreciationRate: toNum(data.depreciationRate),
+      marketTrend: 'stable' as const,
+      confidence: toNum(data.confidence) || 0.85,
+    },
+    docs: Array.isArray(data.docs) ? data.docs : [],
+  }
+}
+
 export async function extractFromImage(imageData: Blob): Promise<GrokScanResult> {
   const base64 = await blobToBase64(imageData)
 
@@ -84,10 +147,16 @@ export async function extractFromImage(imageData: Blob): Promise<GrokScanResult>
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => 'Unknown error')
+    console.error('Grok API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorBody,
+    })
     let message = `API error ${response.status}`
     try {
       const parsed = JSON.parse(errorBody)
-      message = parsed.error || parsed.message || message
+      message = parsed.message || parsed.error || message
+      console.error('Parsed error:', parsed)
     } catch { /* use default message */ }
     throw new Error(message)
   }
@@ -140,8 +209,17 @@ export async function extractFromText(
 
   if (!response.ok) {
     const body = await response.text().catch(() => '')
+    console.error('Text parse API error:', {
+      status: response.status,
+      statusText: response.statusText,
+      body: body,
+    })
     let message = `API error ${response.status}`
-    try { message = JSON.parse(body).message || message } catch { /* use default */ }
+    try { 
+      const parsed = JSON.parse(body)
+      message = parsed.message || parsed.error || message
+      console.error('Parsed error:', parsed)
+    } catch { /* use default */ }
     throw new Error(message)
   }
 
