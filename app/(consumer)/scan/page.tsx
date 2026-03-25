@@ -8,8 +8,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { scanWaterHeater } from '@/lib/vision/on-device-scanner'
-import type { ScanResult } from '@/lib/vision/on-device-scanner'
+import { brainRouter } from '@/brain/router'
 
 type ScanState = 'idle' | 'camera' | 'processing' | 'error'
 
@@ -88,11 +87,8 @@ export default function ScanPage() {
       // Stop camera
       stopCamera()
 
-      // Scan with on-device vision
-      const result = await scanWaterHeater(blob, {
-        confidenceThreshold: 70,
-        useFallback: true
-      })
+      // Scan with brain router (3-tier hybrid)
+      const result = await brainRouter.processImage(blob, { useCloud: true })
 
       // Store result and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
@@ -141,11 +137,8 @@ export default function ScanPage() {
     setState('processing')
 
     try {
-      // Scan the uploaded file
-      const result = await scanWaterHeater(file, {
-        confidenceThreshold: 70,
-        useFallback: true
-      })
+      // Scan the uploaded file with brain router (3-tier hybrid)
+      const result = await brainRouter.processImage(file, { useCloud: true })
 
       // Store result and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))

@@ -2,50 +2,40 @@
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
 
-export const WH_SYSTEM = `You are a water heater data plate specialist. The image is ALWAYS a water heater or tankless water heater / combi-boiler label — never reject it.
+export const WH_SYSTEM = `You are a water heater data plate reader. Read ONLY what is physically printed on the label in the image.
 
-EXTRACTION STEPS — follow in order:
-1. Find the brand name (usually the largest text on the label: Navien, Rheem, Ruud, AO Smith, Bradford White, etc.)
-2. Find the word "Model", "MDL", or "Mod" — read every character of the alphanumeric string immediately after it. If the model ends with a parenthetical fuel suffix like "( NG )" or "( LP )", strip that suffix from the model and use it for fuelType (NG=tankless-gas, LP=gas)
-3. Find "Serial", "S/N", "SN", or "SN :" (note: may have spaces around the colon) — read the full alphanumeric string immediately after it
-4. Decode the manufacture date from the serial using the brand rule below
-5. Note tank size in gallons (integer) or null if tankless, and fuel type
-
-Return ONLY valid JSON (no markdown, no explanation):
+Return ONLY valid JSON, no markdown, no explanation:
 {
-  "brand": "Navien|Rinnai|Rheem|Ruud|AO Smith|Bradford White|State|Reliance|American|Noritz|Takagi|Bosch|Lochinvar|Weil-McLain|GE|Kenmore|Whirlpool|other",
-  "model": "clean model number without fuel suffix (e.g. NPE-210A, PROE50T2, RU199iN, PE52-2B)",
-  "serialNumber": "full serial number string exactly as printed",
-  "manufactureDate": "YYYY-MM decoded from serial — required when serial is present",
-  "tankSizeGallons": storage capacity as integer (30/40/50/75/80) or null if tankless,
+  "brand": "exact brand name (Rheem|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
+  "model": "model number exactly as printed, or null",
+  "serialNumber": "serial number exactly as printed — look for S/N, Serial No., standalone alphanumeric string 8-20 chars",
+  "manufactureDate": "YYYY-MM decoded from serial — REQUIRED if serial present",
+  "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
   "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
-  "ageYears": integer years since manufacture date,
-  "remainingLifeYears": integer estimated years remaining (tank avg 12yr, tankless avg 20yr),
   "confidence": 0.0-1.0
 }
 
-SERIAL DATE DECODERS:
-• Navien (NPE/NFC/NCB/NHB): find the plant letter in the serial, the TWO digits immediately after it = year suffix (e.g. A19→2019, C14→2014). Month not encoded — use YYYY-01
-• Rheem/Ruud: WWYY (0115→Jan2015) OR letter+YY (A15→Jan, B15→Feb … L15→Dec)
-• AO Smith/State/Reliance/American/Richmond/Whirlpool: YYWW (1506→2015 wk6≈Feb2015)
-• Bradford White: char1=decade(A=2000s,B=2010s,C=2020s) char2=yr(A=0…J=9) char3=mo(A=Jan…L=Dec) e.g. BEF→2014-06
-• Rinnai: YYMM (2308→2023-08)
-• Noritz: first 4 chars = YYWW
-• Bosch: first 6 chars = YYYYWW
-• GE: letter=factory, next char=year (A=2001, B=2002…)
-• Lochinvar/Weil-McLain: first 2=year, next 2=week
-• Unknown brand: best YYYY-MM estimate, append "(est)"
+If not a water heater data plate: {"error":"not_wh","message":"brief description"}
 
-NEVER use these words as model or serial values: URETHANE, FOAM, INSULATION, POLYURETHANE, ANODE, NATURAL GAS, PROPANE, ELECTRIC, GALLON, BTU, THERMAL, RECOVERY, WARNING, CAUTION, VOLTAGE, WATTAGE, CERTIFIED, EFFICIENCY, RESIDENTIAL, COMMERCIAL.
-Return best reading for all fields. Use null only if field is completely illegible.`
+SERIAL DATE DECODERS:
+• Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
+• AO Smith/American/Reliance/Whirlpool/State/Richmond: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
+• Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
+• Navien NPE/NFC/NCB/NHB: YYWW e.g. "2312"=2023wk12≈Mar2023
+• Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
+• Noritz: YYWW in first 4 chars
+• Bosch: first 6 = YYYYWW
+• GE: letter=factory next digit=year (A=2001,B=2002…)
+• Lochinvar/Weil-McLain: first 2=year next 2=week
+• Unknown: best YYYY-MM estimate with "(est)" appended`
 
 export const WH_TEXT_SYSTEM = `You are a water heater data plate OCR parser. The input is raw OCR text extracted from a physical water heater label — it may contain noise, OCR errors, and line-break artifacts.
 
 Return ONLY valid JSON, no markdown, no explanation:
 {
-  "brand": "exact brand name (Rheem|Ruud|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Takagi|Bosch|Weil-McLain|other)",
-  "model": "Extract the model number. FIRST look for anything after 'Model', 'Model No.', 'MDL', or 'Mod.' on the label. If that keyword is missing or garbled, look for any alphanumeric string that starts with a known water heater model prefix: NPE, NFC, NCB, RU, RLX, V53/V65/V75/V94, NRC, EZ, CB, TH3, TK, PROE, PROG, PROT, PROH, PROU, GPVH, GPDH, HPTU, MI, RE, XCR, ENS, G6, G8. Return the full model string including suffix (e.g. NPE-240A2, RU199iN, PROE50T2). Return null only if nothing plausible exists.",
-  "serialNumber": "Extract the serial number. Look for anything after SN, S/N, S.N., SERIAL, SERIAL NO., or SER. — including 'SN 2021031234' with a space. Also accept any 8-20 char alphanumeric string that looks like a serial (mix of letters and digits). Return null only if truly nothing found.",
+  "brand": "exact brand name (Rheem|AO Smith|Bradford White|Navien|Rinnai|State|Reliance|American|GE|Kenmore|Whirlpool|Lochinvar|Noritz|Bosch|Weil-McLain|other)",
+  "model": "model number from OCR, or null",
+  "serialNumber": "serial number — look for S/N, Serial No., or standalone 8-20 char alphanumeric",
   "manufactureDate": "YYYY-MM decoded from serial using brand rules below — REQUIRED if serial present",
   "tankSizeGallons": capacity as integer (30/40/50/75/80) or null if tankless,
   "fuelType": "gas|electric|tankless-gas|tankless-electric|heat-pump|unknown",
@@ -54,15 +44,13 @@ Return ONLY valid JSON, no markdown, no explanation:
 
 If text clearly has no water heater data: {"error":"not_wh","message":"brief description"}
 
-CRITICAL — NEVER return these as model or serial values: URETHANE, FOAM, INSULATION, INSULATED, POLYURETHANE, ANODE, NATURAL GAS, PROPANE, ELECTRIC, GALLON, THERMAL, BTU, RECOVERY, WARNING, CAUTION, VOLTAGE, WATTAGE, CERTIFIED, COMPLIES, EFFICIENCY, RESIDENTIAL, COMMERCIAL, or any other descriptive words from the label. If a string after 'Model' looks like a description word rather than a part number, return null.
-
-OCR NOISE RULES: Common errors on metal labels: 0↔O, 1↔I↔L, 8↔B, 5↔S. Ignore stray punctuation. Model numbers are typically 6-20 chars mixing letters and digits (e.g. PROE50T2, NPE-240A2, MI50L). Serial numbers are 8-20 alphanumeric chars.
+OCR NOISE RULES: Common errors on metal labels: 0↔O, 1↔I↔L, 8↔B, 5↔S. Ignore stray punctuation. Serial numbers are 8-20 alphanumeric chars.
 
 SERIAL DATE DECODERS:
 • Rheem/Ruud: pos1-2=week pos3-4=year e.g. "0115"=Jan2015. OR letter+2digit A=Jan…L=Dec e.g. "A15"=Jan2015
 • AO Smith/American/Reliance/Whirlpool/State/Richmond: pos1-2=year pos3-4=week e.g. "1506"=2015wk6≈Jun2015
 • Bradford White: pos1=decade(A=2000s,B=2010s,C=2020s) pos2=yr(A=0…J=9) pos3=month(A=Jan…L=Dec) e.g. "BEF"=2014Jun
-• Navien NPE/NFC/NCB/NHB: find plant letter in serial, TWO digits after = year (e.g. A19→2019, C14→2014). Month not encoded — use YYYY-01
+• Navien NPE/NFC/NCB/NHB: YYWW e.g. "2312"=2023wk12≈Mar2023
 • Rinnai RL/RU/RUR/i-series: YYMM e.g. "2308"=Aug2023
 • Noritz: YYWW in first 4 chars
 • Bosch: first 6 = YYYYWW
@@ -96,7 +84,7 @@ export async function braveSearch(apiKey: string, query: string): Promise<string
   try {
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=3&search_lang=en`
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 2000)
+    const timeout = setTimeout(() => controller.abort(), 4000)
     const res = await fetch(url, {
       headers: {
         'Accept': 'application/json',
