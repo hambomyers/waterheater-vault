@@ -62,7 +62,7 @@ async function callGrok(
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'grok-4.20-beta',
+        model: 'grok-vision-beta',
         messages: [
           { role: 'system', content: WH_SYSTEM },
           { role: 'user', content: userContent },
@@ -92,7 +92,7 @@ async function callGrokReviewScreen(
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'grok-4.20-beta',
+      model: 'grok-beta',
       messages: [
         { role: 'system', content: WH_REVIEW_SCREEN },
         {
