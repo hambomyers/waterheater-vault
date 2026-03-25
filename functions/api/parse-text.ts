@@ -84,8 +84,10 @@ export const onRequestPost = async ({ request, env }: any) => {
     clearTimeout(timeout)
 
     if (!grokRes.ok) {
+      const errorBody = await grokRes.text().catch(() => '')
+      console.error('Grok text API error:', grokRes.status, errorBody)
       return Response.json(
-        { error: 'text_parse_error', message: `xAI API error ${grokRes.status}` },
+        { error: 'text_parse_error', message: `xAI API error ${grokRes.status}`, details: errorBody },
         { status: 502, headers: CORS }
       )
     }
