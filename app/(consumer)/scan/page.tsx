@@ -8,7 +8,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { brainRouter } from '@/brain/router'
+import { scanWaterHeater } from '@/lib/vision/on-device-scanner'
 
 type ScanState = 'idle' | 'camera' | 'processing' | 'error'
 
@@ -111,23 +111,10 @@ export default function ScanPage() {
       // Stop camera
       stopCamera()
 
-      // Scan with brain router (3-tier hybrid)
-      const result = await brainRouter.processImage(blob, { useCloud: true })
+      // Scan with on-device scanner (3-tier hybrid)
+      const result = await scanWaterHeater(blob, { useFallback: true })
 
-      // Save the captured image for verification (non-blocking)
-      if (result.imageBase64) {
-        fetch('/api/save-scan-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: result.imageBase64,
-            serialNumber: result.extractedData.serialNumber,
-            userId: null, // TODO: add user auth
-          }),
-        }).catch(err => console.warn('Failed to save image:', err))
-      }
-
-      // Store result and navigate to profile
+      // Store result in sessionStorage and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
       router.push('/profile')
     } catch (err) {
@@ -174,23 +161,10 @@ export default function ScanPage() {
     setState('processing')
 
     try {
-      // Scan the uploaded file with brain router (3-tier hybrid)
-      const result = await brainRouter.processImage(file, { useCloud: true })
+      // Scan the uploaded file with on-device scanner (3-tier hybrid)
+      const result = await scanWaterHeater(file, { useFallback: true })
 
-      // Save the captured image for verification (non-blocking)
-      if (result.imageBase64) {
-        fetch('/api/save-scan-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageBase64: result.imageBase64,
-            serialNumber: result.extractedData.serialNumber,
-            userId: null, // TODO: add user auth
-          }),
-        }).catch(err => console.warn('Failed to save image:', err))
-      }
-
-      // Store result and navigate to profile
+      // Store result in sessionStorage and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
       router.push('/profile')
     } catch (err) {

@@ -75,10 +75,10 @@ export default function ProfileDetailsPage() {
           <div className="space-y-3">
             <DetailRow label="Fuel Type" value={profile.fuelType} />
             <DetailRow label="Tank Size" value={profile.tankSizeDisplay} />
-            {profile.inputBTU && typeof profile.inputBTU === 'number' && (
+            {typeof profile.inputBTU === 'number' && !isNaN(profile.inputBTU) && (
               <DetailRow label="Input BTU" value={profile.inputBTU.toLocaleString()} />
             )}
-            {profile.inputWatts && typeof profile.inputWatts === 'number' && (
+            {typeof profile.inputWatts === 'number' && !isNaN(profile.inputWatts) && (
               <DetailRow label="Input Watts" value={profile.inputWatts.toLocaleString()} />
             )}
           </div>
