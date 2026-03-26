@@ -12,17 +12,29 @@ import { scanWaterHeater } from '@/lib/vision/on-device-scanner'
 
 type ScanState = 'idle' | 'camera' | 'processing' | 'error'
 
-// Helper: Convert Blob to base64 string
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const base64 = reader.result as string
-      resolve(base64.split(',')[1]) // Remove data:image/jpeg;base64, prefix
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
+async function storeScanImage(blob: Blob): Promise<{ imageId: string }> {
+  const contentType = blob.type && blob.type.startsWith('image/') ? blob.type : 'image/jpeg'
+  const res = await fetch('/api/store-image', {
+    method: 'POST',
+    headers: { 'Content-Type': contentType },
+    body: blob,
   })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const msg =
+      typeof data.message === 'string'
+        ? data.message
+        : typeof data.details === 'string'
+          ? data.details
+          : typeof data.error === 'string'
+            ? data.error
+            : `HTTP ${res.status}`
+    throw new Error(msg)
+  }
+  if (!data.imageId) {
+    throw new Error('Invalid response from server')
+  }
+  return { imageId: data.imageId as string }
 }
 
 export default function ScanPage() {
@@ -124,23 +136,9 @@ export default function ScanPage() {
       // Stop camera
       stopCamera()
 
-      // STEP 1: Save image FIRST (before any AI processing)
+      // STEP 1: Save image FIRST (raw bytes — avoids huge base64 + multipart limits)
       console.log('[SCAN] Saving image to server...')
-      const imageBase64 = await blobToBase64(blob)
-      const storeResponse = await fetch('/api/store-image', {
-        method: 'POST',
-        body: (() => {
-          const fd = new FormData()
-          fd.append('image', imageBase64)
-          return fd
-        })()
-      })
-
-      if (!storeResponse.ok) {
-        throw new Error('Failed to save image')
-      }
-
-      const { imageId } = await storeResponse.json()
+      const { imageId } = await storeScanImage(blob)
       console.log('[SCAN] Image saved with ID:', imageId)
 
       // STEP 2: Now scan with saved imageId (AI models will fetch from server)
@@ -193,23 +191,9 @@ export default function ScanPage() {
     setState('processing')
 
     try {
-      // STEP 1: Save image FIRST (before any AI processing)
+      // STEP 1: Save image FIRST (raw bytes)
       console.log('[SCAN] Saving image to server...')
-      const imageBase64 = await blobToBase64(file)
-      const storeResponse = await fetch('/api/store-image', {
-        method: 'POST',
-        body: (() => {
-          const fd = new FormData()
-          fd.append('image', imageBase64)
-          return fd
-        })()
-      })
-
-      if (!storeResponse.ok) {
-        throw new Error('Failed to save image')
-      }
-
-      const { imageId } = await storeResponse.json()
+      const { imageId } = await storeScanImage(file)
       console.log('[SCAN] Image saved with ID:', imageId)
 
       // STEP 2: Now scan with saved imageId (AI models will fetch from server)
