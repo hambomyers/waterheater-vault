@@ -117,33 +117,22 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   }
   
   const data = await response.json()
-  const consensus = data.consensus
   
-  // Convert consensus to ScanResult format
-  const { calculateEstimatedCost, calculateExpectedLife } = require('./result-parser')
-  
-  const manufactureYear = consensus.manufactureDate ? parseInt(consensus.manufactureDate.split('-')[0]) : 0
-  const currentYear = new Date().getFullYear()
-  const age = manufactureYear > 1980 ? currentYear - manufactureYear : 0
-  
-  const expectedLife = calculateExpectedLife('natural_gas') // TODO: get from consensus
-  const remaining = Math.max(0, expectedLife - age)
-  const { min, max } = calculateEstimatedCost('natural_gas', 40) // TODO: get from consensus
-  
+  // smart-scan returns data directly (already has all derived fields)
   return {
-    brand: consensus.brand || 'Unknown',
-    model: consensus.model || 'Unknown',
-    serial: consensus.serial || '',
-    manufactureDate: consensus.manufactureDate || '',
-    age,
-    fuelType: 'natural_gas',
-    tankSizeGallons: 40,
-    expectedLifeYears: expectedLife,
-    remainingYears: remaining,
-    estimatedCostMin: min,
-    estimatedCostMax: max,
-    confidence: Math.round(consensus.confidence * 100),
-    processingMethod: 'grok-vision'
+    brand: data.brand || 'Unknown',
+    model: data.model || 'Unknown',
+    serial: data.serial || '',
+    manufactureDate: data.manufactureDate || '',
+    age: data.age || 0,
+    fuelType: data.fuelType || 'natural_gas',
+    tankSizeGallons: data.tankSizeGallons || 40,
+    expectedLifeYears: data.expectedLifeYears || 12,
+    remainingYears: data.remainingYears || 0,
+    estimatedCostMin: data.estimatedCostMin || 1500,
+    estimatedCostMax: data.estimatedCostMax || 2000,
+    confidence: data.confidence || 0,
+    processingMethod: data.tier || 'gemini-flash-lite'
   }
 }
 
