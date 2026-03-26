@@ -16,18 +16,13 @@ bucket_name = "waterheater-images"
 binding = "AI"
 
 # ── Environment variables — set in Cloudflare Pages → Settings → Environment Variables ──
-# PARALLEL FIRING SQUAD (primary scan method) - WORKS OUT OF THE BOX:
-# Uses Hugging Face Inference API (FREE, no API keys required):
-#   - llava-v1.6-mistral-7b-hf (1.5x weight)
-#   - bakllava-v1-hf (1.0x weight)
-#   - moondream2 (1.0x weight)
+# PRIMARY VISION API (REQUIRED):
+# GEMINI_API_KEY           — Google Gemini 2.5 Flash-Lite (FREE tier: 1,500/day, then $0.0002/scan)
+#                            Get key: https://aistudio.google.com/apikey
+#                            Best balance of speed (2-3s), accuracy (95%+), and cost
 #
-# OPTIONAL PREMIUM MODELS (add API keys to enable):
-# GEMINI_API_KEY           — Google Gemini 2.0 Flash (free tier, fast). aistudio.google.com
-# GROQ_API_KEY             — Groq Llama 3.2 90B Vision (free tier, blazing). console.groq.com
-# OPENAI_API_KEY           — OpenAI GPT-4o-mini ($0.00015/image). platform.openai.com
-# MISTRAL_API_KEY          — Mistral Pixtral 12B (free tier). console.mistral.ai
-# GROK_API_KEY             — xAI Grok 4.20 (premium backup, 2x weight). console.x.ai
+# OPTIONAL BACKUP MODELS:
+# GROK_API_KEY             — xAI Grok Vision (premium backup, $0.01/scan). console.x.ai
 #
 # OTHER SERVICES:
 # BRAVE_API_KEY            — Brave Search for manual/warranty docs (optional). api.search.brave.com
@@ -36,9 +31,8 @@ binding = "AI"
 # STRIPE_SECRET_KEY        — Stripe checkout sessions
 # STRIPE_PRICE_ID_MONTHLY  — Stripe Price ID for $49/mo Pro plan
 #
-# ARCHITECTURE (Parallel Firing Squad):
-# Primary: 3 FREE Hugging Face models (no keys) → weighted consensus → 1-3s, $0
-# Optional: Add premium models above for higher accuracy
-# Fallback 1: Pattern matching (D1 learned patterns, <100ms, $0)
-# Fallback 2: Text-only LLM (grok-2-1212, ~1-2s, cheap)
-# Offline: On-device Tesseract OCR only
+# ARCHITECTURE (Smart Scan + Self-Learning Flywheel):
+# Tier 1: Pattern matching (D1 learned patterns, <100ms, $0) — grows to 85%+ hit rate
+# Tier 2: Gemini 2.5 Flash-Lite (2-3s, $0.0002) — learns patterns for Tier 1
+# Self-improving: Every scan updates pattern database → costs approach $0 over time
+# Target: Month 1 = $0.20, Month 6 = $1.00, Year 1 = $20 (for 100K scans)

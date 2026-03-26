@@ -99,11 +99,11 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   const formData = new FormData()
   formData.append('imageId', imageId)
   
-  // 12-second timeout for external API call
+  // 30-second timeout for Gemini API call
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 12000)
+  const timeout = setTimeout(() => controller.abort(), 30000)
   
-  const response = await fetch('/api/consumer/parallel-scan', {
+  const response = await fetch('/api/consumer/smart-scan', {
     method: 'POST',
     body: formData,
     signal: controller.signal
