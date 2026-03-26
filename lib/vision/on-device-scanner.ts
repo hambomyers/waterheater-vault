@@ -103,7 +103,7 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 12000)
   
-  const response = await fetch('/api/parallel-scan', {
+  const response = await fetch('/api/consumer/parallel-scan', {
     method: 'POST',
     body: formData,
     signal: controller.signal

@@ -89,6 +89,70 @@ Geofenced zones fill up (max 3 per zone) → creates urgency for other plumbers
 
 ---
 
+## Phase 0 – Immediate Actions (Q2 2026)
+
+**Entity Formation:**
+- Form **VaultPro LLC** in **Wyoming** this week
+- Why Wyoming: cheapest formation, no state income tax, strong privacy protections, future-proof for national/B2B expansion
+- 4-step process:
+  1. File Articles of Organization with Wyoming Secretary of State
+  2. Obtain Federal EIN from IRS
+  3. Draft simple Operating Agreement
+  4. Open business bank account (Mercury or Wise)
+
+**Primary Test Market: Pittsburgh, PA Metro**
+- **Not** Central Virginia yet — Pittsburgh chosen as validation market
+- **Why Pittsburgh wins:**
+  - Oldest U.S. housing stock (median age 64–68 years)
+  - Highest natural water heater failure rate in the country
+  - 600+ independent plumbers (competitive, fragmented market)
+  - Perfect stress-test for Tesseract → Grok → Brave pipeline
+  - Real-world diversity: mix of gas/electric, old/new brands, basement/garage installs
+
+**Validation-First Mindset:**
+- Stay in heavy validation mode through Q2 2026
+- **Do NOT ship full pro SaaS revenue engine yet**
+- Goal: 200+ diverse real-world scans + plumber feedback before any monetization
+- Focus on accuracy, user experience, and pipeline reliability
+- Iterate prompt templates and decoder logic live based on real data
+
+**30-Day Pittsburgh Test Playbook (Weeks 1–4):**
+
+**Week 1–2: Consumer Acquisition**
+- Geo-targeted Facebook/Google ads ($300–500 total budget)
+- Target: Pittsburgh metro homeowners 35–65, own home 10+ years
+- Landing page: waterheaterplan.com with Pittsburgh-specific messaging
+- Goal: Drive 100–150 scans from diverse housing stock
+
+**Week 2–3: Plumber Outreach**
+- Cold outreach to 30–50 Pittsburgh plumbers via email + phone
+- Offer: Free beta access to lead flow (no $49/mo yet)
+- Value prop: "Get notified when water heaters in your area are 8+ years old"
+- Goal: 5–10 plumbers actively receiving and responding to leads
+
+**Week 3–4: Data Collection & Iteration**
+- Track in D1 + Google Sheet:
+  - Scan accuracy (brand, model, serial, manufacture date)
+  - Drop-off points (where users abandon)
+  - Plumber feedback (lead quality, response time, conversion)
+  - Edge cases (blurry labels, damaged plates, unusual brands)
+- Iterate prompt templates live based on failure patterns
+- Enhance pattern matching for Pittsburgh-specific brands/models
+
+**Success Metrics (30-Day Checkpoint):**
+- ✅ 150+ scans completed
+- ✅ 90%+ accuracy on clear images (brand + model + serial)
+- ✅ 5+ plumbers actively receiving leads
+- ✅ 2+ plumber conversions (lead → quote → job)
+- ✅ <20% user drop-off rate
+
+**Decision Point (Day 30):**
+- If metrics hit → expand to 2nd test market (Columbus, OH or Cleveland, OH)
+- If metrics miss → iterate another 30 days in Pittsburgh
+- Do NOT launch revenue model until 200+ scans + 95%+ accuracy
+
+---
+
 ## Design Rules (locked — never break)
 
 **Tesla-Sleek Minimalism:**

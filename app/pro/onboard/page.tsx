@@ -55,7 +55,7 @@ export default function ProOnboardPage() {
       return
     }
 
-    fetch('/api/detect-location')
+    fetch('/api/consumer/detect-location')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.postalCode) setZip(data.postalCode)
@@ -107,7 +107,7 @@ export default function ProOnboardPage() {
       formData.append('gbpUrl', gbpUrl.trim())
       formData.append('businessName', name.trim())
 
-      const res = await fetch('/api/grok-scan', { method: 'POST', body: formData })
+      const res = await fetch('/api/consumer/grok-scan', { method: 'POST', body: formData })
       if (!res.ok) throw new Error(`Screening failed (${res.status})`)
       const data = await res.json()
 

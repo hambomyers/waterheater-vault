@@ -14,7 +14,7 @@ type ScanState = 'idle' | 'camera' | 'processing' | 'error'
 
 async function storeScanImage(blob: Blob): Promise<{ imageId: string }> {
   const contentType = blob.type && blob.type.startsWith('image/') ? blob.type : 'image/jpeg'
-  const res = await fetch('/api/store-image', {
+  const res = await fetch('/api/consumer/store-image', {
     method: 'POST',
     headers: { 'Content-Type': contentType },
     body: blob,
@@ -147,7 +147,7 @@ export default function ScanPage() {
       // STEP 3: Save scan results to database
       console.log('[SCAN] Saving results to database...')
       try {
-        const saveResponse = await fetch('/api/save-scan-result', {
+        const saveResponse = await fetch('/api/consumer/save-scan-result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -227,7 +227,7 @@ export default function ScanPage() {
       // STEP 3: Save scan results to database
       console.log('[SCAN] Saving results to database...')
       try {
-        const saveResponse = await fetch('/api/save-scan-result', {
+        const saveResponse = await fetch('/api/consumer/save-scan-result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
