@@ -39,27 +39,47 @@ export const onRequestPost = async ({ request, env }: any) => {
 
     console.log('[PARALLEL] Starting parallel scan for imageId:', imageId)
 
-    // Fetch saved image from D1
+    // Fetch image metadata from D1 and image from R2
     if (!env.DB) {
       return Response.json(
         { error: 'Database not configured' },
         { status: 500, headers: CORS }
       )
     }
+    
+    if (!env.BUCKET) {
+      return Response.json(
+        { error: 'Storage not configured' },
+        { status: 500, headers: CORS }
+      )
+    }
 
-    const stored = await env.DB.prepare(
-      `SELECT image_data FROM scan_images WHERE id = ?`
+    const metadata = await env.DB.prepare(
+      `SELECT r2_key, file_size FROM scan_images WHERE id = ?`
     ).bind(imageId).first()
 
-    if (!stored?.image_data) {
+    if (!metadata?.r2_key) {
       return Response.json(
-        { error: 'Image not found' },
+        { error: 'Image not found in database' },
         { status: 404, headers: CORS }
       )
     }
 
-    const imageBase64 = stored.image_data as string
-    console.log('[PARALLEL] Image fetched, size:', imageBase64.length)
+    // Fetch image from R2
+    console.log('[PARALLEL] Fetching image from R2:', metadata.r2_key)
+    const r2Object = await env.BUCKET.get(metadata.r2_key)
+    
+    if (!r2Object) {
+      return Response.json(
+        { error: 'Image not found in storage' },
+        { status: 404, headers: CORS }
+      )
+    }
+
+    // Convert R2 object to base64
+    const imageBuffer = await r2Object.arrayBuffer()
+    const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)))
+    console.log('[PARALLEL] Image fetched from R2, size:', imageBuffer.byteLength)
 
     // Fire all models in parallel
     const startTime = Date.now()

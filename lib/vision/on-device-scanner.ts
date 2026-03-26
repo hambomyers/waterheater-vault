@@ -1,8 +1,7 @@
 /**
- * On-Device Vision Scanner
- * 100% on-device processing using Tesseract.js OCR + pattern matching
- * No external API calls - works completely offline
- * Includes image preprocessing for better accuracy
+ * Production Vision Scanner - Single Pipeline Flow
+ * Clean flow: preprocess → store-image → parallel-scan
+ * Zero demo mode, production-ready architecture
  */
 
 export interface ScanResult {
@@ -33,13 +32,11 @@ const DEFAULT_CONFIG: OnDeviceConfig = {
 }
 
 /**
- * Main scan function - 3-tier processing approach
- * Tier 1: Pattern matching (90% of scans, <1s, $0)
- * Tier 2: Phi-2 reasoning (8% of scans, 3-8s, $0) - TODO
- * Tier 3: Grok Vision (2% of scans, 10-25s, ~$0.01)
+ * Main scan function - Clean single pipeline
+ * Flow: preprocess → store-image → 3-tier processing → parallel-scan fallback
  * 
  * @param imageData - base64 image data or Blob
- * @param config - optional configuration
+ * @param config - optional configuration with imageId for saved images
  * @returns ScanResult with extracted water heater data
  */
 export async function scanWaterHeater(
@@ -49,56 +46,52 @@ export async function scanWaterHeater(
   const finalConfig = { ...DEFAULT_CONFIG, ...config }
   
   try {
-    console.log('[SCAN] Starting scan...')
+    console.log('[SCAN] Starting production scan pipeline...')
     
-    
-    // If imageId provided, use parallel-scan endpoint (all AI models process saved image)
+    // If imageId provided, use parallel-scan endpoint (image already stored in R2)
     if (finalConfig.imageId && finalConfig.useFallback) {
-      console.log('[SCAN] Using parallel-scan with imageId:', finalConfig.imageId)
+      console.log('[SCAN] Using parallel-scan with stored imageId:', finalConfig.imageId)
       return await scanWithParallelModels(finalConfig.imageId)
     }
     
-    // Preprocess image for better OCR and vision model results
-    console.log('[SCAN] Preprocessing image...')
+    // Step 1: Preprocess image for optimal results
+    console.log('[SCAN] Step 1: Preprocessing image...')
     const { preprocessImage } = await import('./image-preprocessor')
     const processedImage = await preprocessImage(imageData)
     
-    // Extract text with Tesseract.js
-    console.log('[SCAN] Running OCR...')
+    // Step 2: Extract text with Tesseract.js OCR
+    console.log('[SCAN] Step 2: Running OCR...')
     const ocrResult = await extractTextWithTesseract(processedImage)
-    console.log('[SCAN] OCR done. Text:', ocrResult.text.substring(0, 200))
-    console.log('[SCAN] OCR confidence:', ocrResult.confidence)
+    console.log('[SCAN] OCR complete. Confidence:', ocrResult.confidence)
     
-    // Try pattern matching with very low threshold
-    console.log('[SCAN] Pattern matching...')
+    // Step 3: Try pattern matching (Tier 1 - fastest)
+    console.log('[SCAN] Step 3: Pattern matching...')
     const result = await tryPatternExtraction(ocrResult.text)
-    console.log('[SCAN] Pattern result:', result)
     
-    // Accept anything with confidence > 30 (very permissive)
+    // Accept pattern results with confidence > 30
     if (result.success && result.confidence >= 30) {
-      console.log('[SCAN] ✅ Success')
+      console.log('[SCAN] ✅ Pattern matching succeeded')
       return buildScanResult(result)
     }
     
-    // Fallback to parallel AI models if pattern matching failed and fallback enabled
+    // Step 4: Fallback to parallel AI models if enabled and imageId available
     if (finalConfig.useFallback && finalConfig.imageId) {
-      console.log('[SCAN] 🔄 Falling back to parallel AI models...')
+      console.log('[SCAN] Step 4: Falling back to parallel AI models...')
       return await scanWithParallelModels(finalConfig.imageId)
     }
     
-    // If we got here, OCR worked but pattern matching failed and no fallback
-    console.log('[SCAN] ❌ Pattern matching failed')
-    console.log('[SCAN] Extracted text:', ocrResult.text)
-    throw new Error("Couldn't identify the water heater brand and model from the label. Please ensure the label is clear and well-lit.")
+    // If no fallback available, throw descriptive error
+    console.log('[SCAN] ❌ All processing methods exhausted')
+    throw new Error("Unable to extract water heater information. Please ensure the data plate label is clearly visible and well-lit.")
     
   } catch (error) {
-    console.error('[SCAN] Error:', error)
+    console.error('[SCAN] Pipeline error:', error)
     throw error
   }
 }
 
 /**
- * Scan with parallel AI models (all models fetch from saved imageId)
+ * Scan with parallel AI models (fetch from R2 via imageId)
  */
 async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   console.log('[PARALLEL] Calling parallel-scan endpoint with imageId:', imageId)
@@ -106,10 +99,17 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   const formData = new FormData()
   formData.append('imageId', imageId)
   
+  // 12-second timeout for external API call
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 12000)
+  
   const response = await fetch('/api/parallel-scan', {
     method: 'POST',
-    body: formData
+    body: formData,
+    signal: controller.signal
   })
+  
+  clearTimeout(timeout)
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }))

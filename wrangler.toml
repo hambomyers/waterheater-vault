@@ -7,6 +7,10 @@ binding = "DB"
 database_name = "waterheater-vault"
 database_id = "15010cce-24bc-450a-b49f-74d73b82ca38"
 
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "waterheater-images"
+
 # ── Environment variables — set in Cloudflare Pages → Settings → Environment Variables ──
 # PARALLEL FIRING SQUAD (primary scan method) - WORKS OUT OF THE BOX:
 # Uses Hugging Face Inference API (FREE, no API keys required):

@@ -126,15 +126,21 @@ export const onRequest = async (context: any) => {
     const mode = formData.get('mode') as string | null
     const serialHint = (formData.get('serialHint') as string | null)?.trim() || null
 
-    // If imageId provided, fetch from D1 instead of using uploaded image
-    if (imageId && context.env.DB) {
-      const stored = await context.env.DB.prepare(
-        `SELECT image_data FROM scan_images WHERE id = ?`
+    // If imageId provided, fetch from R2 instead of using uploaded image
+    if (imageId && context.env.DB && context.env.BUCKET) {
+      const metadata = await context.env.DB.prepare(
+        `SELECT r2_key FROM scan_images WHERE id = ?`
       ).bind(imageId).first()
       
-      if (stored?.image_data) {
-        shot1 = stored.image_data as string
-        console.log('[GROK] Using saved image:', imageId)
+      if (metadata?.r2_key) {
+        console.log('[GROK] Fetching image from R2:', metadata.r2_key)
+        const r2Object = await context.env.BUCKET.get(metadata.r2_key)
+        
+        if (r2Object) {
+          const imageBuffer = await r2Object.arrayBuffer()
+          shot1 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)))
+          console.log('[GROK] Using saved image from R2:', imageId)
+        }
       }
     }
 
