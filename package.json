@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "icons": "node scripts/generate-icons.js"
+    "icons": "node scripts/generate-icons.js",
+    "db:migrate:local": "npx wrangler d1 execute waterheater-vault --local --file=migrations/archive/0001_auth_sync.sql && npx wrangler d1 execute waterheater-vault --local --file=migrations/0010_scan_images.sql && npx wrangler d1 execute waterheater-vault --local --file=migrations/0012_r2_upgrade.sql",
+    "dev:pages": "npm run build && npx wrangler pages dev out --compatibility-date=2024-01-01"
   },
   "dependencies": {
     "@stripe/stripe-js": "^4.0.0",
@@ -30,6 +32,7 @@
     "eslint-config-next": "^14.0.0",
     "postcss": "^8.4.0",
     "sharp": "^0.34.5",
-    "tailwindcss": "^3.3.0"
+    "tailwindcss": "^3.3.0",
+    "wrangler": "^4.76.0"
   }
 }
