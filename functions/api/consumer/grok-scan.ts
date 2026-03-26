@@ -1,4 +1,4 @@
-import { computeDerivedFields, extractOutermostJson, braveSearch, learnFromScan, WH_SYSTEM } from './_utils/wh-compute'
+import { computeDerivedFields, extractOutermostJson, braveSearch, learnFromScan, WH_SYSTEM } from '../_utils/wh-compute'
 
 function userFriendlyError(status: number): string {
   switch (status) {

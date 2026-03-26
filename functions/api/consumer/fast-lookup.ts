@@ -2,8 +2,8 @@
 // Returns a full result in <100ms using D1 learned patterns + model catalog.
 // Called FIRST before text-parse or vision. Returns 404 if confidence is too low.
 
-import { computeDerivedFields, normalizeBrand } from './_utils/wh-compute'
-import { decodeWHSerial } from './_utils/whSerialDecoder'
+import { computeDerivedFields, normalizeBrand } from '../_utils/wh-compute'
+import { decodeWHSerial } from '../_utils/whSerialDecoder'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

@@ -2,8 +2,8 @@
 // Receives raw Tesseract OCR text, returns full water heater result.
 // ~10x faster and ~20x cheaper than vision. Feeds the self-improving flywheel.
 
-import { computeDerivedFields, extractOutermostJson, braveSearch, learnFromScan, WH_TEXT_SYSTEM } from './_utils/wh-compute'
-import { extractWHSerial } from './_utils/whSerialDecoder'
+import { computeDerivedFields, extractOutermostJson, braveSearch, learnFromScan, WH_TEXT_SYSTEM } from '../_utils/wh-compute'
+import { extractWHSerial } from '../_utils/whSerialDecoder'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
