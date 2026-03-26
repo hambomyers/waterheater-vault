@@ -129,7 +129,7 @@ CRITICAL RULES:
 1. Brand: Return ONLY one of: Rheem, AO Smith, Bradford White, State, Kenmore, Whirlpool, GE, American, Reliance, Navien, Rinnai, Noritz
 2. Serial Number: Extract COMPLETE serial including ALL spaces/dashes. Example: "RHLN 01 06 534307" NOT "RHLN0106534307"
 3. Model Number: Extract full model code. Example: "PROG50-42N RH62"
-4. Manufacture Date: Look for "Manufacture Date" or "Mfg Date" label. Return format: "Month YYYY" or "MM/YYYY"
+4. Mfg Date: Look for "Manufacture Date" or "Mfg Date" label. Return format: "Month YYYY" or "MM/YYYY"
 5. Capacity: Tank size in gallons (look for "U.S. Gallons" or "Capacity")
 6. Input: BTU/hr rating (look for "Input" or "BTU/hr")
 7. Voltage: Electrical voltage (look for "Voltage" or "V")
