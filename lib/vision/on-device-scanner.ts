@@ -99,11 +99,11 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   const formData = new FormData()
   formData.append('imageId', imageId)
   
-  // 30-second timeout for Gemini API call
+  // 30-second timeout for Grok Vision API call
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
   
-  const response = await fetch('/api/consumer/smart-scan', {
+  const response = await fetch('/api/consumer/parallel-scan', {
     method: 'POST',
     body: formData,
     signal: controller.signal
@@ -132,7 +132,7 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
     estimatedCostMin: data.estimatedCostMin || 1500,
     estimatedCostMax: data.estimatedCostMax || 2000,
     confidence: data.confidence || 0,
-    processingMethod: data.tier || 'gemini-flash-lite'
+    processingMethod: data.tier || 'hybrid-tesseract-grok'
   }
 }
 

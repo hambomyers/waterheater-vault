@@ -9,7 +9,7 @@ export async function preprocessImage(imageData: Blob | string): Promise<string>
       const canvas = document.createElement('canvas')
       let { width, height } = img
 
-      // Max 1024px longest side (perfect balance for Grok/Gemini)
+      // Max 1024px longest side (perfect balance for Grok Vision)
       const MAX = 1024
       if (width > MAX || height > MAX) {
         const ratio = MAX / Math.max(width, height)

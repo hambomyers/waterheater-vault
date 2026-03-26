@@ -57,12 +57,26 @@ export function decodeWHSerial(brand: string, serial: string): SerialDecodeResul
   if (s.length < 4) return null
 
   if (b.includes('rheem') || b.includes('ruud')) {
+    // Handle RHLN format: brand prefix + space + WW + space + YY + space + sequence
+    // Example: "RHLN 01 06 534307" = week 01, year 2006
+    const rhlnMatch = s.match(/RHLN(\d{2})(\d{2})/)
+    if (rhlnMatch) {
+      const week = parseInt(rhlnMatch[1])
+      const year = 2000 + parseInt(rhlnMatch[2])
+      if (week >= 1 && week <= 52 && year >= 2000 && year <= 2040) {
+        return { year, month: wk(week), manufactureDate: fmt(year, wk(week)), patternType: 'WWYY' }
+      }
+    }
+    
+    // Handle letter-month format: A=Jan, B=Feb, etc.
     const letterMonth = s.match(/^([A-L])(\d{2})/)
     if (letterMonth) {
       const month = letterMonth[1].charCodeAt(0) - 64
       const year = 2000 + parseInt(letterMonth[2])
       if (year >= 2000 && year <= 2040) return { year, month, manufactureDate: fmt(year, month), patternType: 'LETTER_YY' }
     }
+    
+    // Handle standard WWYY format
     const week = parseInt(s.slice(0, 2))
     const year = 2000 + parseInt(s.slice(2, 4))
     if (week >= 1 && week <= 52 && year >= 2000 && year <= 2040) {

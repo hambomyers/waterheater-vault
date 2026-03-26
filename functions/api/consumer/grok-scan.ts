@@ -294,7 +294,17 @@ export const onRequest = async (context: any) => {
       return new Response(JSON.stringify(parsed), { headers: { 'Content-Type': 'application/json', ...corsHeaders } })
     }
 
-    // ── Step 2: Compute all derived fields server-side ──
+    // ── Step 2: Calculate confidence based on extraction success ──
+    if (!parsed.confidence || parsed.confidence === 0) {
+      let conf = 0.5 // base confidence
+      if (parsed.brand) conf += 0.15
+      if (parsed.model) conf += 0.1
+      if (parsed.serialNumber) conf += 0.15
+      if (parsed.manufactureDate) conf += 0.1
+      parsed.confidence = Math.min(1.0, conf)
+    }
+    
+    // ── Step 3: Compute all derived fields server-side ──
     parsed = computeDerivedFields(parsed)
 
     // ── Step 3: Brave Search — enrich docs with verified URLs ──

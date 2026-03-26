@@ -111,10 +111,22 @@ export function computeDerivedFields(parsed: any): any {
   const gal = parsed.tankSizeGallons || 0
 
   let mfgYear = 0
+  let mfgMonth = 1
   if (parsed.manufactureDate) {
-    mfgYear = parseInt(String(parsed.manufactureDate).replace(/\(.*\)/, '').trim().split('-')[0]) || 0
+    const cleaned = String(parsed.manufactureDate).replace(/\(.*\)/, '').trim()
+    const parts = cleaned.split('-')
+    mfgYear = parseInt(parts[0]) || 0
+    mfgMonth = parseInt(parts[1]) || 1
   }
-  const ageYears = mfgYear > 1980 ? Math.max(0, currentYear - mfgYear) : 0
+  
+  // Calculate age using proper date math
+  let ageYears = 0
+  if (mfgYear > 1980) {
+    const mfgDate = new Date(mfgYear, mfgMonth - 1, 1)
+    const now = new Date()
+    const ageMs = now.getTime() - mfgDate.getTime()
+    ageYears = Math.floor(ageMs / (1000 * 60 * 60 * 24 * 365.25))
+  }
 
   let expectedLife = 10
   if (fuel.includes('tankless')) {
