@@ -11,6 +11,10 @@ database_id = "15010cce-24bc-450a-b49f-74d73b82ca38"
 binding = "BUCKET"
 bucket_name = "waterheater-images"
 
+# ── Cloudflare Workers AI ──
+[ai]
+binding = "AI"
+
 # ── Environment variables — set in Cloudflare Pages → Settings → Environment Variables ──
 # PARALLEL FIRING SQUAD (primary scan method) - WORKS OUT OF THE BOX:
 # Uses Hugging Face Inference API (FREE, no API keys required):
