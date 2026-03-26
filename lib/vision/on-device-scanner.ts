@@ -51,12 +51,6 @@ export async function scanWaterHeater(
   try {
     console.log('[SCAN] Starting scan...')
     
-    // DEMO MODE: Return mock data for testing
-    // Remove this after real scanning works
-    if (isDemoMode()) {
-      console.log('[SCAN] 🎭 DEMO MODE - Returning mock data')
-      return getMockScanResult()
-    }
     
     // If imageId provided, use parallel-scan endpoint (all AI models process saved image)
     if (finalConfig.imageId && finalConfig.useFallback) {
@@ -64,9 +58,14 @@ export async function scanWaterHeater(
       return await scanWithParallelModels(finalConfig.imageId)
     }
     
-    // Extract text with Tesseract.js (no preprocessing - keep it simple)
+    // Preprocess image for better OCR and vision model results
+    console.log('[SCAN] Preprocessing image...')
+    const { preprocessImage } = await import('./image-preprocessor')
+    const processedImage = await preprocessImage(imageData)
+    
+    // Extract text with Tesseract.js
     console.log('[SCAN] Running OCR...')
-    const ocrResult = await extractTextWithTesseract(imageData)
+    const ocrResult = await extractTextWithTesseract(processedImage)
     console.log('[SCAN] OCR done. Text:', ocrResult.text.substring(0, 200))
     console.log('[SCAN] OCR confidence:', ocrResult.confidence)
     
@@ -81,11 +80,16 @@ export async function scanWaterHeater(
       return buildScanResult(result)
     }
     
-    // If we got here, OCR worked but pattern matching failed
-    // Show the OCR text so user can see what was extracted
+    // Fallback to parallel AI models if pattern matching failed and fallback enabled
+    if (finalConfig.useFallback && finalConfig.imageId) {
+      console.log('[SCAN] 🔄 Falling back to parallel AI models...')
+      return await scanWithParallelModels(finalConfig.imageId)
+    }
+    
+    // If we got here, OCR worked but pattern matching failed and no fallback
     console.log('[SCAN] ❌ Pattern matching failed')
     console.log('[SCAN] Extracted text:', ocrResult.text)
-    throw new Error("Couldn't identify the water heater brand and model. The scanner is in development - try the demo mode or contact support.")
+    throw new Error("Couldn't identify the water heater brand and model from the label. Please ensure the label is clear and well-lit.")
     
   } catch (error) {
     console.error('[SCAN] Error:', error)
@@ -143,35 +147,6 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   }
 }
 
-/**
- * Check if demo mode is enabled (for testing without real photos)
- */
-function isDemoMode(): boolean {
-  if (typeof window === 'undefined') return false
-  // Enable demo mode if URL has ?demo=true
-  return window.location.search.includes('demo=true')
-}
-
-/**
- * Return mock scan result for demo/testing
- */
-function getMockScanResult(): ScanResult {
-  return {
-    brand: 'Rheem',
-    model: 'XE40M06ST45U1',
-    serial: '0423A12345',
-    manufactureDate: '2023-01-23',
-    age: 3,
-    fuelType: 'natural_gas',
-    tankSizeGallons: 40,
-    expectedLifeYears: 12,
-    remainingYears: 9,
-    estimatedCostMin: 1000,
-    estimatedCostMax: 1400,
-    confidence: 95,
-    processingMethod: 'on-device'
-  }
-}
 
 /**
  * Extract text from image using Tesseract.js

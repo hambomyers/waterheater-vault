@@ -93,7 +93,7 @@ async function callGrokReviewScreen(
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'grok-beta',
+      model: 'grok-4.20-reasoning',
       messages: [
         { role: 'system', content: WH_REVIEW_SCREEN },
         {

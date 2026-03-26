@@ -11,7 +11,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-const TEXT_MODEL = 'grok-beta'
+const TEXT_MODEL = 'grok-4.20-reasoning'
 
 export const onRequestPost = async ({ request, env }: any) => {
   try {

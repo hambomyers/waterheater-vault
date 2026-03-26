@@ -117,14 +117,19 @@ async function callGrokVision(imageBase64: string, apiKey: string): Promise<Mode
   const startTime = Date.now()
   
   try {
+    // 12-second timeout for external API call
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 12000)
+    
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
+      signal: controller.signal,
       body: JSON.stringify({
-        model: 'grok-vision-beta',
+        model: 'grok-4.20-reasoning',
         messages: [
           {
             role: 'user',
@@ -138,6 +143,8 @@ async function callGrokVision(imageBase64: string, apiKey: string): Promise<Mode
         temperature: 0.1
       })
     })
+    
+    clearTimeout(timeout)
 
     const responseTime = Date.now() - startTime
 

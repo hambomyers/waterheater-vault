@@ -277,29 +277,36 @@ export default function ScanPage() {
                 </>
               )}
             </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            
             {isMobile ? (
-              <button
-                onClick={startCamera}
-                className="rounded-full bg-[#0066ff] px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
-              >
-                Open Camera
-              </button>
-            ) : (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
+              <div className="space-y-3">
+                <button
+                  onClick={startCamera}
+                  className="w-full rounded-full bg-[#0066ff] px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
+                >
+                  Take Photo
+                </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="rounded-full bg-[#0066ff] px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
+                  className="w-full rounded-full border-2 border-white/30 px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
                 >
-                  Choose Photo
+                  Choose from Gallery
                 </button>
-              </>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="rounded-full bg-[#0066ff] px-8 py-3 font-medium text-white transition-transform hover:scale-105 active:scale-95"
+              >
+                Choose Photo
+              </button>
             )}
           </div>
         )}

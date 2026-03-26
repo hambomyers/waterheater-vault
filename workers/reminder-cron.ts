@@ -93,9 +93,14 @@ export default {
     for (const lead of (leads as Lead[])) {
       const { subject, html } = buildEmail(lead, quarter)
       try {
+        // 12-second timeout for external API call
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 12000)
+        
         const res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             from: 'Water Heater Plan <reminders@waterheaterplan.com>',
             to: lead.email,
@@ -103,6 +108,8 @@ export default {
             html,
           }),
         })
+        clearTimeout(timeout)
+        
         if (res.ok) {
           await env.DB.prepare(`UPDATE leads SET last_reminded_at = ? WHERE id = ?`).bind(now, lead.id).run()
           sent++

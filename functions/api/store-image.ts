@@ -16,12 +16,27 @@ export const onRequestOptions = async () => {
 
 export const onRequestPost = async ({ request, env }: any) => {
   try {
+    console.log('[STORE-IMAGE] Request received')
+    
+    // Check DB binding
+    if (!env.DB) {
+      console.error('[STORE-IMAGE] No DB binding found')
+      return Response.json(
+        { error: 'Database not configured', details: 'No DB binding in environment' },
+        { status: 500, headers: CORS }
+      )
+    }
+    
+    console.log('[STORE-IMAGE] DB binding found, parsing form data...')
     const formData = await request.formData()
     const imageBase64 = formData.get('image') as string
     
+    console.log('[STORE-IMAGE] Image data length:', imageBase64?.length || 0)
+    
     if (!imageBase64) {
+      console.error('[STORE-IMAGE] No image provided in form data')
       return Response.json(
-        { error: 'No image provided' },
+        { error: 'No image provided', details: 'Form data missing image field' },
         { status: 400, headers: CORS }
       )
     }
@@ -29,14 +44,11 @@ export const onRequestPost = async ({ request, env }: any) => {
     // Generate unique image ID
     const imageId = crypto.randomUUID()
     const timestamp = new Date().toISOString()
+    console.log('[STORE-IMAGE] Generated imageId:', imageId)
 
-    // Get client info for tracking
-    const cf = (request as any).cf ?? {}
-    const zip = cf.postalCode ?? null
-    const country = cf.country ?? null
-
-    // Store image in D1 (using existing scan_images table)
-    if (env.DB) {
+    // Store image in D1
+    console.log('[STORE-IMAGE] Storing in D1...')
+    try {
       await env.DB.prepare(`
         INSERT INTO scan_images (
           id, 
@@ -52,22 +64,30 @@ export const onRequestPost = async ({ request, env }: any) => {
         imageBase64,
         timestamp
       ).run()
+      
+      console.log('[STORE-IMAGE] Successfully stored in D1')
+    } catch (dbErr: any) {
+      console.error('[STORE-IMAGE] Database error:', dbErr)
+      return Response.json(
+        { error: 'Database error', message: dbErr.message, details: dbErr.stack },
+        { status: 500, headers: CORS }
+      )
     }
 
     // Return image ID and metadata
-    return Response.json(
-      {
-        imageId,
-        timestamp,
-        size: imageBase64.length,
-        message: 'Image saved successfully'
-      },
-      { headers: CORS }
-    )
+    const response = {
+      imageId,
+      timestamp,
+      size: imageBase64.length,
+      message: 'Image saved successfully'
+    }
+    console.log('[STORE-IMAGE] Returning success response:', { imageId, size: imageBase64.length })
+    
+    return Response.json(response, { headers: CORS })
   } catch (err: any) {
-    console.error('Store image error:', err)
+    console.error('[STORE-IMAGE] Unexpected error:', err)
     return Response.json(
-      { error: 'Failed to store image', message: err.message },
+      { error: 'Failed to store image', message: err.message, stack: err.stack },
       { status: 500, headers: CORS }
     )
   }

@@ -286,10 +286,10 @@ wrangler d1 execute waterheater-vault --file=migrations/0009_learn.sql --remote
 
 ## Build Status
 
-| Sprint | What | Status |
-|--------|------|--------|
-| Sprint 1-5 | Original architecture (Tesseract + Grok hybrid, complex flows) | ✅ Archived |
-| **Sprint 6** | **COMPLETE OVERHAUL: Tesla-sleek minimalism, on-device vision first** | 🔄 In Progress |
+| Feature | Status |
+|---------|--------|
+| 3-tier hybrid scan pipeline | ✅ Complete |
+| Tesla-sleek minimalist UI | ✅ Complete |
 | | • Route conflict fixed (app/pro vs app/(pro)) | ✅ Done |
 | | • Build passing successfully | ✅ Done |
 | | • Scan page: Device detection (mobile camera / desktop file upload) | ✅ Done |
