@@ -3,7 +3,7 @@
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*  
-*Last updated: 2026-03-26 — Production-ready system, comprehensive cleanup complete*
+*Last updated: 2026-03-26 — Production R2 storage, Workers AI vision, serial extraction working, decoder API opportunity identified*
 
 ---
 
@@ -227,7 +227,8 @@ Camera ──▶ Canvas preprocessing (grayscale + contrast, max 1600px)
 **Processing methods exposed in `ProcessingResult.processingMethod`:**
 - `'pattern-match'` — Tier 1: zero LLM, pattern decode (<1s, $0)
 - `'text-parse'` — Tier 2: text LLM, raw OCR text (~1-2s, minimal cost)
-- `'grok-vision'` — Tier 3: vision LLM, full image (~10-25s, ~$0.01)
+- `'workers-ai-llava'` — Primary: Cloudflare Workers AI vision (free, always available, ~2-5s)
+- `'grok-vision'` — Premium: Grok Vision (optional if GROK_API_KEY configured, ~10-25s)
 - `'on-device'` — offline, Tesseract only
 
 **Projected tier distribution:**
@@ -443,18 +444,19 @@ waterheater-vault/
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| 3-tier vision pipeline | ✅ Live | Pattern → text LLM → vision LLM |
-| Tesseract.js OCR + pattern extraction | ✅ Live | Tier 1, 90% target |
-| Text LLM parsing (grok-4.20-reasoning) | ✅ Live | Tier 2, 8% target |
-| Grok Vision fallback (grok-4.20-reasoning) | ✅ Live | Tier 3, 2% target |
-| Self-learning flywheel | ✅ Implemented | serial_patterns + model_catalog |
+| **R2 Image Storage** | ✅ Live | Full images in waterheater-images bucket, metadata in D1 |
+| **Workers AI Vision** | ✅ Live | @cf/llava-hf/llava-1.5-7b-hf - free, mobile-optimized |
+| **Serial Extraction** | ✅ Working | Extracts complete serials with spaces (e.g., RHLN 01 06 534307) |
+| **Database Persistence** | ✅ Live | save-scan-result.ts saves brand, model, serial, date to D1 |
+| Grok Vision (optional) | ✅ Live | Premium backup if GROK_API_KEY configured |
+| Pattern matching fallback | ✅ Live | Never fails - always returns result |
 | Simple Profile Card (homeowner) | ✅ Implemented | Age, life, cost - no jargon |
 | Rich Details view (plumber) | ✅ Implemented | Serial, BTU, specs |
 | Job ticket export (.ics + .csv) | ✅ Implemented | Works offline |
 | "Send to My Plumber" flow | ✅ Implemented | One-tap hero action |
 | Pro onboarding with GBP screening | ✅ Implemented | 4.5+ stars required |
 | Pro dashboard with scan analytics | ✅ Implemented | Scan counts by zip |
-| All D1 migrations applied | ✅ Complete | 0001-0009 live |
+| All D1 migrations applied | ✅ Complete | 0001-0014 live (R2 + scan results columns) |
 
 ---
 
@@ -492,5 +494,94 @@ waterheater-vault/
 
 ---
 
-**Last updated: 2026-03-25**  
+## 🚀 NEW OPPORTUNITY: Comprehensive Decoder API
+
+### Market Gap Identified (2026-03-26)
+
+**Existing Solutions:**
+- HVAC Decoder app: $9.99, manual input, offline database
+- Building Intelligence Center: Free docs, manual lookup, no API
+- DecodeMyItem.com: Free web tool, no API, manual input
+- Klippa OCR: Generic OCR API, no appliance intelligence
+
+**What's Missing:**
+- ❌ No vision-first decoder (all require manual typing)
+- ❌ No public API for programmatic access
+- ❌ No self-learning database
+- ❌ No comprehensive coverage (100+ brands, all eras)
+
+### Our 10X Advantage
+
+**Vision-First Architecture:**
+```
+HVAC Decoder: Type "RHLN 0106534307" manually
+WaterHeaterVault: SNAP photo → auto-extract → instant decode
+```
+
+**AI + Rules Hybrid:**
+```
+Workers AI vision extraction
+  ↓
+Comprehensive pattern database (Building Intelligence Center rules)
+  ├─ Rheem: 7 serial styles
+  ├─ AO Smith: 5 serial styles  
+  ├─ Bradford White: Letter codes
+  └─ 100+ brands total
+  ↓
+Self-learning from every scan
+  ↓
+Multi-source validation (visible date + decoded date)
+```
+
+### Revenue Model Addition
+
+**Layer 3 - Decoder API (NEW):**
+```
+Free Tier: 100 decodes/month
+Pro Tier: $99/mo unlimited (home inspectors)
+Enterprise: $499/mo white-label (insurance, real estate)
+
+Target customers:
+- Home inspection companies (10K+ in US)
+- Insurance adjusters (age verification)
+- Real estate platforms (property assessment)
+- HVAC companies (compete with HVAC Decoder)
+
+Projected ARR:
+- 100 home inspectors × $99/mo = $119K
+- 10 insurance companies × $499/mo = $60K
+- Total new revenue: ~$180K ARR Year 1
+```
+
+### Implementation Plan
+
+**Phase 1: Internal Enhancement (Week 1)**
+- Add comprehensive decoder to `lib/vision/serial-decoder.ts`
+- Use Building Intelligence Center rules for all brands
+- Improve Tier 1 hit rate 90% → 95%+
+- Extract manufacture dates from visible fields + decode from serials
+
+**Phase 2: API Productization (Month 1)**
+- Create `/api/decode-serial` endpoint
+- Accept: `{ brand, serial, image? }` → Return: `{ manufactureDate, age, confidence }`
+- Rate limiting + API key authentication
+- Documentation + developer portal
+
+**Phase 3: Market Expansion (Q2 2026)**
+- Add HVAC equipment decoding
+- Partner with home inspection associations
+- White-label for insurance platforms
+- Become the universal appliance decoder API
+
+### Strategic Fit
+
+Perfectly aligns with "Residential Mechanical Longevity OS" vision:
+- Water heaters → HVAC → All appliances
+- Same decoder powers everything
+- Data moat grows with every category
+- B2B revenue complements B2C plumber model
+
+---
+
+**Last updated: 2026-03-26**  
 **Status: Sprint 6 complete. Ready for production testing.**

@@ -97,10 +97,11 @@ Tesla-sleek, on-device AI scanner that creates a simple "Water Heater Profile" f
 |-------|------------|
 | Framework | Next.js 14 — static export, all `use client` |
 | Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue accent |
-| **Primary Vision** | **PaddleOCR-VL-1.5** (text extraction) + **Phi-4-reasoning-vision-15B** (understanding) — on-device, instant, zero API cost |
-| Fallback Vision | Grok Vision (grok-4.20-beta) — only for blurry/damaged labels or low confidence |
+| **Primary Vision** | **Cloudflare Workers AI** (@cf/llava-hf/llava-1.5-7b-hf) — free, edge-native, mobile-optimized |
+| Secondary Vision | Grok Vision (grok-vision-beta) — optional premium backup if GROK_API_KEY configured |
+| Image Storage | **Cloudflare R2** (waterheater-images bucket) — production-grade object storage |
 | Optional Search | Brave Search API — manual lookup for warranty docs, manuals, rebates (not required for basic scan) |
-| Storage | IndexedDB (offline-first) + Cloudflare D1 (cloud sync + leads + pros) |
+| Storage | **Cloudflare R2** (full images) + **Cloudflare D1** (metadata, leads, pros) — production-grade |
 | Auth | Magic-link via Resend + JWT (no Clerk, no OAuth) |
 | Payments | Stripe Checkout — Pro $49/mo flat |
 | Export | `lib/profile/job-ticket.ts` — pure client-side `.ics` + `.csv` download, zero APIs, works offline |
@@ -116,8 +117,9 @@ Tesla-sleek, on-device AI scanner that creates a simple "Water Heater Profile" f
 Screen 1 — Scan
   Mobile: Camera opens → user points at data plate → tap capture button
   Desktop: File upload → choose photo from computer
-  On-device vision (Tesseract.js OCR + pattern extraction) extracts info
-  Fallback: Grok Vision API for low confidence or unclear labels
+  Image uploaded to R2 bucket → metadata saved to D1
+  Workers AI LLaVA vision extraction (free, always available)
+  Fallback: Pattern matching ensures scans never fail completely
 
 Screen 2 — Simple Profile Card (homeowner view)
   • "8 years old"
