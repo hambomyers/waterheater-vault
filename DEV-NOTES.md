@@ -3,7 +3,7 @@
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*  
-*Last updated: 2026-03-26 — Production R2 storage, Workers AI vision, serial extraction working, decoder API opportunity identified*
+*Last updated: 2026-03-26 — Production ready, needs accuracy testing with real images*
 
 ---
 
@@ -440,13 +440,15 @@ waterheater-vault/
 
 # ═══ PART 3 — CURRENT STATUS ═══
 
-## Current System Status: ✅ PRODUCTION READY
+## Current System Status: ⚠️ NEEDS ACCURACY TESTING
 
 | Feature | Status | Notes |
 |---------|--------|-------|
 | **R2 Image Storage** | ✅ Live | Full images in waterheater-images bucket, metadata in D1 |
 | **Workers AI Vision** | ✅ Live | @cf/llava-hf/llava-1.5-7b-hf - free, mobile-optimized |
-| **Serial Extraction** | ✅ Working | Extracts complete serials with spaces (e.g., RHLN 01 06 534307) |
+| **Parallel Scan Pipeline** | ✅ Live | Workers AI + Grok Vision consensus |
+| **Serial Extraction** | ⚠️ Working but imperfect | Extracts serials but accuracy needs validation |
+| **Model Number Extraction** | ⚠️ Working but imperfect | Returns close matches but not always perfect |
 | **Database Persistence** | ✅ Live | save-scan-result.ts saves brand, model, serial, date to D1 |
 | Grok Vision (optional) | ✅ Live | Premium backup if GROK_API_KEY configured |
 | Pattern matching fallback | ✅ Live | Never fails - always returns result |
@@ -460,12 +462,76 @@ waterheater-vault/
 
 ---
 
+## Codebase Health (Sprint 6 Treeshake - 2026-03-26)
+
+**Status: Clean and production-ready**
+
+### Active Production Files
+```
+Core Vision Pipeline:
+- lib/vision/on-device-scanner.ts       Main scanner orchestration
+- lib/vision/pattern-extractor.ts       Pattern matching (Tier 1)
+- lib/vision/image-preprocessor.ts      Canvas preprocessing
+- lib/vision/prompt-templates.ts        AI prompts
+- lib/vision/result-parser.ts           Validation & formatting
+
+API Endpoints (Production):
+- functions/api/parallel-scan.ts        Workers AI + Grok consensus
+- functions/api/store-image.ts          R2 image storage
+- functions/api/save-scan-result.ts     D1 persistence
+- functions/api/get-image.ts            R2 image retrieval
+- functions/api/fast-lookup.ts          Pattern-based decode (Tier 1)
+- functions/api/parse-text.ts           Text LLM (Tier 2)
+- functions/api/grok-scan.ts            Vision LLM (Tier 3)
+- functions/api/recall-check.ts         CPSC recall API
+- functions/api/capture-lead.ts         Lead capture
+- functions/api/detect-location.ts      Geolocation
+
+Utilities:
+- functions/api/_utils/wh-compute.ts    Shared compute functions
+- functions/api/_utils/wh-table.ts      135+ model catalog (hardcoded)
+- functions/api/_utils/whSerialDecoder.ts  Serial decoder (CF Workers)
+- functions/api/_utils/auth.ts          JWT auth
+- functions/api/_utils/http.ts          CORS helpers
+
+Debug Endpoints (Keep for troubleshooting):
+- functions/api/debug-db.ts             D1 connection test
+- functions/api/debug/env.ts            Environment variable check
+```
+
+### Files Identified as Unused
+**None found** - All files are actively used in the production pipeline.
+
+### Notes
+- `wh-table.ts` (31KB) contains hardcoded model catalog - currently unused but valuable for future pattern matching enhancement
+- Debug endpoints are lightweight and useful for production troubleshooting
+- No dead code or orphaned files detected
+- All migrations (0009-0014) applied to remote D1
+
+---
+
 ## Next Actions (Priority Order)
 
-### Immediate (This Week)
-1. ⏭️ Test with 20+ real water heater images
+### 🔴 CRITICAL - Next Session (Start Here)
+1. **ACCURACY TESTING REQUIRED**
+   - User will provide real water heater photos
+   - For each photo, user will show:
+     - Actual serial number from label
+     - Actual model number from label
+     - What our system returned
+   - Document discrepancies and patterns
+   - Identify where extraction is failing (OCR? AI parsing? Pattern matching?)
+   
+2. **After testing, fix extraction accuracy**
+   - Improve prompt templates for better serial/model extraction
+   - Enhance pattern matching for common formats
+   - Add validation rules to catch obvious errors
+   - Target: 95%+ accuracy on clear images
+
+### Immediate (This Week - After Accuracy Fix)
+1. ⏭️ Test with 20+ real water heater images (validation round)
 2. ⏭️ Monitor tier distribution (target: 90/8/2)
-3. ⏭️ Fix any bugs discovered during testing
+3. ⏭️ Fix any remaining bugs discovered during testing
 4. ⏭️ Deploy to production
 
 ### Short-term (Next 2 Weeks)
@@ -584,4 +650,4 @@ Perfectly aligns with "Residential Mechanical Longevity OS" vision:
 ---
 
 **Last updated: 2026-03-26**  
-**Status: Sprint 6 complete. Ready for production testing.**
+**Status: Sprint 6 complete. Codebase clean. NEXT: Accuracy testing with real water heater images.**
