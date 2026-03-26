@@ -144,6 +144,31 @@ export default function ScanPage() {
       // STEP 2: Now scan with saved imageId (AI models will fetch from server)
       const result = await scanWaterHeater(blob, { useFallback: true, imageId })
 
+      // STEP 3: Save scan results to database
+      console.log('[SCAN] Saving results to database...')
+      try {
+        const saveResponse = await fetch('/api/save-scan-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageId,
+            serialNumber: result.serial,
+            brand: result.brand,
+            model: result.model,
+            manufactureDate: result.manufactureDate,
+            confidence: result.confidence
+          })
+        })
+        
+        if (!saveResponse.ok) {
+          console.warn('[SCAN] Failed to save results to database:', await saveResponse.text())
+        } else {
+          console.log('[SCAN] Results saved to database successfully')
+        }
+      } catch (saveErr) {
+        console.warn('[SCAN] Error saving results to database:', saveErr)
+      }
+
       // Store result in sessionStorage and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
       router.push('/profile')
@@ -198,6 +223,31 @@ export default function ScanPage() {
 
       // STEP 2: Now scan with saved imageId (AI models will fetch from server)
       const result = await scanWaterHeater(file, { useFallback: true, imageId })
+
+      // STEP 3: Save scan results to database
+      console.log('[SCAN] Saving results to database...')
+      try {
+        const saveResponse = await fetch('/api/save-scan-result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageId,
+            serialNumber: result.serial,
+            brand: result.brand,
+            model: result.model,
+            manufactureDate: result.manufactureDate,
+            confidence: result.confidence
+          })
+        })
+        
+        if (!saveResponse.ok) {
+          console.warn('[SCAN] Failed to save results to database:', await saveResponse.text())
+        } else {
+          console.log('[SCAN] Results saved to database successfully')
+        }
+      } catch (saveErr) {
+        console.warn('[SCAN] Error saving results to database:', saveErr)
+      }
 
       // Store result in sessionStorage and navigate to profile
       sessionStorage.setItem('scanResult', JSON.stringify(result))
