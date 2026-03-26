@@ -140,12 +140,22 @@ async function callWorkersAILlava(imageBase64: string, env: any): Promise<ModelR
 
     const result = await env.AI.run('@cf/llava-hf/llava-1.5-7b-hf', {
       image: Array.from(bytes),
-      prompt: `You are an expert water-heater technician. Extract ONLY from the data plate label:
-- brand
-- model (or model_number)
-- serial (or serial_number)
-- manufactureDate (or year)
-Return valid JSON only. If any field is missing, use null. Example: {"brand":"Rheem","model":"PROG40-40","serial":"123456789","manufactureDate":"2023-05"}`,
+      prompt: `You are analyzing a water heater data plate label. Extract these exact fields from the label:
+
+REQUIRED FIELDS:
+- brand: The manufacturer name (e.g., Rheem, AO Smith, Bradford White)
+- model: The model number exactly as shown
+- serial: The serial number exactly as shown (usually alphanumeric, 8-15 characters)
+- manufactureDate: The manufacture date or year if visible
+
+IMPORTANT: 
+- Extract ONLY what you see on the label
+- If a field is not visible, use null
+- Return ONLY valid JSON with no extra text
+- Do NOT make up values
+- Serial numbers are usually near "Serial No." or "S/N" labels
+
+Return format: {"brand":"...","model":"...","serial":"...","manufactureDate":"..."}`,
       max_tokens: 300,
     })
 
