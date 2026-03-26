@@ -11,3 +11,4 @@ dist
 .env.production.local
 .wrangler
 .dev.vars
+CURSOR-DEBUG-PROMPT.md
