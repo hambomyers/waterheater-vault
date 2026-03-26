@@ -31,16 +31,29 @@ export function detectWHBrand(text: string): string {
 
 export function extractWHSerial(text: string): string | undefined {
   const upper = text.toUpperCase()
-  const explicit = upper.match(/(?:S[/.]?N|SERIAL\s*(?:NO\.?|NUMBER)?|SER\.?\s*NO\.?)[:\s#]*([A-Z0-9]{6,20})/)
-  if (explicit?.[1]) return explicit[1]
+  
+  // Try explicit serial labels first
+  const explicit = upper.match(/(?:S[/.]?N|SERIAL\s*(?:NO\.?|NUMBER)?|SER\.?\s*NO\.?)[:\s#]*([A-Z0-9\s-]{6,25})/)
+  if (explicit?.[1]) {
+    return explicit[1].trim()
+  }
+  
+  // Try brand-specific patterns with spaces (e.g., "RHLN 01 06 534307")
+  const brandSerial = upper.match(/\b(RHLN|RHEL|RHLN|PROG|ENS|GPVH|GPDH|NPE|NFC|NCB|RL|RU|RUR)\s*([A-Z0-9\s-]{6,20})/)
+  if (brandSerial) {
+    return (brandSerial[1] + brandSerial[2]).replace(/\s+/g, '')
+  }
+  
+  // Find alphanumeric candidates (8-20 chars with both letters and numbers)
   const candidates = Array.from(upper.matchAll(/\b([A-Z][A-Z0-9]{7,19})\b/g))
     .map(m => m[1])
     .filter(c => /[A-Z]/.test(c) && /[0-9]/.test(c))
     .filter(c => c.length >= 8 && c.length <= 20)
     .filter(c => !['NATURAL', 'ELECTRIC', 'GALLONS', 'THERMAL', 'RECOVERY', 'CAPACITY',
-                   'PRESSURE', 'HEATER', 'PRODUCT', 'MAXIMUM', 'MINIMUM'].some(
+                   'PRESSURE', 'HEATER', 'PRODUCT', 'MAXIMUM', 'MINIMUM', 'STANDARD'].some(
       w => c === w || c.startsWith(w.slice(0, 7))
     ))
+  
   return candidates[0]
 }
 
@@ -133,6 +146,34 @@ export function decodeWHSerial(brand: string, serial: string): SerialDecodeResul
     const year = 2000 + parseInt(s[1])
     if (year >= 2000 && year <= 2040) {
       return { year, month: 1, manufactureDate: fmt(year, 1), patternType: 'LETTER_YY' }
+    }
+  }
+
+  // UNIVERSAL FALLBACK: Try all common patterns for unknown brands
+  // Pattern 1: YYWW (most common)
+  if (s.length >= 4 && /^\d{4}/.test(s)) {
+    const year = 2000 + parseInt(s.slice(0, 2))
+    const week = parseInt(s.slice(2, 4))
+    if (year >= 2000 && year <= 2040 && week >= 1 && week <= 52) {
+      return { year, month: wk(week), manufactureDate: fmt(year, wk(week)), patternType: 'YYWW' }
+    }
+  }
+  
+  // Pattern 2: WWYY
+  if (s.length >= 4 && /^\d{4}/.test(s)) {
+    const week = parseInt(s.slice(0, 2))
+    const year = 2000 + parseInt(s.slice(2, 4))
+    if (week >= 1 && week <= 52 && year >= 2000 && year <= 2040) {
+      return { year, month: wk(week), manufactureDate: fmt(year, wk(week)), patternType: 'WWYY' }
+    }
+  }
+  
+  // Pattern 3: YYMM
+  if (s.length >= 4 && /^\d{4}/.test(s)) {
+    const year = 2000 + parseInt(s.slice(0, 2))
+    const month = parseInt(s.slice(2, 4))
+    if (year >= 2000 && year <= 2040 && month >= 1 && month <= 12) {
+      return { year, month, manufactureDate: fmt(year, month), patternType: 'YYMM' }
     }
   }
 

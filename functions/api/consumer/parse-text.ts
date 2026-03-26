@@ -112,14 +112,13 @@ export const onRequestPost = async ({ request, env }: any) => {
     }
 
     // ── Calculate confidence based on extraction success ──
-    if (!parsed.confidence || parsed.confidence === 0) {
-      let conf = 0.5 // base confidence
-      if (parsed.brand) conf += 0.15
-      if (parsed.model) conf += 0.1
-      if (parsed.serialNumber) conf += 0.15
-      if (parsed.manufactureDate) conf += 0.1
-      parsed.confidence = Math.min(1.0, conf)
-    }
+    // Always calculate confidence - never leave at 0
+    let conf = 0.3 // base confidence (we at least tried)
+    if (parsed.brand && parsed.brand !== 'Unknown') conf += 0.2
+    if (parsed.model) conf += 0.15
+    if (parsed.serialNumber) conf += 0.2
+    if (parsed.manufactureDate) conf += 0.15
+    parsed.confidence = Math.min(1.0, Math.max(0.3, conf)) // minimum 30%
 
     // ── Compute derived fields ──
     const enriched = computeDerivedFields(parsed)

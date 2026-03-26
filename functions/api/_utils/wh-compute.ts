@@ -154,17 +154,34 @@ export function computeDerivedFields(parsed: any): any {
     costMid = 1450; unitLow = 800; unitHigh = 1300; laborLow = 450; laborHigh = 850; emLow = 450; emHigh = 750; ncLow = 2500; ncHigh = 3700
   }
 
+  // Determine warranty years based on brand
+  let warrantyYears = 6 // default
+  if (brand.includes('navien') || brand.includes('rinnai') || brand.includes('noritz')) warrantyYears = 12
+  else if (brand.includes('bosch')) warrantyYears = 15
+  else if (brand.includes('lochinvar')) warrantyYears = 10
+  
+  // Calculate warranty status
   let warranty = 'See manufacturer documentation'
-  if (brand.includes('navien')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
-  else if (brand.includes('rinnai')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
-  else if (brand.includes('noritz')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
-  else if (brand.includes('bosch')) warranty = '15-year heat exchanger, 6-year parts'
-  else if (brand.includes('lochinvar')) warranty = '10-year heat exchanger, 5-year parts'
-  else if (brand.includes('bradford')) warranty = '6-year tank, 1-year parts'
-  else if (brand.includes('rheem') || brand.includes('ruud')) warranty = '6-year tank, 1-year parts'
-  else if (brand.includes('ao smith') || brand.includes('a.o. smith')) warranty = '6–12-year tank (model dependent)'
-  else if (brand.includes('state') || brand.includes('american') || brand.includes('reliance')) warranty = '6-year tank, 1-year parts'
-  else if (brand.includes('ge') || brand.includes('kenmore') || brand.includes('whirlpool')) warranty = '6-year tank, 1-year parts'
+  if (ageYears > 0) {
+    if (ageYears >= warrantyYears) {
+      warranty = 'Expired'
+    } else {
+      const remaining = warrantyYears - ageYears
+      warranty = `${remaining} year${remaining !== 1 ? 's' : ''} remaining`
+    }
+  } else {
+    // Fallback to descriptive warranty info if age unknown
+    if (brand.includes('navien')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
+    else if (brand.includes('rinnai')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
+    else if (brand.includes('noritz')) warranty = '12-year heat exchanger, 5-year parts, 1-year labor'
+    else if (brand.includes('bosch')) warranty = '15-year heat exchanger, 6-year parts'
+    else if (brand.includes('lochinvar')) warranty = '10-year heat exchanger, 5-year parts'
+    else if (brand.includes('bradford')) warranty = '6-year tank, 1-year parts'
+    else if (brand.includes('rheem') || brand.includes('ruud')) warranty = '6-year tank, 1-year parts'
+    else if (brand.includes('ao smith') || brand.includes('a.o. smith')) warranty = '6–12-year tank (model dependent)'
+    else if (brand.includes('state') || brand.includes('american') || brand.includes('reliance')) warranty = '6-year tank, 1-year parts'
+    else if (brand.includes('ge') || brand.includes('kenmore') || brand.includes('whirlpool')) warranty = '6-year tank, 1-year parts'
+  }
 
   const b = parsed.brand || 'Water Heater'
   const m = parsed.model ? ` ${parsed.model}` : ''
