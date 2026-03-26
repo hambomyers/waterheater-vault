@@ -140,22 +140,26 @@ async function callWorkersAILlava(imageBase64: string, env: any): Promise<ModelR
 
     const result = await env.AI.run('@cf/llava-hf/llava-1.5-7b-hf', {
       image: Array.from(bytes),
-      prompt: `You are analyzing a water heater data plate label. Extract these exact fields from the label:
+      prompt: `You are analyzing a water heater data plate. Extract the COMPLETE text exactly as shown:
 
-REQUIRED FIELDS:
-- brand: The manufacturer name (e.g., Rheem, AO Smith, Bradford White)
-- model: The model number exactly as shown
-- serial: The serial number exactly as shown (usually alphanumeric, 8-15 characters)
-- manufactureDate: The manufacture date or year if visible
+FIELD LOCATIONS:
+- Brand: Usually at top (Rheem, AO Smith, Bradford White, etc.)
+- Model: Look for "Model:" label, extract full alphanumeric code
+- Serial: Look for "Serial:" or "Serial Number:" or "S/N:" label
+- Manufacture Date: Look for "Manufacture Date" or "Mfg Date"
 
-IMPORTANT: 
-- Extract ONLY what you see on the label
-- If a field is not visible, use null
-- Return ONLY valid JSON with no extra text
-- Do NOT make up values
-- Serial numbers are usually near "Serial No." or "S/N" labels
+SERIAL NUMBER RULES (CRITICAL):
+- Extract the ENTIRE serial number including ALL spaces and characters
+- Common formats:
+  * Rheem: "RHLN 01 06 534307" (brand code + date + sequence)
+  * AO Smith: "0907A12345" (year+month + sequence)
+  * Bradford White: "YF12345" (letter codes + sequence)
+- DO NOT try to interpret or reformat the serial
+- DO NOT remove spaces or dashes
+- Copy it EXACTLY as printed on the label
 
-Return format: {"brand":"...","model":"...","serial":"...","manufactureDate":"..."}`,
+Return ONLY valid JSON:
+{"brand":"...","model":"...","serial":"...","manufactureDate":"..."}`,
       max_tokens: 300,
     })
 
