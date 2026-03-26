@@ -76,9 +76,16 @@ export const onRequestPost = async ({ request, env }: any) => {
       )
     }
 
-    // Convert R2 object to base64
+    // Convert R2 object to base64 (chunked to avoid stack overflow)
     const imageBuffer = await r2Object.arrayBuffer()
-    const imageBase64 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)))
+    const uint8Array = new Uint8Array(imageBuffer)
+    let binary = ''
+    const chunkSize = 8192
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize)
+      binary += String.fromCharCode.apply(null, chunk as unknown as number[])
+    }
+    const imageBase64 = btoa(binary)
     console.log('[PARALLEL] Image fetched from R2, size:', imageBuffer.byteLength)
 
     // Fire all models in parallel
