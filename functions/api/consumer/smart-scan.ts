@@ -8,7 +8,7 @@
  * Target: 85%+ pattern match rate by Month 6 = $0 cost for most scans
  */
 
-import { computeDerivedFields, learnFromScan } from '../_utils/wh-compute'
+import { computeDerivedFields, learnFromScan, calculateBaseConfidence } from '../_utils/wh-compute'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -100,6 +100,13 @@ export const onRequestPost = async ({ request, env }: any) => {
       tankSizeGallons: geminiResult.capacity || 40,
     })
 
+    // Calculate base confidence score
+    const baseConfidence = calculateBaseConfidence({
+      ...enriched,
+      serialNumber: enriched.serialNumber || geminiResult.serial || '',
+      tankSizeGallons: enriched.tankSizeGallons || 0
+    })
+
     // LEARN from this scan (update pattern database)
     if (geminiResult.brand && geminiResult.serial) {
       await learnFromScan(enriched, env.DB)
@@ -110,8 +117,9 @@ export const onRequestPost = async ({ request, env }: any) => {
       INSERT INTO scan_results (
         image_id, brand, model, serial_number, manufacture_date, 
         fuel_type, tank_size_gallons, age_years, remaining_life_years,
-        status, warnings, processing_method, confidence, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        status, warnings, processing_method, confidence, created_at,
+        base_confidence, validation_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       imageId,
       enriched.brand || null,
@@ -125,12 +133,26 @@ export const onRequestPost = async ({ request, env }: any) => {
       enriched.status || 'Normal',
       JSON.stringify(enriched.warnings || []),
       'gemini-flash-lite',
-      0.95, // High confidence for Gemini
-      new Date().toISOString()
+      baseConfidence,
+      new Date().toISOString(),
+      baseConfidence,
+      'verifying'
     ).run().catch((err: any) => {
       console.error('[SMART-SCAN] Failed to store scan result:', err)
       // Don't fail the scan, just log the error
     })
+
+    // Trigger background validation (fire-and-forget)
+    if (env.BRAVE_API_KEY && baseConfidence < 85) {
+      // Only validate if confidence isn't already high
+      fetch(`${request.url.replace('/smart-scan', `/validate/${imageId}`)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extraction: enriched })
+      }).catch(() => {
+        // Ignore validation failures
+      })
+    }
 
     // Return with field names that match client expectations
     return Response.json({
@@ -139,6 +161,8 @@ export const onRequestPost = async ({ request, env }: any) => {
       serialNumber: enriched.serialNumber || geminiResult.serial || '',
       ageYears: enriched.ageYears || 0,
       remainingLifeYears: enriched.remainingLifeYears || 0,
+      confidence: baseConfidence,
+      validationStatus: 'verifying',
       tier: 'gemini-flash-lite',
       responseTime,
       cost: 0.0002,

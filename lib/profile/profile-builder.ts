@@ -54,6 +54,9 @@ export interface RichProfile {
   installationNotes: string[]
   confidence: number
   processingMethod: string
+  validationStatus?: 'verifying' | 'complete' | 'failed'
+  validationScore?: number
+  questionableFields?: string
 }
 
 /**
@@ -148,7 +151,10 @@ export function buildRichProfile(result: ScanResult): RichProfile {
     warrantyStatus,
     installationNotes,
     confidence: result.confidence,
-    processingMethod: result.processingMethod
+    processingMethod: result.processingMethod,
+    validationStatus: (result as any).validationStatus,
+    validationScore: (result as any).validationScore,
+    questionableFields: (result as any).questionableFields
   }
 }
 

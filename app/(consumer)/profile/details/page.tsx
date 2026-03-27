@@ -119,7 +119,36 @@ export default function ProfileDetailsPage() {
           </h2>
           <div className="space-y-3">
             <DetailRow label="Processing Method" value={profile.processingMethod} />
-            <DetailRow label="Confidence" value={`${profile.confidence}%`} />
+            <div className="flex items-center justify-between">
+              <span className="text-white/60">Confidence</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white">{profile.confidence}%</span>
+                {profile.validationStatus === 'verifying' && (
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-xs text-blue-400">Verifying...</span>
+                  </div>
+                )}
+                {profile.validationStatus === 'complete' && profile.validationScore && (
+                  <div className="flex items-center gap-1">
+                    <div className="h-2 w-2 rounded-full bg-green-500" />
+                    <span className="text-xs text-green-400">{profile.validationScore}/10</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {profile.validationStatus === 'complete' && profile.questionableFields && 
+             JSON.parse(profile.questionableFields || '[]').length > 0 && (
+              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="h-2 w-2 rounded-full bg-yellow-500" />
+                  <span className="text-sm text-yellow-400">Double-check these fields:</span>
+                </div>
+                <div className="text-xs text-yellow-300">
+                  {JSON.parse(profile.questionableFields || '[]').join(', ')}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

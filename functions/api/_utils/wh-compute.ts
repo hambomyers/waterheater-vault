@@ -102,6 +102,69 @@ export async function braveSearch(apiKey: string, query: string): Promise<string
   }
 }
 
+// ── Base Confidence Calculator ───────────────────────────────────────────────
+
+export function calculateBaseConfidence(extraction: any): number {
+  let score = 0
+  
+  // Brand detection (+25)
+  if (extraction.brand && extraction.brand !== 'Unknown' && extraction.brand !== '') {
+    score += 25
+  }
+  
+  // Model detection (+20)
+  if (extraction.model && extraction.model !== 'Unknown' && extraction.model !== '') {
+    score += 20
+  }
+  
+  // Serial number detection (+25)
+  if (extraction.serialNumber && extraction.serialNumber !== '') {
+    score += 25
+  }
+  
+  // Manufacture date parsed (+20)
+  if (extraction.manufactureDate && extraction.manufactureDate !== '') {
+    score += 20
+  }
+  
+  // Tank size matches expectations (+10)
+  if (extraction.tankSizeGallons && extraction.tankSizeGallons >= 20 && extraction.tankSizeGallons <= 120) {
+    score += 10
+  }
+  
+  // Serial pattern matches brand format (+15)
+  if (extraction.brand && extraction.serialNumber) {
+    const brand = extraction.brand.toLowerCase()
+    const serial = extraction.serialNumber.toUpperCase()
+    
+    // Rheem/Ruud: WWYY format (e.g., 0106)
+    if ((brand.includes('rheem') || brand.includes('ruud')) && serial.match(/\d{4}/)) {
+      score += 15
+    }
+    // AO Smith: YYWW format (e.g., 0601)
+    else if (brand.includes('ao smith') && serial.match(/\d{4}/)) {
+      score += 15
+    }
+    // Bradford White: BWL format (e.g., BEF)
+    else if (brand.includes('bradford') && serial.match(/^[A-Z]{3}/)) {
+      score += 15
+    }
+  }
+  
+  // Model exists in catalog (+10)
+  if (extraction.model && extraction.model.length >= 4) {
+    score += 10
+  }
+  
+  // Age calculation reasonable (+10)
+  if (extraction.ageYears >= 0 && extraction.ageYears <= 50) {
+    score += 10
+  }
+  
+  // Cap at 95% for base confidence
+  return Math.min(95, Math.round(score))
+}
+
 // ── Derived field computation ─────────────────────────────────────────────────
 
 export function computeDerivedFields(parsed: any): any {
