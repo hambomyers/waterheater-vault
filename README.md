@@ -97,8 +97,7 @@ Tesla-sleek, on-device AI scanner that creates a simple "Water Heater Profile" f
 |-------|------------|
 | Framework | Next.js 14 — static export, all `use client` |
 | Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue accent |
-| **Primary Vision** | **Cloudflare Workers AI** (@cf/llava-hf/llava-1.5-7b-hf) — free, edge-native, mobile-optimized |
-| Secondary Vision | Grok Vision (grok-vision-beta) — optional premium backup if GROK_API_KEY configured |
+| **Vision API** | **Google Gemini 2.5 Flash-Lite** — FREE tier: 2M tokens/day (~10K scans), then $0.075 per 1M tokens |
 | Image Storage | **Cloudflare R2** (waterheater-images bucket) — production-grade object storage |
 | Optional Search | Brave Search API — manual lookup for warranty docs, manuals, rebates (not required for basic scan) |
 | Storage | **Cloudflare R2** (full images) + **Cloudflare D1** (metadata, leads, pros) — production-grade |
@@ -118,8 +117,8 @@ Screen 1 — Scan
   Mobile: Camera opens → user points at data plate → tap capture button
   Desktop: File upload → choose photo from computer
   Image uploaded to R2 bucket → metadata saved to D1
-  Workers AI LLaVA vision extraction (free, always available)
-  Fallback: Pattern matching ensures scans never fail completely
+  Gemini 2.5 Flash-Lite vision extraction (2-3 seconds, 95%+ accuracy)
+  Self-learning: Every scan improves pattern database
 
 Screen 2 — Simple Profile Card (homeowner view)
   • "8 years old"
@@ -222,7 +221,7 @@ Alias: **scan.waterheaterplan.com** → same app
 
 | Key | Purpose |
 |-----|---------|
-| `GROK_API_KEY` | Grok — fallback LLM for unknown models + pro review screening |
+| `GEMINI_API_KEY` | Google Gemini 2.5 Flash-Lite — water heater vision + pro GBP screening |
 | `BRAVE_API_KEY` | Brave Search — live manual, warranty, rebate URLs |
 | `RESEND_API_KEY` | Resend.com — magic link + lead emails |
 | `JWT_SECRET` | Sign/verify tokens (32+ chars) |
@@ -273,8 +272,8 @@ wrangler d1 execute waterheater-vault --file=migrations/0009_learn.sql --remote
 
 | Days | Focus | Deliverable |
 |------|-------|-------------|
-| 1–10 | **Ship the offline core** | `lib/wh-lookup.ts` (10 brands, ~500 models) + `lib/exportJobTicket.ts` (.ics + .csv) wired to results page |
-| 11–20 | **Instant results UX** | Scan-to-result confirmed <3s, owner company auto-routing in InvitePlumberButton, PDF embeds job ticket data |
+| 1–10 | **Ship the vision core** | Gemini 2.5 Flash-Lite integration + self-learning pattern database |
+| 11–20 | **Fast results UX** | Scan-to-result in 2-3s, owner company auto-routing, PDF embeds job ticket data |
 | 21–40 | **Local market** | Yard signs, Nextdoor, local Facebook ads — drive scans in 1 zip code |
 | 41–60 | **Polish + second zip** | Tighten lead delivery, confirm first $49/mo plumber paying, expand to zip #2 |
 

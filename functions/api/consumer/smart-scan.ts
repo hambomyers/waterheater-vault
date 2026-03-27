@@ -34,6 +34,14 @@ interface GeminiResponse {
 export const onRequestPost = async ({ request, env }: any) => {
   try {
     const formData = await request.formData()
+    const mode = formData.get('mode') as string
+    
+    // MODE 1: GBP Review Screening (text-only)
+    if (mode === 'review-screen') {
+      return handleReviewScreening(formData, env)
+    }
+    
+    // MODE 2: Water Heater Vision Scan (default)
     const imageId = formData.get('imageId') as string
 
     if (!imageId) {
@@ -114,6 +122,92 @@ export const onRequestPost = async ({ request, env }: any) => {
     console.error('[SMART-SCAN] Error:', err)
     return Response.json(
       { error: 'Scan failed', message: err.message },
+      { status: 500, headers: CORS }
+    )
+  }
+}
+
+/**
+ * Handle GBP Review Screening (text-only mode)
+ */
+async function handleReviewScreening(formData: FormData, env: any) {
+  const businessName = formData.get('businessName') as string
+  const gbpUrl = formData.get('gbpUrl') as string
+  
+  if (!businessName || !gbpUrl) {
+    return Response.json(
+      { error: 'businessName and gbpUrl required' },
+      { status: 400, headers: CORS }
+    )
+  }
+  
+  if (!env.GEMINI_API_KEY) {
+    return Response.json(
+      { error: 'GEMINI_API_KEY not configured' },
+      { status: 500, headers: CORS }
+    )
+  }
+  
+  const prompt = `You are screening a plumber's Google Business Profile for WaterHeaterVault Pro.
+
+Business: ${businessName}
+GBP URL: ${gbpUrl}
+
+Analyze this business and return ONLY valid JSON:
+{
+  "approved": true or false,
+  "rating": average star rating (number),
+  "reviewCount": total reviews (integer),
+  "sentiment": "positive" | "mixed" | "negative",
+  "businessName": "exact business name",
+  "summary": "1-2 sentence summary",
+  "redFlags": ["array of issues if any"]
+}
+
+RULES:
+1. approved = true ONLY if rating >= 4.5 AND no serious red flags
+2. approved = false if safety incidents, unlicensed work, fraud, or hostile responses
+3. redFlags = [] if no issues`
+
+  try {
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + env.GEMINI_API_KEY,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 300,
+          }
+        })
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Gemini API error (${response.status}): ${error}`)
+    }
+
+    const data = await response.json()
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+    
+    const jsonMatch = content.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) {
+      throw new Error('No JSON found in Gemini response')
+    }
+
+    const result = JSON.parse(jsonMatch[0])
+    
+    return Response.json(result, { headers: CORS })
+    
+  } catch (err: any) {
+    console.error('[SMART-SCAN] Review screening error:', err)
+    return Response.json(
+      { error: 'Screening failed', message: err.message },
       { status: 500, headers: CORS }
     )
   }

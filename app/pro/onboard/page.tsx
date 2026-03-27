@@ -107,7 +107,7 @@ export default function ProOnboardPage() {
       formData.append('gbpUrl', gbpUrl.trim())
       formData.append('businessName', name.trim())
 
-      const res = await fetch('/api/consumer/grok-scan', { method: 'POST', body: formData })
+      const res = await fetch('/api/consumer/smart-scan', { method: 'POST', body: formData })
       if (!res.ok) throw new Error(`Screening failed (${res.status})`)
       const data = await res.json()
 

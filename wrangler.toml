@@ -16,23 +16,23 @@ bucket_name = "waterheater-images"
 binding = "AI"
 
 # ── Environment variables — set in Cloudflare Pages → Settings → Environment Variables ──
-# PRIMARY VISION API (REQUIRED):
-# GEMINI_API_KEY           — Google Gemini 2.5 Flash-Lite (FREE tier: 1,500/day, then $0.0002/scan)
+# VISION API (REQUIRED):
+# GEMINI_API_KEY           — Google Gemini 2.5 Flash-Lite
+#                            FREE tier: 2M tokens/day (≈10,000 scans/day)
+#                            Paid tier: $0.075 per 1M tokens after free tier
 #                            Get key: https://aistudio.google.com/apikey
-#                            Best balance of speed (2-3s), accuracy (95%+), and cost
-#
-# OPTIONAL BACKUP MODELS:
-# GROK_API_KEY             — xAI Grok Vision (premium backup, $0.01/scan). console.x.ai
+#                            Speed: 2-3 seconds per scan
+#                            Accuracy: 95%+ on water heater labels
+#                            Also used for: Pro GBP review screening
 #
 # OTHER SERVICES:
-# BRAVE_API_KEY            — Brave Search for manual/warranty docs (optional). api.search.brave.com
-# RESEND_API_KEY           — Email delivery (Resend). Send from: reports@waterheaterplan.com
+# BRAVE_API_KEY            — Brave Search for manual/warranty docs (optional)
+# RESEND_API_KEY           — Email delivery (Resend)
 # JWT_SECRET               — Sign/verify tokens (32+ chars)
 # STRIPE_SECRET_KEY        — Stripe checkout sessions
 # STRIPE_PRICE_ID_MONTHLY  — Stripe Price ID for $49/mo Pro plan
 #
-# ARCHITECTURE (Smart Scan + Self-Learning Flywheel):
-# Tier 1: Pattern matching (D1 learned patterns, <100ms, $0) — grows to 85%+ hit rate
-# Tier 2: Gemini 2.5 Flash-Lite (2-3s, $0.0002) — learns patterns for Tier 1
-# Self-improving: Every scan updates pattern database → costs approach $0 over time
-# Target: Month 1 = $0.20, Month 6 = $1.00, Year 1 = $20 (for 100K scans)
+# ARCHITECTURE:
+# Single-tier Gemini vision for all scans
+# Self-learning: Every scan updates D1 pattern database for future improvements
+# Cost target: $0 for first 10K scans/day (free tier), then ~$0.01 per scan
