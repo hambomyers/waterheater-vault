@@ -105,6 +105,33 @@ export const onRequestPost = async ({ request, env }: any) => {
       await learnFromScan(enriched, env.DB)
     }
 
+    // Store scan result with image reference for AI learning
+    await env.DB.prepare(`
+      INSERT INTO scan_results (
+        image_id, brand, model, serial_number, manufacture_date, 
+        fuel_type, tank_size_gallons, age_years, remaining_life_years,
+        status, warnings, processing_method, confidence, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      imageId,
+      enriched.brand || null,
+      enriched.model || null,
+      enriched.serialNumber || null,
+      geminiResult.manufactureDate || null,
+      enriched.fuelType || null,
+      enriched.tankSizeGallons || null,
+      enriched.ageYears || 0,
+      enriched.remainingLifeYears || 0,
+      enriched.status || 'Normal',
+      JSON.stringify(enriched.warnings || []),
+      'gemini-flash-lite',
+      0.95, // High confidence for Gemini
+      new Date().toISOString()
+    ).run().catch((err: any) => {
+      console.error('[SMART-SCAN] Failed to store scan result:', err)
+      // Don't fail the scan, just log the error
+    })
+
     // Return with field names that match client expectations
     return Response.json({
       imageId,

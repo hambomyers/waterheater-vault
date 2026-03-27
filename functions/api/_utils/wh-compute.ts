@@ -110,18 +110,65 @@ export function computeDerivedFields(parsed: any): any {
   const brand = (parsed.brand || '').toLowerCase()
   const gal = parsed.tankSizeGallons || 0
 
+  // Parse manufacture date - handle all water heater date formats
   let mfgYear = 0
   let mfgMonth = 1
   if (parsed.manufactureDate) {
     const cleaned = String(parsed.manufactureDate).replace(/\(.*\)/, '').trim()
+    
+    // Try YYYY-MM format first
     const parts = cleaned.split('-')
-    mfgYear = parseInt(parts[0]) || 0
-    mfgMonth = parseInt(parts[1]) || 1
+    if (parts.length === 2 && parts[0].length === 4) {
+      mfgYear = parseInt(parts[0]) || 0
+      mfgMonth = parseInt(parts[1]) || 1
+    } else {
+      // Handle "Month YYYY" format (e.g., "January 2006")
+      const monthYearMatch = cleaned.match(/^(\w+)\s+(\d{4})$/)
+      if (monthYearMatch) {
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+                          'july', 'august', 'september', 'october', 'november', 'december']
+        const monthName = monthYearMatch[1].toLowerCase()
+        mfgYear = parseInt(monthYearMatch[2]) || 0
+        mfgMonth = monthNames.indexOf(monthName) + 1
+        if (mfgMonth <= 0) mfgMonth = 1
+      } else {
+        // Handle "MM/YYYY" format (e.g., "01/2006")
+        const slashMatch = cleaned.match(/^(\d{1,2})[\/\-](\d{4})$/)
+        if (slashMatch) {
+          mfgYear = parseInt(slashMatch[2]) || 0
+          mfgMonth = parseInt(slashMatch[1]) || 1
+        } else {
+          // Handle "YYYY/MM" format (e.g., "2006/01")
+          const yearSlashMatch = cleaned.match(/^(\d{4})[\/\-](\d{1,2})$/)
+          if (yearSlashMatch) {
+            mfgYear = parseInt(yearSlashMatch[1]) || 0
+            mfgMonth = parseInt(yearSlashMatch[2]) || 1
+          } else {
+            // Handle month abbreviations (e.g., "Jan 2006", "JAN-2006")
+            const abbrMatch = cleaned.match(/^([A-Za-z]{3})[\s\-]*(\d{4})$/)
+            if (abbrMatch) {
+              const monthAbbrs = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
+                                'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+              const abbr = abbrMatch[1].toLowerCase()
+              mfgYear = parseInt(abbrMatch[2]) || 0
+              mfgMonth = monthAbbrs.indexOf(abbr) + 1
+              if (mfgMonth <= 0) mfgMonth = 1
+            } else {
+              // Fallback: try to extract 4-digit year
+              const yearMatch = cleaned.match(/(\d{4})/)
+              if (yearMatch) {
+                mfgYear = parseInt(yearMatch[1]) || 0
+              }
+            }
+          }
+        }
+      }
+    }
   }
   
   // Calculate age using proper date math
   let ageYears = 0
-  if (mfgYear > 1980) {
+  if (mfgYear >= 1980 && mfgYear <= currentYear) {
     const mfgDate = new Date(mfgYear, mfgMonth - 1, 1)
     const now = new Date()
     const ageMs = now.getTime() - mfgDate.getTime()
@@ -136,7 +183,7 @@ export function computeDerivedFields(parsed: any): any {
   } else if (fuel === 'heat-pump' || fuel === 'heat_pump') {
     expectedLife = 13
   }
-  const remainingLifeYears = Math.max(0, expectedLife - ageYears)
+  const remainingLifeYears = expectedLife - ageYears
 
   let costMid = 1150, unitLow = 700, unitHigh = 1100, laborLow = 400, laborHigh = 800
   let emLow = 400, emHigh = 700, ncLow = 2200, ncHigh = 3400
@@ -162,7 +209,7 @@ export function computeDerivedFields(parsed: any): any {
   
   // Calculate warranty status
   let warranty = 'See manufacturer documentation'
-  if (ageYears > 0) {
+  if (ageYears >= 0) {
     if (ageYears >= warrantyYears) {
       warranty = 'Expired'
     } else {
@@ -201,23 +248,41 @@ export function computeDerivedFields(parsed: any): any {
     { type: 'utilityRebate', label: 'Utility Rebate',      searchQuery: `${fq} water heater utility rebate DSIRE energystar` },
   ]
 
-  return {
-    ...parsed,
-    product: `${b}${m} ${pType}`,
-    fuelType: fuel,
-    ageYears,
-    remainingLifeYears,
-    estimatedReplacementCost: costMid,
-    currentWarranty: parsed.currentWarranty || warranty,
-    depreciationRate: expectedLife > 0 ? parseFloat((1 / expectedLife).toFixed(3)) : 0.1,
-    shot1Note: parsed.shot1Note || null,
-    priceBreakdown: {
-      unitLow, unitHigh, laborLow, laborHigh,
-      emergencyPremiumLow: emLow, emergencyPremiumHigh: emHigh,
-      nationalChainLow: ncLow, nationalChainHigh: ncHigh,
-    },
-    docs,
-  }
+    // Status and warnings
+    let status = 'Normal'
+    let warnings: string[] = []
+    
+    if (ageYears >= expectedLife) {
+      status = 'End of Life'
+      warnings.push(`Unit is ${ageYears - expectedLife} year${ageYears - expectedLife !== 1 ? 's' : ''} beyond expected lifespan`)
+    } else if (ageYears >= expectedLife - 2) {
+      status = 'Near End of Life'
+      warnings.push(`Unit will reach end of life in ${expectedLife - ageYears} year${expectedLife - ageYears !== 1 ? 's' : ''}`)
+    }
+    
+    if (fuel.includes('tankless') && ageYears >= 15) {
+      warnings.push('Tankless unit approaching maximum service life')
+    }
+    
+    return {
+      ...parsed,
+      product: `${b}${m} ${pType}`,
+      fuelType: fuel,
+      ageYears,
+      remainingLifeYears,
+      estimatedReplacementCost: costMid,
+      currentWarranty: parsed.currentWarranty || warranty,
+      depreciationRate: expectedLife > 0 ? parseFloat((1 / expectedLife).toFixed(3)) : 0.1,
+      status,
+      warnings,
+      shot1Note: parsed.shot1Note || null,
+      priceBreakdown: {
+        unitLow, unitHigh, laborLow, laborHigh,
+        emergencyPremiumLow: emLow, emergencyPremiumHigh: emHigh,
+        nationalChainLow: ncLow, nationalChainHigh: ncHigh,
+      },
+      docs,
+    }
 }
 
 // ── Self-improving: record each scan to build pattern + model confidence ──────
@@ -238,6 +303,7 @@ export async function learnFromScan(db: any, parsed: any): Promise<void> {
       ? parseInt(String(parsed.manufactureDate).split('-')[0]) : 0
     const decodedCorrectly = mfgYear >= 2000 && mfgYear <= 2040 ? 1 : 0
 
+    // Record serial pattern learning
     await db.prepare(`
       INSERT INTO serial_patterns (brand, pattern_type, sample_count, correct_count, confidence, last_updated)
       VALUES (?, ?, 1, ?, ?, ?)
@@ -254,6 +320,27 @@ export async function learnFromScan(db: any, parsed: any): Promise<void> {
       decodedCorrectly, decodedCorrectly,
     ).run().catch(() => {})
 
+    // Record date format pattern learning
+    if (parsed.manufactureDate) {
+      const dateStr = String(parsed.manufactureDate).trim()
+      let dateFormat = 'unknown'
+      
+      if (dateStr.match(/^\d{4}-\d{1,2}$/)) dateFormat = 'YYYY-MM'
+      else if (dateStr.match(/^\w+\s+\d{4}$/)) dateFormat = 'Month YYYY'
+      else if (dateStr.match(/^\d{1,2}[\/\-]\d{4}$/)) dateFormat = 'MM/YYYY'
+      else if (dateStr.match(/^\d{4}[\/\-]\d{1,2}$/)) dateFormat = 'YYYY/MM'
+      else if (dateStr.match(/^[A-Za-z]{3}[\s\-]*\d{4}$/)) dateFormat = 'Mon YYYY'
+      
+      await db.prepare(`
+        INSERT INTO date_format_patterns (brand, date_format, sample_count, last_seen)
+        VALUES (?, ?, 1, ?)
+        ON CONFLICT(brand, date_format) DO UPDATE SET
+          sample_count = sample_count + 1,
+          last_seen = excluded.last_seen
+      `).bind(brand, dateFormat, new Date().toISOString()).run().catch(() => {})
+    }
+
+    // Record model catalog learning
     if (model.length >= 4) {
       const prefix = model.slice(0, 8)
       const fuel = (parsed.fuelType || '').toLowerCase() || null
