@@ -106,14 +106,31 @@ export const onRequestPost = async ({ request, env }: any) => {
 
     // Graceful consensus – NEVER throws
     const consensus = calculateConsensus(modelResults)
-
+    
+    // Import compute function to add derived fields
+    const { computeDerivedFields } = await import('../_utils/wh-compute')
+    
+    // Build base result with extracted fields
+    const baseResult = {
+      brand: consensus.brand || 'Unknown',
+      model: consensus.model || 'Unknown',
+      serialNumber: consensus.serial || '',
+      manufactureDate: consensus.manufactureDate || '',
+      fuelType: 'natural_gas', // default
+      tankSizeGallons: 40, // default
+      confidence: consensus.confidence || 0.3
+    }
+    
+    // Compute all derived fields (age, remaining life, warranty, costs)
+    const enriched = computeDerivedFields(baseResult)
+    
     return Response.json({
+      ...enriched,
       imageId,
-      consensus,
-      modelResults,
+      tier: 'parallel-scan',
       totalTime,
-      source: 'parallel-scan',
-      note: 'Mobile scans now use Workers AI + pattern fallback'
+      modelResults,
+      source: 'parallel-scan'
     }, { headers: CORS })
 
   } catch (err: any) {
@@ -256,11 +273,13 @@ function calculateConsensus(results: ModelResult[]): any {
   const brands = validResults.map(r => r.brand).filter(Boolean) as string[]
   const models = validResults.map(r => r.model_number).filter(Boolean) as string[]
   const serials = validResults.map(r => r.serial).filter(Boolean) as string[]
+  const dates = validResults.map(r => r.manufactureDate).filter(Boolean) as string[]
 
   return {
     brand: getMostCommon(brands) || null,
     model: getMostCommon(models) || null,
     serial: getMostCommon(serials) || null,
+    manufactureDate: getMostCommon(dates) || null,
     confidence: Math.round(validResults.reduce((sum, r) => sum + r.confidence, 0) / validResults.length * 100) / 100,
     agreementCount: validResults.length,
     source: validResults[0].model.includes('fallback') ? 'pattern-fallback' : 'ai-consensus'

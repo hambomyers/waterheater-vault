@@ -94,16 +94,16 @@ export async function scanWaterHeater(
  * Scan with parallel AI models (fetch from R2 via imageId)
  */
 async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
-  console.log('[PARALLEL] Calling parallel-scan endpoint with imageId:', imageId)
+  console.log('[SMART-SCAN] Calling smart-scan endpoint (Gemini) with imageId:', imageId)
   
   const formData = new FormData()
   formData.append('imageId', imageId)
   
-  // 30-second timeout for Grok Vision API call
+  // 30-second timeout for Gemini API call
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30000)
   
-  const response = await fetch('/api/consumer/parallel-scan', {
+  const response = await fetch('/api/consumer/smart-scan', {
     method: 'POST',
     body: formData,
     signal: controller.signal
@@ -118,21 +118,23 @@ async function scanWithParallelModels(imageId: string): Promise<ScanResult> {
   
   const data = await response.json()
   
+  console.log('[SMART-SCAN] Response:', data)
+  
   // smart-scan returns data directly (already has all derived fields)
   return {
     brand: data.brand || 'Unknown',
     model: data.model || 'Unknown',
-    serial: data.serial || '',
+    serial: data.serialNumber || data.serial || '',
     manufactureDate: data.manufactureDate || '',
-    age: data.age || 0,
+    age: data.ageYears || data.age || 0,
     fuelType: data.fuelType || 'natural_gas',
     tankSizeGallons: data.tankSizeGallons || 40,
     expectedLifeYears: data.expectedLifeYears || 12,
-    remainingYears: data.remainingYears || 0,
+    remainingYears: data.remainingLifeYears || data.remainingYears || 0,
     estimatedCostMin: data.estimatedCostMin || 1500,
     estimatedCostMax: data.estimatedCostMax || 2000,
     confidence: data.confidence || 0,
-    processingMethod: data.tier || 'hybrid-tesseract-grok'
+    processingMethod: data.tier || 'gemini-flash-lite'
   }
 }
 

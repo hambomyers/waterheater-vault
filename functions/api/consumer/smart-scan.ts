@@ -97,9 +97,13 @@ export const onRequestPost = async ({ request, env }: any) => {
       await learnFromScan(enriched, env.DB)
     }
 
+    // Return with field names that match client expectations
     return Response.json({
       imageId,
       ...enriched,
+      serialNumber: enriched.serialNumber || geminiResult.serial || '',
+      ageYears: enriched.ageYears || 0,
+      remainingLifeYears: enriched.remainingLifeYears || 0,
       tier: 'gemini-flash-lite',
       responseTime,
       cost: 0.0002,
