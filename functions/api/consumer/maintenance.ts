@@ -4,7 +4,7 @@
  * PATCH: Update checklist item status and notes
  */
 
-import { generateSmartChecklist } from '../../_utils/wh-compute'
+import { generateSmartChecklist } from '../_utils/wh-compute'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
