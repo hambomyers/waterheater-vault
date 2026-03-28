@@ -98,6 +98,8 @@ Tesla-sleek, on-device AI scanner that creates a simple "Water Heater Profile" f
 | Framework | Next.js 14 — static export, all `use client` |
 | Styling | Tailwind CSS — `#000000` black, white text, `#0066ff` blue accent |
 | **Vision API** | **Google Gemini 2.5 Flash-Lite** — FREE tier: 2M tokens/day (~10K scans), then $0.075 per 1M tokens |
+| **Confidence System** | Two-stage validation: Base confidence scoring + Brave Search API validation |
+| **Maintenance Vault** | 50+ point virtual checklist with progress tracking + iCal export |
 | Image Storage | **Cloudflare R2** (waterheater-images bucket) — production-grade object storage |
 | Optional Search | Brave Search API — manual lookup for warranty docs, manuals, rebates (not required for basic scan) |
 | Storage | **Cloudflare R2** (full images) + **Cloudflare D1** (metadata, leads, pros) — production-grade |
@@ -118,14 +120,18 @@ Screen 1 — Scan
   Desktop: File upload → choose photo from computer
   Image uploaded to R2 bucket → metadata saved to D1
   Gemini 2.5 Flash-Lite vision extraction (2-3 seconds, 95%+ accuracy)
+  Real confidence scoring based on data completeness
+  Background Brave Search validation for verification
   Self-learning: Every scan improves pattern database
 
 Screen 2 — Simple Profile Card (homeowner view)
   • "8 years old"
   • "~4 years remaining" (color gauge)
   • "Estimated replacement: $1,800–$2,400"
+  • Confidence score with verification status
   • [Send to My Plumber]  ← BIG hero button
   • [Details]             ← small link (reveals technical specs)
+  • [Maintenance Checklist] ← collapsible 50+ point checklist
 
 Screen 3 — Send to My Plumber
   One tap → PDF + job ticket generated
@@ -186,8 +192,10 @@ File: `WaterHeater-Job-{Serial}.csv`
 | `/` | Landing page — big Scan button, simple value prop |
 | `/scan` | Camera scan with on-device vision |
 | `/profile` | Simple Profile Card — age, life remaining, cost estimate, "Send to My Plumber" button |
-| `/profile/details` | Rich technical view (hidden by default) — serial, model, BTU, specs |
+| `/profile/details` | Rich technical view (hidden by default) — serial, model, BTU, specs, confidence validation, maintenance checklist |
 | `/send-plumber` | One-tap send flow — generates PDF + job ticket |
+| `/api/consumer/maintenance` | Maintenance checklist API (GET/PATCH) |
+| `/api/consumer/maintenance/[imageId]` | Maintenance validation endpoint |
 
 **Pro Routes:**
 
@@ -222,7 +230,7 @@ Alias: **scan.waterheaterplan.com** → same app
 | Key | Purpose |
 |-----|---------|
 | `GEMINI_API_KEY` | Google Gemini 2.5 Flash-Lite — water heater vision + pro GBP screening |
-| `BRAVE_API_KEY` | Brave Search — live manual, warranty, rebate URLs |
+| `BRAVE_API_KEY` | Brave Search — confidence validation, live manual, warranty, rebate URLs |
 | `RESEND_API_KEY` | Resend.com — magic link + lead emails |
 | `JWT_SECRET` | Sign/verify tokens (32+ chars) |
 | `STRIPE_SECRET_KEY` | Stripe — create checkout sessions |
@@ -264,7 +272,10 @@ wrangler d1 execute waterheater-vault --file=migrations/0009_learn.sql --remote
 | `0006_leads_sms.sql` | phone + sms_consent on leads | ✅ applied |
 | `0007_serial_cache.sql` | serial_cache (cost control) | ✅ applied |
 | `0008_leads_reminder.sql` | last_reminded_at on leads | ✅ applied |
-| `0009_learn.sql` | serial_patterns + model_catalog (flywheel) | ✅ applied 2026-03-22 |
+| `0014_create_scan_results.sql` | scan_results table for structured results storage | ✅ applied |
+| `0015_date_format_patterns.sql` | Date format pattern learning (flywheel) | ✅ applied |
+| `0016_confidence_validation_columns.sql` | Two-stage confidence system columns | ✅ applied |
+| `20260328_add_maintenance_profile.sql` | Maintenance vault + checklist columns | ✅ applied |
 
 ---
 
@@ -289,7 +300,15 @@ wrangler d1 execute waterheater-vault --file=migrations/0009_learn.sql --remote
 
 | Feature | Status |
 |---------|--------|
-| 3-tier hybrid scan pipeline | ✅ Complete |
+| Two-stage confidence validation system | ✅ Complete |
+| Smart Maintenance Vault (50+ tasks) | ✅ Complete |
+| | • Base confidence scoring (data completeness) | ✅ Done |
+| | • Brave Search API validation | ✅ Done |
+| | • Real-time confidence updates | ✅ Done |
+| | • 50+ point maintenance checklist | ✅ Done |
+| | • Progress tracking + iCal export | ✅ Done |
+| | • Tankless white vinegar descaling | ✅ Done |
+| | • Hard water area detection | ✅ Done |
 | Tesla-sleek minimalist UI | ✅ Complete |
 | | • Route conflict fixed (app/pro vs app/(pro)) | ✅ Done |
 | | • Build passing successfully | ✅ Done |

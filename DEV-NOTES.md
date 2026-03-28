@@ -3,7 +3,7 @@
 **SINGLE SOURCE OF TRUTH. Read before every session. Update after every meaningful change.**
 
 *Owner: H and H Myers Investments LLC · DBA: Water Heater Plan · Central Virginia*  
-*Last updated: 2026-03-26 — Production ready, needs accuracy testing with real images*
+*Last updated: 2026-03-28 — Production ready with confidence validation + maintenance vault, ready for Pittsburgh test market*
 
 ---
 
@@ -35,13 +35,18 @@ Completely free. Simple, jargon-free interface. No shop talk on main screens.
 
 **What homeowners see:**
 - Simple "Water Heater Profile" card: age, life remaining (in plain English), estimated replacement cost
+- Real confidence scores with verification status
 - One big button: **"Send to My Plumber"** — hero action, one-tap job ticket
 - Optional "Details" link for those who want technical specs (but hidden by default)
+- Optional "Maintenance Checklist" with 50+ professional tasks and progress tracking
 - No serial numbers, BTUs, glass lining, or technical jargon on main screen
 
 **What homeowners get:**
-- Instant scan results (3-tier vision pipeline, mostly offline)
+- Instant scan results (Gemini 2.5 Flash-Lite, 2-3 seconds)
+- Real confidence scoring based on data completeness
+- Background Brave Search validation for verification
 - Clean profile card they can understand
+- 50+ point professional maintenance checklist with iCal export
 - Easy connection to screened local plumbers
 - Free forever — no upsells, no manipulation
 
@@ -56,9 +61,11 @@ Screened local plumbers pay $49/month for geofenced zone access.
 **What plumbers get:**
 - Full technical data: serial numbers, model specs, BTU ratings, tank size, manufacture date, warranty status
 - Rich "Details" view that homeowners don't see
+- Confidence validation scores and verification status
 - Job tickets with complete technical specifications (.ics + .csv)
 - Auto-notifications when heaters in their zone are in danger zone (age > 8yr or remaining < 3yr)
 - Directory listing on waterheaterplan.com/pro/directory
+- Maintenance history and checklist completion data
 
 **Unit economics:**
 - Price: $49/mo flat (no annual option — keep it simple)
@@ -89,15 +96,17 @@ Geofenced zones fill up (max 3 per zone) → creates urgency for other plumbers
 
 ---
 
-## Phase 0 – Immediate Actions (Q2 2026)
+## Phase 1 – Current Architecture (Q2 2026)
 
-**Entity Formation:**
-- Form **VaultPro LLC** in **Wyoming** this week
-- Why Wyoming: cheapest formation, no state income tax, strong privacy protections, future-proof for national/B2B expansion
-- 4-step process:
-  1. File Articles of Organization with Wyoming Secretary of State
-  2. Obtain Federal EIN from IRS
-  3. Draft simple Operating Agreement
+**Core Technology Stack:**
+- **Frontend**: Next.js 14 + Tailwind CSS (black theme, #0066ff blue accent)
+- **Vision API**: Google Gemini 2.5 Flash-Lite (2-3 seconds, 95%+ accuracy)
+- **Confidence System**: Two-stage validation (base scoring + Brave Search validation)
+- **Maintenance Vault**: 50+ point virtual checklist with progress tracking
+- **Storage**: Cloudflare R2 (images) + D1 (metadata, scan results, maintenance data)
+- **Deployment**: Cloudflare Pages + Functions
+- **Auth**: Magic-link via Resend + JWT
+- **Payments**: Stripe ($49/mo Pro plan)
   4. Open business bank account (Mercury or Wise)
 
 **Primary Test Market: Pittsburgh, PA Metro**
@@ -673,23 +682,31 @@ Projected ARR:
 
 ### Implementation Plan
 
-**Phase 1: Internal Enhancement (Week 1)**
-- Add comprehensive decoder to `lib/vision/serial-decoder.ts`
-- Use Building Intelligence Center rules for all brands
-- Improve Tier 1 hit rate 90% → 95%+
-- Extract manufacture dates from visible fields + decode from serials
+## Current Implementation Status
 
-**Phase 2: API Productization (Month 1)**
-- Create `/api/decode-serial` endpoint
-- Accept: `{ brand, serial, image? }` → Return: `{ manufactureDate, age, confidence }`
-- Rate limiting + API key authentication
-- Documentation + developer portal
+**✅ Complete Features:**
+- Gemini 2.5 Flash-Lite vision extraction with real confidence scoring
+- Two-stage confidence validation system (base + Brave Search)
+- Smart Maintenance Vault with 50+ professional tasks
+- Progress tracking and iCal calendar export
+- Tankless-specific maintenance (white vinegar descaling)
+- Hard water area detection (Pittsburgh zip codes)
+- Complete scan results storage in D1 database
+- Self-learning pattern database for serial decoding
+- Real-time UI updates with verification status
 
-**Phase 3: Market Expansion (Q2 2026)**
-- Add HVAC equipment decoding
-- Partner with home inspection associations
-- White-label for insurance platforms
-- Become the universal appliance decoder API
+**🔲 Ready for Testing:**
+- Pittsburgh test market deployment
+- Real-world accuracy validation
+- User feedback collection
+- Pro zone claiming and lead delivery
+
+**🚀 Next Steps:**
+- Deploy to production (completed)
+- Test with real water heater images
+- Collect user feedback on confidence scores
+- Validate maintenance checklist usefulness
+- Begin Pittsburgh local marketing
 
 ### Strategic Fit
 
