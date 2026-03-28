@@ -108,6 +108,24 @@ export interface VaultItem {
   // Optional so all existing items continue working with zero migration.
   // Any code reading events should default to [].
   events?: VaultEvent[]
+  // ── New: maintenance profile and checklist ─────────────────────────────────────
+  maintenance_profile?: {
+    totalTasks: number
+    completedTasks: number
+    pendingTasks: number
+    nextAnnualDue: string
+    lastCompleted?: string
+    isTankless: boolean
+    hardWaterArea: boolean
+  }
+  checklist_items?: Array<{
+    id: string
+    task: string
+    frequency: string
+    status: 'pending' | 'completed' | 'skipped'
+    notes: string
+    completedAt?: string
+  }>
 }
 
 type SyncOperationType = 'upsert' | 'delete'

@@ -102,6 +102,82 @@ export async function braveSearch(apiKey: string, query: string): Promise<string
   }
 }
 
+// ── Smart Maintenance Checklist Generator ───────────────────────────────────────
+
+export function generateSmartChecklist(extraction: any, zip?: string) {
+  const isTankless = extraction.fuelType?.toLowerCase().includes('tankless') || 
+                     extraction.model?.toLowerCase().includes('tankless') ||
+                     extraction.brand?.toLowerCase().includes('navien') ||
+                     extraction.brand?.toLowerCase().includes('rinnai');
+
+  const isHardWaterArea = zip && (zip.startsWith('15') || zip.startsWith('16')); // Pittsburgh + surrounding
+
+  const universalTasks = [
+    { id: "safety-1", task: "Visual inspection for leaks, corrosion, or rust at tank and all connections", frequency: "annual", status: "pending", notes: "" },
+    { id: "safety-2", task: "Test T&P (temperature & pressure relief) valve operation", frequency: "annual", status: "pending", notes: "" },
+    { id: "safety-3", task: "Check system water pressure (target 50–60 psi; install PRV if >80 psi)", frequency: "annual", status: "pending", notes: "" },
+    { id: "safety-4", task: "Inspect expansion tank pre-charge and bladder integrity", frequency: "annual", status: "pending", notes: "" },
+    { id: "safety-5", task: "Test for carbon monoxide (gas models only)", frequency: "annual", status: "pending", notes: "" },
+    { id: "safety-6", task: "Verify CO detector is present and functional within 10 ft", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-7", task: "Flush tank: drain 2–3 gallons then full flush until water runs clear", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-8", task: "Inspect and replace sacrificial anode rod if >75% corroded", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-9", task: "Verify thermostat setting is 120°F (energy-saving & safe)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-10", task: "Insulate hot-water pipes and add tank blanket if in cold climate", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-11", task: "Inspect all shutoff, drain, and PRV valves for leaks/operation", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-12", task: "Check drain pan (if installed above living space)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-13", task: "Inspect gas line connections / pilot light / electronic ignition (gas only)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-14", task: "Clean combustion chamber and burner assembly (gas only)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-15", task: "Inspect venting system (B-vent, direct vent, exhaust clear?)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-16", task: "Inspect electrical wiring and connections (electric models)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-17", task: "Clean air intake vents and filters", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-18", task: "Check for unusual noises or vibrations during operation", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-19", task: "Test temperature accuracy with thermometer at tap", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-20", task: "Inspect and clean sediment filter (if present)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-21", task: "Check for proper grounding and bonding", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-22", task: "Verify proper clearances around unit (6 inches front, 2 inches sides)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-23", task: "Inspect water quality (hardness, pH, iron content)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-24", task: "Check for proper condensation drainage", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-25", task: "Inspect and clean dip tube (if accessible)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-26", task: "Verify proper gas line sizing and pressure", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-27", task: "Check for proper electrical disconnect (electric models)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-28", task: "Inspect and clean mixing valve (if present)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-29", task: "Verify proper vent termination and clearances", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-30", task: "Check for proper earthquake straps (CA requirement)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-31", task: "Inspect and test pressure reducing valve (PRV)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-32", task: "Check for proper water softener operation (if present)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-33", task: "Verify proper recirculation pump operation (if present)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-34", task: "Inspect and clean hot water recirculation lines", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-35", task: "Check for proper expansion tank sizing and installation", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-36", task: "Inspect and test backflow preventer (if present)", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-37", task: "Verify proper gas shut-off valve location and accessibility", frequency: "annual", status: "pending", notes: "" },
+    { id: "core-38", task: "Check for proper electrical grounding and bonding", frequency: "annual", status: "pending", notes: "" }
+  ];
+
+  const customTasks: any[] = [];
+
+  if (isTankless) {
+    customTasks.push(
+      { id: "tankless-1", task: "Circulate white vinegar through heat exchanger for 45–60 minutes using submersible pump (descaling)", frequency: isHardWaterArea ? "every-6-months" : "annual", status: "pending", notes: "" },
+      { id: "tankless-2", task: "Clean inlet water filter(s) – remove, rinse, scrub with brush", frequency: "every-6-months", status: "pending", notes: "" },
+      { id: "tankless-3", task: "Clean air intake filter with toothbrush and cold water", frequency: "every-6-months", status: "pending", notes: "" },
+      { id: "tankless-4", task: "Inspect and clean condensate trap/drain line", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-5", task: "Test flow sensors and verify consistent temperature/flow rate", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-6", task: "Inspect and clean flame sensor and ignition electrodes", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-7", task: "Check for proper gas pressure at inlet and manifold", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-8", task: "Inspect and clean burner assembly and heat exchanger fins", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-9", task: "Verify proper venting and exhaust system operation", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-10", task: "Check for proper minimum flow rate activation (0.5 GPM)", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-11", task: "Inspect and test recirculation pump (if equipped)", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-12", task: "Clean and inspect condensate neutralizer (if present)", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-13", task: "Check for proper freeze protection settings and operation", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-14", task: "Inspect and clean hot water mixing valve (if present)", frequency: "annual", status: "pending", notes: "" },
+      { id: "tankless-15", task: "Verify proper electrical connections and voltage", frequency: "annual", status: "pending", notes: "" }
+    );
+  }
+
+  return [...universalTasks, ...customTasks];
+}
+
 // ── Base Confidence Calculator ───────────────────────────────────────────────
 
 export function calculateBaseConfidence(extraction: any): number {

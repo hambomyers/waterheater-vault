@@ -8,9 +8,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { buildRichProfile, type RichProfile } from '@/lib/profile/profile-builder'
 import type { ScanResult } from '@/lib/vision/on-device-scanner'
-import { buildRichProfile } from '@/lib/profile/profile-builder'
-import type { RichProfile } from '@/lib/profile/profile-builder'
+import MaintenanceChecklistSection from '@/components/MaintenanceChecklistSection'
 
 export default function ProfileDetailsPage() {
   const router = useRouter()
@@ -103,7 +103,7 @@ export default function ProfileDetailsPage() {
             Installation Notes
           </h2>
           <ul className="space-y-2">
-            {profile.installationNotes.map((note, index) => (
+            {profile.installationNotes.map((note: string, index: number) => (
               <li key={index} className="flex items-start text-sm text-white/80">
                 <span className="mr-2 mt-1 text-[#0066ff]">•</span>
                 <span className="font-light">{note}</span>
@@ -151,6 +151,9 @@ export default function ProfileDetailsPage() {
             )}
           </div>
         </section>
+
+        {/* Maintenance Checklist */}
+        <MaintenanceChecklistSection profile={profile} />
 
         {/* Actions */}
         <div className="space-y-3 pt-4">
